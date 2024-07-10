@@ -1,0 +1,115 @@
+Metadata-Version: 2.1
+Name: tomtoolkit
+Version: 2.14.6
+Summary: The TOM Toolkit and base modules
+Home-page: https://tomtoolkit.github.io
+Author: TOM Toolkit Project
+Author-email: dcollom@lco.global
+Keywords: tomtoolkit,astronomy,astrophysics,cosmology,science,fits,observatory
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Topic :: Scientific/Engineering :: Astronomy
+Classifier: Topic :: Scientific/Engineering :: Physics
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: astroquery >=0.4.2
+Requires-Dist: astroplan ~=0.8
+Requires-Dist: astropy >=5.0
+Requires-Dist: beautifulsoup4 ~=4.9
+Requires-Dist: django <5,>=3.1
+Requires-Dist: djangorestframework ~=3.12
+Requires-Dist: django-bootstrap4 <24,>=3
+Requires-Dist: django-contrib-comments ~=2.0
+Requires-Dist: django-crispy-forms ~=2.0
+Requires-Dist: crispy-bootstrap4 ~=2022.0
+Requires-Dist: django-extensions ~=3.1
+Requires-Dist: django-filter <24,>=21
+Requires-Dist: django-gravatar2 ~=1.4
+Requires-Dist: django-guardian ~=2.3
+Requires-Dist: fits2image >=0.4.2
+Requires-Dist: Markdown ~=3.4
+Requires-Dist: numpy ~=1.20
+Requires-Dist: pillow <11.0,>=9.2
+Requires-Dist: plotly ~=5.0
+Requires-Dist: python-dateutil ~=2.8
+Requires-Dist: requests ~=2.25
+Requires-Dist: specutils ~=1.8
+Provides-Extra: docs
+Requires-Dist: recommonmark ~=0.7 ; extra == 'docs'
+Requires-Dist: sphinx <8,>=4 ; extra == 'docs'
+Requires-Dist: tom-antares ; extra == 'docs'
+Requires-Dist: tom-scimma ; extra == 'docs'
+Provides-Extra: test
+Requires-Dist: factory-boy <3.4.0,>=3.2.1 ; extra == 'test'
+
+# TOM Toolkit
+[![pypi](https://img.shields.io/pypi/v/tomtoolkit.svg)](https://pypi.python.org/pypi/tomtoolkit)
+[![run-tests](https://github.com/TOMToolkit/tom_base/actions/workflows/run-tests.yml/badge.svg)](https://github.com/TOMToolkit/tom_base/actions/workflows/run-tests.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a09d330b4dca4a4a86e68755268b7da3)](https://www.codacy.com/gh/TOMToolkit/tom_base/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=TOMToolkit/tom_base&amp;utm_campaign=Badge_Grade)
+[![Coverage Status](https://coveralls.io/repos/github/TOMToolkit/tom_base/badge.svg?branch=main)](https://coveralls.io/github/TOMToolkit/tom_base?branch=main)
+[![Documentation Status](https://readthedocs.org/projects/tom-toolkit/badge/?version=stable)](https://tom-toolkit.readthedocs.io/en/stable/?badge=stable)
+[![ASCL](https://img.shields.io/badge/ascl-2208.004-blue.svg?colorB=262255)](https://ascl.net/2208.004)
+
+[Documentation](https://tom-toolkit.readthedocs.io/en/latest/)
+![logo](tom_common/static/tom_common/img/logo-color.png)
+
+The TOM Toolkit is a web framework for building TOMs: Target and Observation
+Managers. TOMs are meant to facilitate collaborative astronomical observing
+projects. A typical TOM allows its users to curate target lists, request
+observations of those targets at various observatories as well as manage and
+organize their data. [Read more](https://tom-toolkit.readthedocs.io/en/stable/introduction/about.html) about TOMs.
+
+## Getting started with the TOM Toolkit
+The [getting started guide](https://tom-toolkit.readthedocs.io/en/latest/introduction/getting_started.html)
+will guide you through the process of setting up a TOM for the first time.
+
+## Reporting issues/feature requests
+Please use the [issue tracker](https://github.com/TOMToolkit/tom_base/issues) to
+report any issues or support questions.
+
+## Contributing to the project
+If you'd like to contribute to the TOM Toolkit, first of all, thanks! Secondly, we
+have a [contribution guide](https://tom-toolkit.readthedocs.io/en/stable/introduction/contributing.html) that
+you might find helpful. We are particularly interested in the contribution of
+observation and alert modules.
+
+## Developer information
+For development information targeted at the maintainers of the project, please see [README-dev.md](README-dev.md).
+
+
+## Plugins
+
+### tom_alerts_dash
+
+The [tom_alerts_dash](https://github.com/TOMToolkit/tom_alerts_dash) plugin adds responsive ReactJS views to the
+`tom_alerts` module for supported brokers.
+
+### Antares
+
+The [tom-antares](https://github.com/TOMToolkit/tom_antares) plugin adds support
+for querying the Antares broker for targets of interest.
+
+### tom_nonsidereal_airmass
+
+The [tom_nonsidereal_airmass](https://github.com/TOMToolkit/tom_nonsidereal_airmass) plugin provides a templatetag
+that supports plotting for non-sidereal objects. The plugin is fully supported by the TOM Toolkit team; however,
+non-sidereal visibility calculations require the PyEphem library, which is minimally supported while its successor
+is in development. The library used for the TOM Toolkit sidereal visibility, astroplan, does not yet support
+non-sidereal visibility calculations.
+
+### tom-lt
+
+This module provides the ability to submit observations to the Liverpool Telescope Phase 2 system. It is in a very alpha
+state, with little error handling and minimal instrument options, but can successfully submit well-formed observation
+requests.
+
+[Github](https://github.com/TOMToolkit/tom_lt)
+
+### tom_registration
+
+The [tom_registration](https://github.com/TOMToolkit/tom_registration) plugin introduces support for two TOM registration
+flows--an open registration, and a registration that requires administrator approval.
