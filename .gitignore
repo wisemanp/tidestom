@@ -1,1 +1,4 @@
 tom_env/
+data/
+*pycache*
+*idea*
