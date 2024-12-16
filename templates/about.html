@@ -1,0 +1,42 @@
+{% extends 'tom_common/base.html' %}
+{% load static targets_extras observation_extras dataproduct_extras tom_common_extras %}
+{% block title %}About{% endblock %}
+{% block content %}
+<body>
+    <header>
+        <h1>4MOST Time Domain Extragalactic Survey (TiDES)</h1>
+    </header>
+    
+    <main>
+        <p class="text-center"><img src="{% static 'tom_common/img/logo-color.png' %}" class="img-fluid mx-auto"></p>
+        <p>The industralisation of transient spectroscopy.</p>
+        <section>
+            <h2>Purpose</h2>
+            <p>The 4MOST Time Domain Extragalactic Survey (TiDES) focuses on studying time-domain astrophysical events, such as supernovae, tidal disruption events (TDEs), and active galactic nuclei (AGN). It aims to provide spectroscopic follow-up observations for transient events detected by wide-field surveys like the LSST.</p>
+        </section>
+        <section>
+            <h2>Science Goals</h2>
+            <ul>
+                <li>Measure redshifts and classify transient sources to understand their nature.</li>
+                <li>Investigate the environments of these events, such as the properties of their host galaxies.</li>
+                <li>Constrain cosmological parameters using supernovae as standard candles and other transient-related methods.</li>
+            </ul>
+        </section>
+        <section>
+            <h2>Integration with Other Surveys</h2>
+            <p>TiDES complements the LSST, which provides photometric observations of millions of transient events, by adding spectroscopic data crucial for detailed analysis. It also works in synergy with other components of 4MOST, like surveys targeting galaxy evolution and large-scale structures.</p>
+        </section>
+        <section>
+            <h2>Observational Strategy</h2>
+            <p>TiDES uses the high multiplexing capability of 4MOST, allowing simultaneous spectroscopy of thousands of objects. The survey includes pre-defined targets and dynamic scheduling to follow up on new transient events.</p>
+        </section>
+        <section>
+            <h2>Timeline and Status</h2>
+            <p>TiDES is part of the planned first 5-year survey phase of 4MOST, expected to begin in the mid-2020s. Its design ensures flexibility to adapt to the discovery of new phenomena as observational capabilities improve.</p>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 4MOST TiDES. All rights reserved.</p>
+    </footer>
+</body>
+{% endblock %}
