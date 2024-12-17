@@ -1,9 +1,11 @@
-from django.views.generic import TemplateView
+#from django.views.generic import TemplateView
+#from django.views.generic.detail import DetailView
 from django_filters.views import FilterView
 from django.utils import timezone
 from guardian.mixins import PermissionListMixin
 from tom_targets.models import Target
 from tom_targets.filters import TargetFilter
+#from tom_common.mixins import Raise403PermissionRequiredMixin
 from datetime import timedelta
 
 
@@ -21,3 +23,5 @@ class LatestView(PermissionListMixin, FilterView):
         last_24_hours = timezone.now() - timedelta(hours=24)
         context['targets'] = Target.objects.filter(created__gte=last_24_hours)
         return context
+   
+   

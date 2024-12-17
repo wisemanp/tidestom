@@ -3,4 +3,4 @@ env
 tom_env/
 data/
 *pycache*
-
+static/plots/

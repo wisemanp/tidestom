@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'tom_common',
     'django_comments',
     'bootstrap4',
+    #'bootstrap5',
+    'django_bootstrap5',
     'crispy_bootstrap4',
     'crispy_forms',
     'rest_framework',
@@ -62,6 +64,7 @@ INSTALLED_APPS = [
     'tom_observations',
     'tom_dataproducts',
     'custom_code',
+    'tidestom'
 ]
 
 SITE_ID = 1

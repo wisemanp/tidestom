@@ -16,8 +16,10 @@ Including another URLconf
 from django.urls import path, include
 from django.views.generic import TemplateView
 from .views import LatestView
+from tom_targets.views import TargetDetailView
 urlpatterns = [
     path('', include('tom_common.urls')),
     path('about/', TemplateView.as_view(template_name='about.html'),name='about'),
-    path('latest/', LatestView.as_view(), name='latest')
+    path('latest/', LatestView.as_view(), name='latest'),
+    path('targets/<int:pk>/', TargetDetailView.as_view(template_name='target_detail.html'), name='target_detail'),
 ]
