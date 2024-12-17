@@ -1,0 +1,13 @@
+{% extends 'tom_common/base.html' %}
+{% block content %}
+<p>
+To know that we know what we know, and to know that we do not know
+what we do not know, that is true knowledge. <br/>
+<strong>Nicolaus Copernicus</strong>
+</p>
+<ul>
+  {% for target in targets %}
+  <li>{{ target.name }}</li>
+  {% endfor %}
+</ul>
+{% endblock %}

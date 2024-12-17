@@ -13,11 +13,11 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
 from django.urls import path, include
-from .views import AboutView
+from .views 
+# from django.views.generic import TemplateView #This bit is from the 'Adding pages to your TOM' w
 
 urlpatterns = [
     path('', include('tom_common.urls')),
-    path('about/', AboutView.as_view(), name='about')
+    path('about/', TemplateView.as_view(template_name='about.html'), name='about')
 ]
