@@ -19,5 +19,5 @@ from .views import AboutView
 
 urlpatterns = [
     path('', include('tom_common.urls')),
-    path('about/', AboutView.as_view(), name='about')
+    # path('about/', AboutView.as_view(), name='about') This line is to add another (static)page designed in about.html in tidestom>templates
 ]
