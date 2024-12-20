@@ -1,0 +1,51 @@
+<h4>Submit Classification</h4>
+<form method="post" action="{% url 'submit_classification' target.id %}">
+  {% csrf_token %}
+  {{ form.tidesclass.label_tag }} {{ form.tidesclass }}
+  <div id="tidesclass_other_field" style="display: none;">
+    {{ form.tidesclass_other.label_tag }} {{ form.tidesclass_other }}
+  </div>
+  {{ form.tidesclass_subclass.label_tag }} {{ form.tidesclass_subclass }}
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var tidesclassField = document.getElementById('id_tidesclass');
+    var tidesclassOtherField = document.getElementById('tidesclass_other_field');
+    var tidesclassSubclassField = document.getElementById('id_tidesclass_subclass');
+
+    function toggleTidesclassOtherField() {
+      if (tidesclassField.value === 'Other') {
+        tidesclassOtherField.style.display = 'block';
+      } else {
+        tidesclassOtherField.style.display = 'none';
+      }
+    }
+
+    function loadSubClassOptions() {
+      var mainClass = tidesclassField.value;
+      fetch(`/api/get_subclasses/?main_class=${mainClass}`)
+        .then(response => response.json())
+        .then(data => {
+          tidesclassSubclassField.innerHTML = '<option value="">---------</option>'; // Add blank option
+          data.forEach(subclass => {
+            var option = document.createElement('option');
+            option.value = subclass.id;
+            option.text = subclass.sub_class;
+            tidesclassSubclassField.add(option);
+          });
+          console.log("Sub-class options loaded:", data);
+        })
+        .catch(error => console.error("Error loading sub-class options:", error));
+    }
+
+    tidesclassField.addEventListener('change', function() {
+      toggleTidesclassOtherField();
+      loadSubClassOptions();
+    });
+
+    toggleTidesclassOtherField(); // Initial check
+    loadSubClassOptions(); // Initial load
+  });
+</script>
