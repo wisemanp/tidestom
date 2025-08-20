@@ -1,10 +1,13 @@
 logs/
-data/
 env
 tom_env/
 data/
 *pycache*
 static/plots/
+.DS_Store
 db*
-*.ipynb_checkpoints/
 *.log
+*.DS_Store*
+*ipynb_checkpoints*
+custom_code/__pycache__/
+tidestom/__pycache__/

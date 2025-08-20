@@ -12,7 +12,7 @@ def tides_target_data(target):
     """
     exclude_fields = ['name', 'classification', 'z_best', 'z_sn', 'z_gal', 'z_source', 'confidence']
     extras = {k['name']: target.extra_fields.get(k['name'], '') for k in settings.EXTRA_FIELDS if not k.get('hidden') and k['name'] not in exclude_fields}
-    print(target.as_dict())  
+    print(target.as_dict())
     return {
         'target': target,
         'extras': extras
@@ -33,3 +33,14 @@ def target_classifications(target):
         'human_classifications': human_classifications,
         'aggregated_human_class': aggregated_human_class,
     }
+    return {'target': target}
+
+@register.inclusion_tag('custom_code/partials/aladin_finderchart.html')
+def aladin_finderchart(target):
+    """
+    Displays Aladin skyview of the given target along with basic finder chart annotations including a compass
+    and a scale bar. The resulting image is downloadable. This templatetag only works for sidereal targets.
+    """
+
+    return {'target': target}
+

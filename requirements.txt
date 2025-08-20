@@ -4,3 +4,4 @@ django-htmx
 pandas
 matplotlib
 psycopg2 # PostgreSQL adapter for Python
+gunicorn>=21.2

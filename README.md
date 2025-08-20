@@ -8,19 +8,6 @@ This repository contains the Tides TOM (Target and Observation Manager) project,
 
 To set up the Tides TOM, follow these steps:
 
-1. Run the setup script:
-    ```bash
-    ./setup.sh
-    ```
-
-Once you have installed the TOM Toolkit and the required dependencies, you can proceed to fork this repository and set up the Tides TOM.
-
----
-
-## Contributing to Development
-
-If you want to contribute to the development of this project, follow these steps:
-
 1. **Fork the repository**:  
    Go to the [Tides TOM GitHub repository](https://github.com/TiDES-4MOST/tidestom.git) and click the "Fork" button in the top-right corner to create your own copy of the repository.
 
@@ -31,32 +18,46 @@ If you want to contribute to the development of this project, follow these steps
     cd tidestom
     ```
 
-3. **Create a new branch**:  
+3. **Run the setup script**:  
+   Set up the virtual environment and install dependencies:
+    ```bash
+    ./setup.sh
+    ```
+
+Once you have installed the TOM Toolkit and the required dependencies, you can proceed to set up and run the Tides TOM.
+
+---
+
+## Contributing to Development
+
+If you want to contribute to the development of this project, follow these steps:
+
+1. **Create a new branch**:  
    Create a branch for your changes:
     ```bash
     git checkout -b <your-branch-name>
     ```
 
-4. **Make your changes**:  
+2. **Make your changes**:  
    Make the necessary changes to the codebase.
 
-5. **Edit .gitignore**:  
-   Make sure that any data/ directories and the database (db.sqlite, or similar) are added to .gitignore so they are not tracked by git.
+3. **Edit `.gitignore`**:  
+   Make sure that any data directories and the database (e.g., `db.sqlite`) are added to `.gitignore` so they are not tracked by Git.
 
-6. **Commit your changes**:  
+4. **Commit your changes**:  
    Stage and commit your changes:
     ```bash
     git add .
     git commit -m "Description of your changes"
     ```
 
-7. **Push your branch**:  
+5. **Push your branch**:  
    Push your branch to your forked repository:
     ```bash
     git push origin <your-branch-name>
     ```
 
-8. **Open a pull request**:  
+6. **Open a pull request**:  
    Go to the original repository on GitHub and open a pull request to merge your changes into the main branch.
 
 
