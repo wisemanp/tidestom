@@ -69,19 +69,19 @@ class MyTargetDetailView(DetailView):
         for submission in submissions:
             print(f"Submission ID: {submission.id}")
             print(f"Target: {submission.target}")
-            print(f"Tidesclass Class: {submission.tidesclass}")
-            print(f"Tidesclass Subclass: {submission.tidesclass_subclass}")
+            print(f"SN Type: {getattr(submission, 'sn_type', None)}")
+            print(f"SN Subtype: {getattr(submission, 'sn_subtype', None)}")
         context['form'] = TidesTargetForm()
 
         # Get all human classification submissions for this target
         submissions = HumanTidesClassSubmission.objects.filter(target=target)
-        # Aggregate the most common classification
+        # Aggregate the most common classification from remote column sn_type
         if submissions.exists():
             print(f"Submissions exist, now trying to count ")  # Debug statement
-            tidesclass_counts = Counter(sub.tidesclass for sub in submissions if sub.tidesclass is not None)
-            print("counted ",tidesclass_counts)
+            tidesclass_counts = Counter(sub.sn_type for sub in submissions if getattr(sub, 'sn_type', None) is not None)
+            print("counted ", tidesclass_counts)
             most_common_class, count = tidesclass_counts.most_common(1)[0]
-            print("counted, here is most common",most_common_class, count )
+            print("counted, here is most common", most_common_class, count)
             context['aggregated_human_class'] = {
                 'most_common_class': most_common_class,
                 'count': count,
@@ -90,24 +90,27 @@ class MyTargetDetailView(DetailView):
         else:
             context['aggregated_human_class'] = None
 
-        # Add all individual submissions to the context
-        context['human_classifications'] = submissions.order_by('-timestamp')
+        # Add all individual submissions to the context (remote column is created, not timestamp)
+        context['human_classifications'] = submissions.order_by('-created')
         return context
 
 class SubmitClassificationView(FormView):
-    
     form_class = TidesTargetForm
 
     def form_valid(self, form):
         target = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
-        # Save the classification as a new submission
+
+        # Map form fields to remote schema fields
+        subclass_obj = form.cleaned_data.get('tidesclass_subclass')
+        sn_subtype = getattr(subclass_obj, 'sub_class', None) if subclass_obj else None
+
         submission = HumanTidesClassSubmission.objects.create(
-            target=target,
-            user=self.request.user,
-            tidesclass=form.cleaned_data['tidesclass'],
-            tidesclass_other=form.cleaned_data['tidesclass_other'],
-            tidesclass_subclass=form.cleaned_data['tidesclass_subclass'],
-            timestamp=now()
+            target=target,                          # FK mapped to db_column='tides_id'
+            person_id=self.request.user.id,         # remote integer column
+            sn_type=form.cleaned_data['tidesclass'],# remote sn_type
+            sn_subtype=sn_subtype,                  # remote sn_subtype (text)
+            comments=form.cleaned_data.get('tidesclass_other') or '',  # map "other" to comments
+            created=now()                           # remote created timestamp
         )
         print(f"Submission saved: {submission}")  # Debug statement
         return redirect('target_detail', pk=self.kwargs['target_id'])
