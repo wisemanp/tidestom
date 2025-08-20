@@ -1,0 +1,19 @@
+{
+  "HydrogenCheckbox": { "x": [4102.9351, 4341.69, 4862.68, 6564.61], "color": "rgb(0,0,255)", "label": "H", "type": "emission" },
+  "HeliumCheckbox2": { "x": [4685.710], "color": "rgb(128,128,0)", "label": "He II", "type": "emission" },
+  "CIIICheckbox": { "x": [1908.734], "color": "rgb(165,42,42)", "label": "C III", "type": "emission" },
+  "CIVCheckbox": { "x": [1548.187, 1550.772], "color": "rgb(0,0,0)", "label": "C IV", "type": "emission" },
+  "NitrogenCheckbox2": { "x": [6549.86, 6585.27], "color": "rgb(0,191,255)", "label": "N II", "type": "emission" },
+  "OICheckbox": { "x": [6302.046], "color": "rgb(220,20,60)", "label": "O I", "type": "emission" },
+  "OIICheckbox": { "x": [3727.092, 3729.875], "color": "rgb(139,0,0)", "label": "O II", "type": "emission" },
+  "OIIICheckbox": { "x": [4364.44, 4960.30, 5008.24], "color": "rgb(255,0,0)", "label": "O III", "type": "emission" },
+  "NeIIICheckbox": { "x": [3869.81], "color": "rgb(124,252,0)", "label": "Ne III", "type": "emission" },
+  "SIICheckbox": { "x": [6718.29, 6732.68], "color": "rgb(218,165,32)", "label": "S II", "type": "emission" },
+
+  "CHCheckboxAbs": { "x": [4300.00], "color": "rgb(31, 31, 43)", "label": "CH", "type": "absorption" },
+  "CICheckboxAbs": { "x": [9061.44, 9088.51, 9111.80], "color": "rgb(165,42,42)", "label": "C I", "type": "absorption" },
+  "CIICheckboxAbs": { "x": [6578.05, 6582.88], "color": "rgb(0,0,0)", "label": "C II", "type": "absorption" },
+  "NaICheckboxAbs": { "x": [5889.95, 5895.92], "color": "rgb(255,140,0)", "label": "Na I", "type": "absorption" },
+  "MgICheckboxAbs": { "x": [5167.33, 5172.68, 5183.60], "color": "rgb(128,128,128)", "label": "Mg I", "type": "absorption" },
+  "CaIICheckboxAbs": { "x": [3933.66, 3968.47], "color": "rgb(128,0,128)", "label": "Ca II", "type": "absorption" }
+}

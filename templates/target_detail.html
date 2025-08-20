@@ -30,26 +30,41 @@ document.addEventListener("DOMContentLoaded", function () {
     const redshiftSlider = document.querySelector("#redshiftSlider");
     const redshiftInput = document.querySelector("#redshiftInput");
 
-    const lines = {
-        "HydrogenCheckbox": { x: [4102.9351, 4341.69, 4862.68, 6564.61], color: "blue" },
-        "HeliumCheckbox2": { x: [4685.710], color: "olive" },
-        "NitrogenCheckbox2": { x: [6549.86, 6585.27], color: "deepskyblue"},
-        "OICheckbox": { x: [6302.046], color: "crimson"},
-        "OIICheckbox": {x: [3727.092, 3729.875], color: "darkred"},
-        "OIIICheckbox": { x: [4364.44, 4960.30, 5008.24], color: "red" },
-        "SIICheckbox": { x: [6718.29, 6732.68], color: "goldenrod"},
-        "NeIIICheckbox": {x: [3869.81], color: "lawngreen"},
-        "CIIICheckbox": {x: [1908.734], color: "brown"},
-        "CIVCheckbox": {x: [1548.187, 1550.772], color: "black"},
-        
-        "CHCheckboxAbs": {x: [4300.00], color: "rgb(31, 31, 43)"},
-        "CICheckboxAbs": {x: [9061.44, 9088.51, 9111.80], color: "brown"},
-        "CIICheckboxAbs": {x: [6578.05, 6582.88], color: "black"},
-        "NaICheckboxAbs": {x: [5889.95, 5895.92], color: "darkorange"},
-        "MgICheckboxAbs": {x: [5167.33, 5172.68, 5183.60], color: "gray"},
-        "CaIICheckboxAbs": {x: [3933.66, 3968.47], color: "purple"},
+    let lines = {};  // placeholder
 
-    };
+    fetch("{% static 'json/line_data.json' %}")
+      .then(response => response.json())
+      .then(data => {
+          lines = data;
+
+          // Separate containers
+          const emissionContainer = document.getElementById("emission-lines");
+          const absorptionContainer = document.getElementById("absorption-lines");
+
+          // Build checkboxes dynamically from the .json file
+          Object.entries(lines).forEach(([id, { color, label, type }]) => {
+              const wrapper = document.createElement("label");
+              wrapper.innerHTML = `
+                  <input type="checkbox" id="${id}">
+                  <span style="color:${color};">${label}</span>
+              `;
+
+              if (type === "emission") {
+                  emissionContainer.appendChild(wrapper);
+              } else {
+                  absorptionContainer.appendChild(wrapper);
+              }
+          });
+
+          // Add event listeners after building checkboxes
+          Object.keys(lines).forEach(id => {
+              const checkbox = document.getElementById(id);
+              if (checkbox) {
+                  checkbox.addEventListener("change", () => updateLines(parseFloat(redshiftSlider.value)));
+              }
+          });
+      });
+
 
     function updateLines(z) {
         const newShapes = Object.entries(lines)
@@ -223,36 +238,16 @@ document.addEventListener("DOMContentLoaded", function () {
       </div>
       <!-- Checkboxes -->
       <div class="checkbox-container spectroscopy-only">
-        <div class="checkbox-group">
-            <h5>Emission Lines</h5>
-            <div class="checkbox-grid">
-                <label><input type="checkbox" id="HydrogenCheckbox"> <span style="color: blue;">H</span></label>
-                <label><input type="checkbox" id="HeliumCheckbox2"> <span style="color:olive">He II</span></label>
-                <label><input type="checkbox" id="CIIICheckbox"> <span style="color:brown">C III</span></label>
-                <label><input type="checkbox" id="CIVCheckbox"> <span style="color:black">C IV</span></label>
-                <label><input type="checkbox" id="NitrogenCheckbox2"> <span style="color:deepskyblue">N II</span></label>
-                <label><input type="checkbox" id="OICheckbox"> <span style="color:firebrick">O I</span></label>
-                <label><input type="checkbox" id="OIICheckbox"> <span style="color:darkred">O II</span></label>
-                <label><input type="checkbox" id="OIIICheckbox"> <span style="color: red;">O III</span></label>
-                <label><input type="checkbox" id="NeIIICheckbox"> <span style="color:lawngreen;">Ne III</span></label>
-                <label><input type="checkbox" id="SIICheckbox"> <span style="color:goldenrod;">S II</span></label>
-            </div>
-        </div>
-    
-        <div class="checkbox-group">
-            <h5>Absorption Lines</h5>
-            <div class="checkbox-grid">
-              <label><input type="checkbox" id="CHCheckboxAbs"> <span style="color:rgb(31, 31, 43)">CH</span></label>
-              <label><input type="checkbox" id="CICheckboxAbs"> <span style="color:brown">C I</span></label>
-              <label><input type="checkbox" id="CIICheckboxAbs"> <span style="color:black">C II</span></label>
-              <label><input type="checkbox" id="NaICheckboxAbs"> <span style="color:darkorange">Na I</span></label>
-              <label><input type="checkbox" id="MgICheckboxAbs"> <span style="color: gray">Mg I</span></label>
-              <label><input type="checkbox" id="CaIICheckboxAbs"> <span style="color:purple">Ca II</span></label>
-            </div>
-        </div>
-    </div>
-    
-      
+          <div class="checkbox-group">
+              <h5>Emission Lines</h5>
+              <div class="checkbox-grid" id="emission-lines"></div>
+          </div>
+
+          <div class="checkbox-group">
+              <h5>Absorption Lines</h5>
+              <div class="checkbox-grid" id="absorption-lines"></div>
+          </div>
+      </div>
       
       {% comments_enabled as comments_are_enabled %}
       <hr/>
