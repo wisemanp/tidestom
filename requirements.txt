@@ -3,3 +3,4 @@ django-bootstrap5
 django-htmx
 pandas
 matplotlib
+gunicorn>=21.2
