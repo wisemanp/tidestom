@@ -128,10 +128,10 @@ DATABASES = {
         },
     'tides_db':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tides_db',  # Main database
-        'USER': 'pwise',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'NAME': 'tidestom',  # Main database
+        'USER': 'cf5g09',
+        'PASSWORD': 'titanic2018',
+        'HOST': 'cannon.phys.soton.ac.uk',
         'PORT': '5432',
     },
 
