@@ -130,7 +130,7 @@ DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'tidestom',  # Main database
-        'USER': 'cf5g09',
+        'USER': 'postgres',
         'PASSWORD': DB_PASS,
         'HOST': 'cannon.phys.soton.ac.uk',
         'PORT': '5432',
