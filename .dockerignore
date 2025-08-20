@@ -5,3 +5,4 @@ __pycache__
 .env
 .git
 .DS_store
+/static/plots/*
