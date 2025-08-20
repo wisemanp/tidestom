@@ -119,15 +119,15 @@ DATABASES = {
     #    'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     #}
          #USE THESE WHEN DOING A DUMP FOR SETTING UP THE FULL TIDES DB
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'test_postgres',
-        'USER': 'pwise',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '5432',
-        },
-    'tides_db':{
+    #'default': {
+    #    'ENGINE': 'django.db.backends.postgresql',
+    #    'NAME': 'test_postgres',
+    #    'USER': 'pwise',
+    #    'PASSWORD': '',
+    #    'HOST': 'localhost',
+    #    'PORT': '5432',
+    #   },
+    'default':{
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'tidestom',  # Main database
         'USER': 'cf5g09',
@@ -137,7 +137,7 @@ DATABASES = {
     },
 
 }
-DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
+#DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
