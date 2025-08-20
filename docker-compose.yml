@@ -6,6 +6,7 @@ services:
       - "8000:8000"
     environment:
       TIDES_TEST_DIR: ${TIDES_TEST_DIR}
+      BD_PASS: ${DB_PASS}
       # Remote PostgreSQL database connection
       DATABASE_URL: postgres://cf5g09:titanic2018@cannon.phys.soton.ac.uk/tidestom
 

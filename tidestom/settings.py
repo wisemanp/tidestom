@@ -18,6 +18,7 @@ import tempfile
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+DB_PASS = os.environ.get('DB_PASS')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -130,7 +131,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'tidestom',  # Main database
         'USER': 'cf5g09',
-        'PASSWORD': 'titanic2018',
+        'PASSWORD': DB_PASS,
         'HOST': 'cannon.phys.soton.ac.uk',
         'PORT': '5432',
     },
