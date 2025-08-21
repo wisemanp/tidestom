@@ -1,49 +1,59 @@
 from plotly import offline
 import plotly.graph_objs as go
+from datetime import datetime
 from django import template
-from custom_code.models import TidesSpec
-import numpy as np
+from django.conf import settings
 
+from pathlib import Path
 from astropy.io import fits
+from astropy import units as u
+from specutils import Spectrum1D
+
+from custom_code.models import TidesSpec
 
 register = template.Library()
 
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
-def target_spectroscopy(context, target):
+def target_spectroscopy(context, target, dataproduct=None):
     """
-    Renders a spectroscopic plot for a ``Target`` using the spectrum filepath from the tides_spec table.
+    Render a spectroscopic plot for a Target.
+    Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
     """
-    # Query the tides_spec table for the spectrum filepath
-    try:
-        tides_spec = TidesSpec.objects.get(tides_id=target.tides_id)
-        spectrum_filepath = tides_spec.filepath
-    except TidesSpec.DoesNotExist:
-        return {
-            'target': target,
-            'plot': '<p>No spectrum available for this target.</p>'
-        }
+    # Pick the latest spectrum for this target
+    spec = (
+        TidesSpec.objects
+        .filter(tides=target)
+        .order_by('-obs_date', '-qmost_id')
+        .first()
+    )
+    if not spec:
+        return {'target': target, 'plot': '<p>No spectrum available for this target.</p>'}
 
-    # Load the spectrum data from the filepath
+    # Resolve file path (use stored path; fallback to symlink convention if missing)
+    p = Path(spec.filepath)
+    if not p.exists():
+        candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
+        if candidate.exists():
+            p = candidate
+
     try:
-        if spectrum_filepath.endswith(['.txt', '.spec','.csv','.dat']):
-            # Load text file
-            spectrum_data = np.loadtxt(spectrum_filepath, delimiter=',')  # Assuming CSV format
-            wavelength = spectrum_data[:, 0]  # First column: Wavelength
-            flux = spectrum_data[:, 1]  # Second column: Flux
-        elif spectrum_filepath.endswith('.fits'):
-            spectrum_data = fits.getdata(spectrum_filepath)  # Assuming FITS format
-            wavelength = spectrum_data['WAVE']  # Assuming 'WAVE' is the column name for wavelength
-            flux = spectrum_data['FLUX']  # Assuming 'FLUX' is the column name for flux
+        data = fits.getdata(str(p))
+        wave = data['WAVE'][0] * u.Angstrom
+        flux = data['FLUX'][0] * u.Unit('erg cm-2 s-1 AA-1')
+        spectrum = Spectrum1D(flux=flux, spectral_axis=wave)
+
+        plot_data = [
+            go.Scatter(
+                x=spectrum.spectral_axis.value,
+                y=spectrum.flux.value,
+                name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
+                      else datetime.now().strftime('%Y%m%d-%H:%M:%S'))
+            )
+        ]
     except Exception as e:
-        return {
-            'target': target,
-            'plot': f'<p>Failed to load spectrum: {e}</p>'
-        }
+        return {'target': target, 'plot': f'<p>Failed to load spectrum: {e}</p>'}
 
-    # Create the plot
-    plot_data = [go.Scatter(x=wavelength, y=flux, name='Spectrum')]
     fig = go.Figure(data=plot_data)
-
     fig.update_layout(
         autosize=True,
         xaxis_title='Observed Wavelength [Å]',
@@ -57,12 +67,6 @@ def target_spectroscopy(context, target):
         'target': target,
         'plot': offline.plot(fig, output_type='div', show_link=False)
     }
-
-
-
-
-
-
 
 ###### Below is an example from the TOM Documentation
 # @register.inclusion_tag('myplots/targets_reduceddata.html')
