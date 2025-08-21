@@ -81,21 +81,46 @@ class Command(BaseCommand):
         Ensure a tides_spec row exists for this target+file.
         We use the DataProduct PK as qmost_id for a stable BIGINT key.
         """
-        dp = DataProduct.objects.filter(target=target, data=spectrum_file_path).order_by('-id').first()
+        # Try both the original file path and the symlinked storage path used by add_spectrum_to_database
+        original = Path(spectrum_file_path)
+        symlinked = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / original.name
+
+        dp = (
+            DataProduct.objects.filter(target=target, data__in=[str(original), str(symlinked)])
+            .order_by('-id')
+            .first()
+        )
+        if not dp:
+            # Fallback: latest spectroscopy DP for this target
+            dp = (
+                DataProduct.objects.filter(target=target, data_product_type='spectroscopy')
+                .order_by('-id')
+                .first()
+            )
         if not dp:
             print(f"WARNING: No DataProduct found for target {target.name} and file {spectrum_file_path}")
             return
+
+        # Do not insert if a tides_spec already exists for this DataProduct (qmost_id)
+        existing_qs = TidesSpec.objects.filter(qmost_id=dp.id)
+        if existing_qs.exists():
+            count = existing_qs.count()
+            if count > 1:
+                print(f"WARNING: Found {count} tides_spec rows with qmost_id={dp.id} for target {target.name}. "
+                      f"Skipping insert to avoid further duplicates.")
+            else:
+                print(f"tides_spec already exists for qmost_id={dp.id}; skipping insert.")
+            return
+
         defaults = {
             'tides': target,
-            'filepath': spectrum_file_path,
-            'obs_date': now(),   # replace with header time if you have it
-            'obs_mjd': None,     # replace if you can compute MJD
+            'filepath': dp.data,    # store the exact path saved on the DP
+            'obs_date': now(),      # replace with header time if available
+            'obs_mjd': None,
         }
-        spec, created = TidesSpec.objects.update_or_create(qmost_id=dp.id, defaults=defaults)
-        if created:
-            print(f"Inserted tides_spec row qmost_id={dp.id} for target {target.name}")
-        else:
-            print(f"Updated tides_spec row qmost_id={dp.id} for target {target.name}")
+        # Create only if not present
+        TidesSpec.objects.create(qmost_id=dp.id, **defaults)
+        print(f"Inserted tides_spec row qmost_id={dp.id} for target {target.name}")
 
     def add_spectra_from_mock_db(self):
         test_data_dir = Path(settings.BASE_DIR) / 'data/spectra/test'
@@ -114,9 +139,11 @@ class Command(BaseCommand):
             )
 
             if os.path.exists(spectrum_file_path):
-                # Check if the spectrum already exists in the database
+                # Check if the spectrum already exists in the database (original OR symlinked path)
+                original = Path(spectrum_file_path)
+                symlinked = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / original.name
                 spectrum_exists = DataProduct.objects.filter(
-                    target=target, data=spectrum_file_path
+                    target=target, data__in=[str(original), str(symlinked)]
                 ).exists()
 
                 if not spectrum_exists:
@@ -177,9 +204,11 @@ class Command(BaseCommand):
                 print(f'WARNING: Spectrum file {spectrum_file_path} not found for target {obj_name}.')
                 continue
 
-            # Check if the spectrum already exists in the database
+            # Check if the spectrum already exists in the database (original OR symlinked path)
+            original = Path(spectrum_file_path)
+            symlinked = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / original.name
             spectrum_exists = DataProduct.objects.filter(
-                target=target, data=spectrum_file_path
+                target=target, data__in=[str(original), str(symlinked)]
             ).exists()
             if not spectrum_exists:
                 generate_spectrum_plot(target, spectrum_file_path)

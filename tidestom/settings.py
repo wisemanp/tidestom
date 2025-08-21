@@ -201,7 +201,7 @@ LOGGING = {
     'loggers': {
         'django.db.backends': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # Log all SQL queries
+            'level': 'INFO',  # Log all SQL queries
         },
     },
 }

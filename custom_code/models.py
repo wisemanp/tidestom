@@ -58,6 +58,11 @@ class TidesTarget(TomTarget):
         db_table = 'tides_cand'
         verbose_name = 'target'
 
+    # Provide an integer tides_id like your old code expects
+    @property
+    def tides_id(self):
+        return self.pk
+
     @property
     def human_tidesclass(self):
         rec = self.human_classifications.order_by('-created').only('sn_type').first()
@@ -127,10 +132,10 @@ class HumanClassification(models.Model):
         related_name='human_classifications',
         db_column='tides_id',
     )
-    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
-
+    user = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, db_column='person_id'
+    )
     obs_id = models.IntegerField(null=True, blank=True)
-    person_id = models.IntegerField(null=True, blank=True)
     sn_type = models.CharField(max_length=50)
     sn_z = models.FloatField(null=True, blank=True)
     sn_subtype = models.CharField(max_length=50, null=True, blank=True)

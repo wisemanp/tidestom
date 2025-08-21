@@ -29,26 +29,22 @@ class LatestView(ListView):
     context_object_name = 'targets'
 
     def get_queryset(self):
-        # Default range: last 30 days
-        days_range = self.request.GET.get('days_range', 30)
-        date_threshold = now() - timedelta(days=int(days_range))
-
-        # Query tides_spec for objects observed within the range
+        days_range = int(self.request.GET.get('days_range', 30))
+        date_threshold = now() - timedelta(days=days_range)
         return TidesSpec.objects.filter(obs_date__gte=date_threshold).order_by('-obs_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['default_days_range'] = self.request.GET.get('days_range', 30)
 
-        # Get matching TidesTarget objects by tides_id (pk)
-        tides_ids = [getattr(spec, 'tides_id', None) or getattr(spec, 'tides_target_id', None)
-                     for spec in context['targets']]
-        tides_ids = [tid for tid in tides_ids if tid is not None]
+        specs = context[self.context_object_name]
+        # Collect tides_ids from TidesSpec (Django exposes <fk>_id)
+        tides_ids = [s.tides_id for s in specs if getattr(s, 'tides_id', None) is not None]
         target_map = {t.pk: t for t in TidesTarget.objects.filter(pk__in=tides_ids)}
-        # Attach the corresponding TidesTarget to each TidesSpec
-        for spec in context['targets']:
-            tid = getattr(spec, 'tides_id', None) or getattr(spec, 'tides_target_id', None)
-            spec.target = target_map.get(tid)
+
+        # Attach the corresponding TidesTarget to each spec as .target
+        for s in specs:
+            s.target = target_map.get(getattr(s, 'tides_id', None))
 
         return context
 
