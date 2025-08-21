@@ -115,22 +115,22 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 
 DATABASES = {
     #DB contection rules for remote cannon DB
-    #'default':{
-    #    'ENGINE': 'django.db.backends.postgresql',
-    #    'NAME': 'tidestom',  # Main database
-    #    'USER': 'postgres',
-    #    'PASSWORD': DB_PASS,
-    #    'HOST': 'cannon.phys.soton.ac.uk',
-    #    'PORT': '5432',
-    #},
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tides_db',  # Main database
-        'USER': 'pwise',
-        'PASSWORD':'',
-        'HOST': 'localhost',
+        'NAME': 'tidestom',  # Main database
+        'USER': 'postgres',
+        'PASSWORD': DB_PASS,
+        'HOST': 'cannon.phys.soton.ac.uk',
         'PORT': '5432',
     }
+    #'default':{
+    #    'ENGINE': 'django.db.backends.postgresql',
+    #    'NAME': 'tides_db',  # Main database
+    #    'USER': 'pwise',
+    #    'PASSWORD':'',
+    #    'HOST': 'localhost',
+    #    'PORT': '5432',
+    #}
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
 
