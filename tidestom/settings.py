@@ -181,7 +181,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, '_static')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
                     os.path.join(TEST_DIR, 'sims'),]
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
-              
 MEDIA_URL = '/data/'
 
 LOGGING = {
