@@ -5,23 +5,36 @@ from tom_targets.models import Target as TomTarget
 User = get_user_model()
 
 class TidesClass(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
 
+    class Meta:
+        managed = False
+        db_table = 'tides_class'
+        ordering = ['name']
+
+
 class TidesClassSubClass(models.Model):
-    main_class = models.ForeignKey(TidesClass, on_delete=models.CASCADE, related_name='sub_classes')
+    main_class = models.ForeignKey(
+        TidesClass, on_delete=models.CASCADE, related_name='sub_classes'
+    )
     sub_class = models.CharField(max_length=100)
 
     def __str__(self):
         return f"{self.main_class.name} - {self.sub_class}"
 
+    class Meta:
+        managed = False
+        db_table = 'tides_class_subclass'
+        unique_together = (('main_class', 'sub_class'),)
+        ordering = ['main_class_id', 'sub_class']
+
 # ----------------------------
 # Main Target row in tides_cand
 # ----------------------------
 class TidesTarget(TomTarget):
-    # Parent PK stored in tides_cand.tides_id
     target_ptr = models.OneToOneField(
         TomTarget,
         on_delete=models.CASCADE,
@@ -30,11 +43,10 @@ class TidesTarget(TomTarget):
         primary_key=True,
     )
 
-    # Columns that actually exist in tides_cand
     lsst_sn_id = models.BigIntegerField(unique=True, null=True, blank=True)
     lsst_host_id = models.BigIntegerField(null=True, blank=True)
     last_date = models.DateTimeField(null=True, blank=True)
-    classification = models.CharField(max_length=50, null=True, blank=True)  # optional/legacy
+    classification = models.CharField(max_length=50, null=True, blank=True)
     z_best = models.FloatField(null=True, blank=True)
     z_sn = models.FloatField(null=True, blank=True)
     z_gal = models.FloatField(null=True, blank=True)
@@ -45,8 +57,6 @@ class TidesTarget(TomTarget):
         managed = False
         db_table = 'tides_cand'
         verbose_name = 'target'
-
-    # ---- Classification helpers (computed, not stored in tides_cand) ----
 
     @property
     def human_tidesclass(self):
@@ -74,7 +84,6 @@ class TidesTarget(TomTarget):
 
     @property
     def auto_tidesclass(self):
-        # Prefer global; else pick best across pipelines
         g = self.pipeline_classifications_global.order_by('-probability').only('sn_type').first()
         if g:
             return g.sn_type
@@ -117,9 +126,7 @@ class HumanClassification(models.Model):
         on_delete=models.CASCADE,
         related_name='human_classifications',
         db_column='tides_id',
-        to_field='pk',
     )
-    # Optional link to Django user if you want it; otherwise drop this FK/column
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
 
     obs_id = models.IntegerField(null=True, blank=True)
@@ -128,7 +135,7 @@ class HumanClassification(models.Model):
     sn_z = models.FloatField(null=True, blank=True)
     sn_subtype = models.CharField(max_length=50, null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
-    created = models.DateTimeField()  # remote default NOW(); leave null=False
+    created = models.DateTimeField()
 
     class Meta:
         managed = False
@@ -143,7 +150,7 @@ class PipelineClassificationGlobal(models.Model):
     tides = models.ForeignKey(
         TidesTarget, on_delete=models.CASCADE,
         related_name='pipeline_classifications_global',
-        db_column='tides_id', to_field='pk'
+        db_column='tides_id'
     )
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
@@ -160,7 +167,7 @@ class PipelineClassificationSuperfit(models.Model):
     tides = models.ForeignKey(
         TidesTarget, on_delete=models.CASCADE,
         related_name='pipeline_classifications_superfit',
-        db_column='tides_id', to_field='pk'
+        db_column='tides_id'
     )
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
@@ -169,14 +176,14 @@ class PipelineClassificationSuperfit(models.Model):
     class Meta:
         managed = False
         db_table = 'pipeline_classification_superfit'
-        ordering = ['-probability'
+        ordering = ['-probability']
 
 
 class PipelineClassificationSnid(models.Model):
     tides = models.ForeignKey(
         TidesTarget, on_delete=models.CASCADE,
         related_name='pipeline_classifications_snid',
-        db_column='tides_id', to_field='pk'
+        db_column='tides_id'
     )
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
@@ -192,7 +199,7 @@ class PipelineClassificationDash(models.Model):
     tides = models.ForeignKey(
         TidesTarget, on_delete=models.CASCADE,
         related_name='pipeline_classifications_dash',
-        db_column='tides_id', to_field='pk'
+        db_column='tides_id'
     )
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
@@ -208,7 +215,7 @@ class PipelineClassificationEd(models.Model):
     tides = models.ForeignKey(
         TidesTarget, on_delete=models.CASCADE,
         related_name='pipeline_classifications_ed',
-        db_column='tides_id', to_field='pk'
+        db_column='tides_id'
     )
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
@@ -218,3 +225,30 @@ class PipelineClassificationEd(models.Model):
         managed = False
         db_table = 'pipeline_classification_ed'
         ordering = ['-probability']
+
+
+# ----------------------------
+# Spectra (remote)
+# ----------------------------
+class TidesSpec(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget,
+        db_column='tides_id',
+        on_delete=models.CASCADE,
+        related_name='spectra'
+    )
+    qmost_id = models.BigIntegerField(primary_key=True)
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    obs_date = models.DateTimeField(null=True, blank=True)
+    obs_mjd = models.FloatField(null=True, blank=True)
+    snr = models.FloatField(null=True, blank=True)
+    seeing = models.FloatField(null=True, blank=True)
+    sky_brightness = models.FloatField(null=True, blank=True)
+    filepath = models.TextField(null=True, blank=True)
+    version = models.IntegerField(null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tides_spec'
+        ordering = ['-obs_date']

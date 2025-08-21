@@ -11,14 +11,13 @@ from tom_targets.models import Target
 from tom_dataproducts.models import DataProduct
 from datetime import timedelta
 from collections import Counter
-from custom_code.models import MirroredTidesTarget,  HumanClassification, PipelineClassificationGlobal  
+from custom_code.models import TidesTarget, HumanClassification, PipelineClassificationGlobal, TidesSpec
 from custom_code.forms import TidesTargetForm
 import psycopg2
 from django.conf import settings
 from django.db import transaction
 from django.views.generic.list import ListView
 from django.utils.timezone import now
-from custom_code.models import TidesSpec
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,54 +40,48 @@ class LatestView(ListView):
         context = super().get_context_data(**kwargs)
         context['default_days_range'] = self.request.GET.get('days_range', 30)
 
-        # Get matching MirroredTidesTarget objects by tides_id
-        tides_ids = [spec.tides_id for spec in context['targets']]
-        target_map = {
-            t.tides_id: t for t in MirroredTidesTarget.objects.filter(tides_id__in=tides_ids)
-        }
-
-        # Attach the corresponding MirroredTidesTarget to each TidesSpec
+        # Get matching TidesTarget objects by tides_id (pk)
+        tides_ids = [getattr(spec, 'tides_id', None) or getattr(spec, 'tides_target_id', None)
+                     for spec in context['targets']]
+        tides_ids = [tid for tid in tides_ids if tid is not None]
+        target_map = {t.pk: t for t in TidesTarget.objects.filter(pk__in=tides_ids)}
+        # Attach the corresponding TidesTarget to each TidesSpec
         for spec in context['targets']:
-            spec.mirrored_target = target_map.get(spec.tides_id)
+            tid = getattr(spec, 'tides_id', None) or getattr(spec, 'tides_target_id', None)
+            spec.target = target_map.get(tid)
 
         return context
 
 class MyTargetDetailView(DetailView):
-    model = MirroredTidesTarget
+    model = TidesTarget
     template_name = 'target_detail.html'
     context_object_name = 'target'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         target = self.get_object()
-        submissions = HumanTidesClassSubmission.objects.filter(target=target)
-        print(f"Submissions retrieved: {submissions}")  # Debug statement
-        # Debug each submission
-        for submission in submissions:
-            print(f"Submission ID: {submission.id}")
-            print(f"Target: {submission.target}")
-            print(f"SN Type: {getattr(submission, 'sn_type', None)}")
-            print(f"SN Subtype: {getattr(submission, 'sn_subtype', None)}")
+        # Use remote-backed HumanClassification (FK: tides or tides_id)
+        submissions = HumanClassification.objects.filter(tides_id=target.pk)
+
         context['form'] = TidesTargetForm()
 
-        # Get all human classification submissions for this target
-        submissions = HumanTidesClassSubmission.objects.filter(target=target)
-        # Aggregate the most common classification from remote column sn_type
+        # Aggregate the most common classification from sn_type
         if submissions.exists():
-            print(f"Submissions exist, now trying to count ")  # Debug statement
-            tidesclass_counts = Counter(sub.sn_type for sub in submissions if getattr(sub, 'sn_type', None) is not None)
-            print("counted ", tidesclass_counts)
-            most_common_class, count = tidesclass_counts.most_common(1)[0]
-            print("counted, here is most common", most_common_class, count)
+            aggregated = (
+                submissions.values('sn_type')
+                .annotate(count=models.Count('id'))
+                .order_by('-count')
+                .first()
+            )
             context['aggregated_human_class'] = {
-                'most_common_class': most_common_class,
-                'count': count,
+                'most_common_class': aggregated['sn_type'],
+                'count': aggregated['count'],
                 'total_submissions': submissions.count(),
             }
         else:
             context['aggregated_human_class'] = None
 
-        # Add all individual submissions to the context (remote column is created, not timestamp)
+        # Individual submissions (ordered by remote 'created' column)
         context['human_classifications'] = submissions.order_by('-created')
         return context
 
@@ -102,15 +95,14 @@ class SubmitClassificationView(FormView):
         subclass_obj = form.cleaned_data.get('tidesclass_subclass')
         sn_subtype = getattr(subclass_obj, 'sub_class', None) if subclass_obj else None
 
-        submission = HumanTidesClassSubmission.objects.create(
-            target=target,                          # FK mapped to db_column='tides_id'
+        submission = HumanClassification.objects.create(
+            tides=target,                           # FK mapped to db_column='tides_id'
             person_id=self.request.user.id,         # remote integer column
             sn_type=form.cleaned_data['tidesclass'],# remote sn_type
             sn_subtype=sn_subtype,                  # remote sn_subtype (text)
             comments=form.cleaned_data.get('tidesclass_other') or '',  # map "other" to comments
             created=now()                           # remote created timestamp
         )
-        print(f"Submission saved: {submission}")  # Debug statement
         return redirect('target_detail', pk=self.kwargs['target_id'])
 
     def get_context_data(self, **kwargs):

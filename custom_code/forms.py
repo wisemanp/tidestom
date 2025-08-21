@@ -1,4 +1,6 @@
 from django import forms
+from django.db import DatabaseError
+from .models import TidesClass, TidesClassSubClass, TidesTarget
 
 class TidesTargetForm(forms.Form):
     tidesclass = forms.ChoiceField(label='TiDES Classification')
@@ -16,7 +18,10 @@ class TidesTargetForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         # Populate main class choices from DB; fallback to static choices on the model if DB is empty
-        db_choices = list(TidesClass.objects.order_by('name').values_list('name', 'name'))
+        try:
+            db_choices = list(TidesClass.objects.order_by('name').values_list('name', 'name'))
+        except DatabaseError:
+            db_choices = []
         fallback = getattr(TidesTarget, 'TIDES_CLASS_CHOICES', [])
         self.fields['tidesclass'].choices = db_choices if db_choices else fallback
 
@@ -31,7 +36,7 @@ class TidesTargetForm(forms.Form):
             try:
                 main_class = TidesClass.objects.get(name=main_class_name)
                 self.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.filter(main_class=main_class)
-            except TidesClass.DoesNotExist:
+            except (TidesClass.DoesNotExist, DatabaseError):
                 self.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.none()
 
     def clean(self):
@@ -45,7 +50,7 @@ class TidesTargetForm(forms.Form):
             self.add_error('tidesclass_other', 'This field is required when "Other" is selected.')
 
         # Ensure selected subclass belongs to the selected main class
-        if subclass and tidesclass and subclass.main_class.name != tidesclass:
+        if subclass and tidesclass and getattr(subclass.main_class, 'name', None) != tidesclass:
             self.add_error('tidesclass_subclass', 'Selected sub-class does not belong to the chosen main class.')
 
         return cleaned

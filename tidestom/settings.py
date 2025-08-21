@@ -218,10 +218,9 @@ CACHES = {
 
 # TOM Specific configuration
 TARGET_TYPE = 'SIDEREAL'
-TARGET_MODEL = 'custom_code.models.TidesTarget'
-TOM_TARGET_MODEL = 'custom_code.models.TidesTarget'
+TOM_TARGET_MODEL = 'tom_targets.Target'
 # Set to the full path of a custom target model to extend the BaseTarget Model with custom fields.
-TARGET_MODEL_CLASS = 'custom_code.models.TidesTarget'
+
 
 # Define MATCH_MANAGERS here. This is a dictionary that contains a dotted module path to the desired match manager
 # for a given model.

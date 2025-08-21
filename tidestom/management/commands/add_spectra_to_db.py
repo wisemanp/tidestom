@@ -1,26 +1,18 @@
 import os
-import logging
 import pandas as pd
 from datetime import datetime
-from pathlib import Path  # Import pathlib
+from pathlib import Path
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from custom_code.models import TidesTarget as Target
 from custom_code.models import TidesClassSubClass
+from custom_code.models import TidesSpec
+from custom_code.models import PipelineClassificationGlobal
 from tom_dataproducts.models import DataProduct
+from django.utils.timezone import now
 from tidestom.tides_utils.target_utils import (
     generate_spectrum_plot, add_spectrum_to_database
-)
-
-# Configure logging
-logging.basicConfig(
-    filename=(
-        '/Users/pwise/4MOST/tides/tidestom/logs'
-        f'/add_spectra_to_db_{datetime.now().strftime("%Y%m%d%H%M%S")}.log'
-    ),  # Replace with your desired logfile path
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
 )
 
 
@@ -29,7 +21,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--mock', action='store_true', 
+            '--mock', action='store_true',
             help=('Add spectra from mock database')
         )
 
@@ -50,17 +42,60 @@ class Command(BaseCommand):
         elif kwargs['pipeline']:
             pipeline_results_path = kwargs['pipeline_results']
             if not pipeline_results_path:
-                logging.error(
-                    "Pipeline results path must be provided when using "
-                    "--pipeline option"
-                )
+                print("ERROR: Pipeline results path must be provided when using --pipeline option")
                 return
             self.add_spectra_from_pipeline(pipeline_results_path)
 
         else:
-            logging.error(
-                "Either --mock or --pipeline option must be specified"
-            )
+            print("ERROR: Either --mock or --pipeline option must be specified")
+
+    def _upsert_auto_classification(self, target, sn_type, sn_subtype, probability, source_version):
+        """
+        Upsert an automatic classification into pipeline_classification_global.
+        target: TidesTarget
+        sn_type: str | None
+        sn_subtype: str | None (stored in notes)
+        probability: float | None
+        source_version: str (e.g., 'mock' or 'pipeline')
+        """
+        if not sn_type and probability is None:
+            return
+        obj, created = PipelineClassificationGlobal.objects.update_or_create(
+            tides=target,
+            version=source_version,
+            defaults={
+                'sn_type': sn_type,
+                'probability': probability,
+                'notes': sn_subtype or '',
+            },
+        )
+        if created:
+            print(f'Inserted auto classification [{source_version}] for target {target.name}: '
+                  f'{sn_type} (p={probability})')
+        else:
+            print(f'Updated auto classification [{source_version}] for target {target.name}: '
+                  f'{sn_type} (p={probability})')
+
+    def _ensure_tides_spec(self, target, spectrum_file_path):
+        """
+        Ensure a tides_spec row exists for this target+file.
+        We use the DataProduct PK as qmost_id for a stable BIGINT key.
+        """
+        dp = DataProduct.objects.filter(target=target, data=spectrum_file_path).order_by('-id').first()
+        if not dp:
+            print(f"WARNING: No DataProduct found for target {target.name} and file {spectrum_file_path}")
+            return
+        defaults = {
+            'tides': target,
+            'filepath': spectrum_file_path,
+            'obs_date': now(),   # replace with header time if you have it
+            'obs_mjd': None,     # replace if you can compute MJD
+        }
+        spec, created = TidesSpec.objects.update_or_create(qmost_id=dp.id, defaults=defaults)
+        if created:
+            print(f"Inserted tides_spec row qmost_id={dp.id} for target {target.name}")
+        else:
+            print(f"Updated tides_spec row qmost_id={dp.id} for target {target.name}")
 
     def add_spectra_from_mock_db(self):
         test_data_dir = Path(settings.BASE_DIR) / 'data/spectra/test'
@@ -68,11 +103,7 @@ class Command(BaseCommand):
         target_csv_path = os.path.join(settings.TEST_DIR, "mock_DB.csv")
 
         if not os.path.exists(target_csv_path):
-            self.stdout.write(
-                self.style.ERROR(
-                    f"Target CSV file not found at {target_csv_path}"
-                )
-            )
+            print(f"ERROR: Target CSV file not found at {target_csv_path}")
             return
 
         dbdf = pd.read_csv(target_csv_path, index_col=0)
@@ -90,72 +121,42 @@ class Command(BaseCommand):
 
                 if not spectrum_exists:
                     generate_spectrum_plot(target, spectrum_file_path)
-                    logging.info(
-                        f'Successfully updated plots for target {target.name}'
-                    )
-                    result = add_spectrum_to_database(
-                        target, spectrum_file_path
-                    )
+                    print(f'Successfully updated plots for target {target.name}')
+                    result = add_spectrum_to_database(target, spectrum_file_path)
                     if 'Error' in result:
-                        logging.error(result)
+                        print(f"ERROR: {result}")
                     else:
-                        logging.info(result)
+                        print(result)
+                    # Ensure a tides_spec row exists for this spectrum
+                    self._ensure_tides_spec(target, spectrum_file_path)
                 else:
-                    logging.warning(
-                        f'Spectrum for target {target.name} already exists in'
-                        ' the database'
-                    )
+                    print(f'WARNING: Spectrum for target {target.name} already exists in the database')
+                    # Even if DataProduct exists already, make sure tides_spec is present
+                    self._ensure_tides_spec(target, spectrum_file_path)
 
                 # Add or update automatic classification
-                logging.info(
-                    f'Checking auto classification for target {target.name}'
-                )
+                print(f'Checking auto classification for target {target.name}')
                 int_name = int(target.name)
                 if int_name in dbdf.index:
-                    logging.info(
-                        f'Found target {target.name} in the mock catalogue.'
-                    )
+                    print(f'Found target {target.name} in the mock catalogue.')
                     auto_class = dbdf.at[int_name, 'AutoClass']
-                    auto_class_subclass = dbdf.at[
-                        int_name, 'AutoClass_SubClass'
-                    ]
+                    auto_class_subclass = dbdf.at[int_name, 'AutoClass_SubClass']
                     auto_class_prob = dbdf.at[int_name, 'AutoClassProb']
 
                     if auto_class:
-                        target.auto_tidesclass = auto_class
-
-                        # Retrieve the TidesClassSubClass instance using the
-                        # correct field
-                        auto_class_subclass_instance = (
-                            TidesClassSubClass.objects
-                            .filter(sub_class=auto_class_subclass).first()
-                        )
-
-                        if auto_class_subclass_instance:
-                            target.auto_tidesclass_subclass = auto_class_subclass_instance
-                        else:
-                            logging.warning(
-                                f"Subclass '{auto_class_subclass}' not found "
-                                f"in TidesClassSubClass for target "
-                                f"{target.name}."
-                            )
-
-                        target.auto_tidesclass_prob = auto_class_prob
-                        target.save()
-                        logging.info(
-                            'Updated auto classification for target '
-                            f'{target.name}.'
+                        # Optional: validate subclass exists
+                        if auto_class_subclass:
+                            exists = TidesClassSubClass.objects.filter(sub_class=auto_class_subclass).exists()
+                            if not exists:
+                                print(f"WARNING: Subclass '{auto_class_subclass}' not found for target {target.name}.")
+                        # Persist to pipeline_classification_global (read by TidesTarget.auto_* properties)
+                        self._upsert_auto_classification(
+                            target, auto_class, auto_class_subclass, auto_class_prob, source_version='mock'
                         )
                     else:
-                        logging.warning(
-                            'No auto classification found for target '
-                            f'{target.name}.'
-                        )
+                        print(f'WARNING: No auto classification found for target {target.name}.')
             else:
-                logging.warning(
-                    f'Spectrum file {spectrum_file_path} not found for target'
-                    f' {target.name}'
-                )
+                print(f'WARNING: Spectrum file {spectrum_file_path} not found for target {target.name}')
 
     def add_spectra_from_pipeline(self, pipeline_results_path):
         pipeline_results = pd.read_csv(pipeline_results_path)
@@ -169,17 +170,11 @@ class Command(BaseCommand):
 
             target = Target.objects.filter(name=obj_name).first()
             if not target:
-                logging.warning(f'Target {obj_name} not found in the database')
+                print(f'WARNING: Target {obj_name} not found in the database')
                 continue
 
-            if (
-                not spectrum_file_path
-                or not os.path.exists(spectrum_file_path)
-            ):
-                logging.warning(
-                    f'Spectrum file {spectrum_file_path} not found for'
-                    f' target {obj_name}.'
-                )
+            if not spectrum_file_path or not os.path.exists(spectrum_file_path):
+                print(f'WARNING: Spectrum file {spectrum_file_path} not found for target {obj_name}.')
                 continue
 
             # Check if the spectrum already exists in the database
@@ -188,48 +183,28 @@ class Command(BaseCommand):
             ).exists()
             if not spectrum_exists:
                 generate_spectrum_plot(target, spectrum_file_path)
-                logging.info(
-                    f'Successfully updated plots for target {target.name}.'
-                )
+                print(f'Successfully updated plots for target {target.name}.')
                 result = add_spectrum_to_database(target, spectrum_file_path)
                 if 'Error' in result:
-                    logging.error(result)
+                    print(f"ERROR: {result}")
                 else:
-                    logging.info(result)
+                    print(result)
+                self._ensure_tides_spec(target, spectrum_file_path)
             else:
-                logging.warning(
-                    f'Spectrum for target {target.name} already exists in the'
-                    ' database.'
-                )
+                print(f'WARNING: Spectrum for target {target.name} already exists in the database.')
+                self._ensure_tides_spec(target, spectrum_file_path)
 
             # Add or update automatic classification
             if auto_class:
-                target.auto_tidesclass = auto_class
-
-                # Retrieve the TidesClassSubClass instance using the correct
-                # field
-                auto_class_subclass_instance = (
-                    TidesClassSubClass
-                    .objects
-                    .filter(sub_class=auto_class_subclass).first()
-                )
-
-                if auto_class_subclass_instance:
-                    target.auto_tidesclass_subclass = (
-                        auto_class_subclass_instance
-                    )
-                else:
-                    logging.warning(
-                        f"Subclass '{auto_class_subclass}' not found in"
-                        f" TidesClassSubClass for target {target.name}."
-                    )
-
-                target.auto_tidesclass_prob = auto_class_prob
-                target.save()
-                logging.info(
-                    f'Updated auto classification for target {target.name}'
+                if auto_class_subclass:
+                    exists = TidesClassSubClass.objects.filter(sub_class=auto_class_subclass).exists()
+                    if not exists:
+                        print(
+                            f"WARNING: Subclass '{auto_class_subclass}' not found in TidesClassSubClass "
+                            f"for target {target.name}."
+                        )
+                self._upsert_auto_classification(
+                    target, auto_class, auto_class_subclass, auto_class_prob, source_version='pipeline'
                 )
             else:
-                logging.warning(
-                    f'No auto classification found for target {target.name}'
-                )
+                print(f'WARNING: No auto classification found for target {target.name}')
