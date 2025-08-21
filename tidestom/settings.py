@@ -123,7 +123,6 @@ DATABASES = {
         'HOST': 'cannon.phys.soton.ac.uk',
         'PORT': '5432',
     },
-
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
 

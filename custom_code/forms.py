@@ -1,18 +1,51 @@
 from django import forms
 
 class TidesTargetForm(forms.Form):
-    humanclass = forms.CharField(max_length=50, required=True, label="Supernova Type")
-    humanclass_other = forms.FloatField(required=False, label="Redshift")
-    humanclass_subclass = forms.CharField(max_length=100, required=False, label="Subtype")
-    comments = forms.CharField(widget=forms.Textarea, required=False, label="Comments")
+    tidesclass = forms.ChoiceField(label='TiDES Classification')
+    tidesclass_other = forms.CharField(
+        label='TiDES Classification (Other)',
+        required=False
+    )
+    tidesclass_subclass = forms.ModelChoiceField(
+        label='TiDES Sub-classification',
+        queryset=TidesClassSubClass.objects.none(),
+        required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Populate main class choices from DB; fallback to static choices on the model if DB is empty
+        db_choices = list(TidesClass.objects.order_by('name').values_list('name', 'name'))
+        fallback = getattr(TidesTarget, 'TIDES_CLASS_CHOICES', [])
+        self.fields['tidesclass'].choices = db_choices if db_choices else fallback
+
+        # Dynamically filter subclasses based on selected main class
+        main_class_name = None
+        if 'tidesclass' in self.data:
+            main_class_name = self.data.get('tidesclass')
+        elif self.initial.get('tidesclass'):
+            main_class_name = self.initial.get('tidesclass')
+
+        if main_class_name:
+            try:
+                main_class = TidesClass.objects.get(name=main_class_name)
+                self.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.filter(main_class=main_class)
+            except TidesClass.DoesNotExist:
+                self.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.none()
 
     def clean(self):
-        cleaned_data = super().clean()
-        humanclass = cleaned_data.get('humanclass')
-        humanclass_other = cleaned_data.get('humanclass_other')
+        cleaned = super().clean()
+        tidesclass = cleaned.get('tidesclass')
+        tidesclass_other = cleaned.get('tidesclass_other')
+        subclass = cleaned.get('tidesclass_subclass')
 
-        # Validate that 'humanclass_other' is required when 'humanclass' is "Other"
-        if humanclass == 'Other' and not humanclass_other:
-            self.add_error('humanclass_other', 'This field is required when "Other" is selected.')
+        # Require "other" text if main class is Other
+        if tidesclass == 'Other' and not tidesclass_other:
+            self.add_error('tidesclass_other', 'This field is required when "Other" is selected.')
 
-        return cleaned_data
+        # Ensure selected subclass belongs to the selected main class
+        if subclass and tidesclass and subclass.main_class.name != tidesclass:
+            self.add_error('tidesclass_subclass', 'Selected sub-class does not belong to the chosen main class.')
+
+        return cleaned

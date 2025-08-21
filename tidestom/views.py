@@ -61,64 +61,56 @@ class MyTargetDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         target = self.get_object()
-        logger.info(f"Target tides_id: {target.tides_id}")
-        # Log the target object
-        logger.info(f"Target object: {target}")
+        submissions = HumanTidesClassSubmission.objects.filter(target=target)
+        print(f"Submissions retrieved: {submissions}")  # Debug statement
+        # Debug each submission
+        for submission in submissions:
+            print(f"Submission ID: {submission.id}")
+            print(f"Target: {submission.target}")
+            print(f"SN Type: {getattr(submission, 'sn_type', None)}")
+            print(f"SN Subtype: {getattr(submission, 'sn_subtype', None)}")
+        context['form'] = TidesTargetForm()
 
-        # Query human classifications for this target
-        submissions = HumanClassification.objects.filter(tides_id=target.tides_id)
-
-        # Aggregate the most common classification
+        # Get all human classification submissions for this target
+        submissions = HumanTidesClassSubmission.objects.filter(target=target)
+        # Aggregate the most common classification from remote column sn_type
         if submissions.exists():
-            aggregation = HumanClassification.aggregate_human_tidesclass(target.tides_id)
-            context['aggregated_human_class'] = aggregation
+            print(f"Submissions exist, now trying to count ")  # Debug statement
+            tidesclass_counts = Counter(sub.sn_type for sub in submissions if getattr(sub, 'sn_type', None) is not None)
+            print("counted ", tidesclass_counts)
+            most_common_class, count = tidesclass_counts.most_common(1)[0]
+            print("counted, here is most common", most_common_class, count)
+            context['aggregated_human_class'] = {
+                'most_common_class': most_common_class,
+                'count': count,
+                'total_submissions': submissions.count(),
+            }
         else:
             context['aggregated_human_class'] = None
 
-        # Add all individual submissions to the context
+        # Add all individual submissions to the context (remote column is created, not timestamp)
         context['human_classifications'] = submissions.order_by('-created')
-
-        # Query auto-classifications for this target
-        try:
-            auto_classifications = PipelineClassificationGlobal.objects.filter(
-                tides_target__tides_id=target.tides_id  # Correctly traverse the foreign key
-            ).order_by('-probability')
-            logger.info(f"Auto-classifications query successful: {auto_classifications}")
-        except Exception as e:
-            logger.error(f"Error querying auto-classifications: {e}")
-            auto_classifications = []
-
-        context['auto_classifications'] = auto_classifications
-
         return context
 
 class SubmitClassificationView(FormView):
     form_class = TidesTargetForm
 
     def form_valid(self, form):
-        # Get the target object
-        target = get_object_or_404(MirroredTidesTarget, id=self.kwargs['target_id'])
+        target = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
 
-        # Prepare data for insertion into human_classifications table
-        classification_data = {
-            'tides_id': target.tides_id,  # Assuming TidesTarget has a tides_id field
-            'obs_id': None,  # Replace with actual observation ID if available
-            'person_id': self.request.user.id,
-            'sn_type': form.cleaned_data['tidesclass'],
-            'sn_z': form.cleaned_data.get('tidesclass_other'),
-            'sn_subtype': form.cleaned_data.get('tidesclass_subclass'),
-            'comments': form.cleaned_data.get('comments', ''),
-            'created': now(),
-        }
+        # Map form fields to remote schema fields
+        subclass_obj = form.cleaned_data.get('tidesclass_subclass')
+        sn_subtype = getattr(subclass_obj, 'sub_class', None) if subclass_obj else None
 
-        # Insert data into human_classifications table using Django ORM
-        try:
-            with transaction.atomic(using='tides_db'):  # Use the database router
-                HumanClassification.objects.create(**classification_data)
-            self.request.session['success_message'] = "Classification submitted successfully!"
-        except Exception as e:
-            self.request.session['error_message'] = f"Failed to submit classification: {e}"
-
+        submission = HumanTidesClassSubmission.objects.create(
+            target=target,                          # FK mapped to db_column='tides_id'
+            person_id=self.request.user.id,         # remote integer column
+            sn_type=form.cleaned_data['tidesclass'],# remote sn_type
+            sn_subtype=sn_subtype,                  # remote sn_subtype (text)
+            comments=form.cleaned_data.get('tidesclass_other') or '',  # map "other" to comments
+            created=now()                           # remote created timestamp
+        )
+        print(f"Submission saved: {submission}")  # Debug statement
         return redirect('target_detail', pk=self.kwargs['target_id'])
 
     def get_context_data(self, **kwargs):

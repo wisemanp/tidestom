@@ -12,3 +12,5 @@ db*
 custom_code/__pycache__/
 tidestom/__pycache__/
 .env
+*pyc
+
