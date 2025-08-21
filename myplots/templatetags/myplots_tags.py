@@ -1,6 +1,8 @@
+import warnings
 from plotly import offline
 import plotly.graph_objs as go
 from datetime import datetime
+from astropy.time import Time
 from django import template
 from django.conf import settings
 
@@ -10,6 +12,9 @@ from astropy import units as u
 from specutils import Spectrum1D
 
 from custom_code.models import TidesSpec
+from tidestom.settings import BROKERS
+lasair_token = BROKERS['LASAIR']['api_key']
+from .photometry_settings import plot_lightcurves, fetch_ztf_lasair
 
 register = template.Library()
 
@@ -68,17 +73,42 @@ def target_spectroscopy(context, target, dataproduct=None):
         'plot': offline.plot(fig, output_type='div', show_link=False)
     }
 
-###### Below is an example from the TOM Documentation
-# @register.inclusion_tag('myplots/targets_reduceddata.html')
-# def targets_reduceddata(targets=Target.objects.all()):
-#     # order targets by creation date
-#     targets = targets.order_by('-created')
-#     # x axis: target names. y axis datum count
-#     data = [go.Bar(
-#         x=[target.name for target in targets],
-#         y=[target.reduceddatum_set.count() for target in targets]
-#     )]
-#     # Create plot
-#     figure = offline.plot(go.Figure(data=data), output_type='div', show_link=False)
-#     # Add plot to the template context
-#     return {'figure': figure}
+
+##############
+# Photometry #
+##############
+
+@register.inclusion_tag('myplots/target_photometry.html', takes_context=True)
+def target_photometry(context, target, dataproduct=None):
+    """
+    Renders a photometry plot for a ``Target``. If a ``DataProduct`` is specified, it will only render a plot with
+    that photometry.
+    """
+    # check if the Lasair's API key is set
+    if lasair_token is None or lasair_token == "":
+        warnings.warn("Warning: Lasair API key not set!", UserWarning)
+        return {'target': target}
+    
+    photometry = fetch_ztf_lasair(49.1384664, 44.9725084)  # ZTF25aacedrs for testing
+    #photometry = fetch_ztf_lasair(target.ra, target.dec)
+    
+    # plot photometry
+    fig = plot_lightcurves(photometry)
+    
+    # add epochs with spectra
+    try:
+        spectroscopy_data_type = settings.DATA_PRODUCT_TYPES['spectroscopy'][0]
+    except (AttributeError, KeyError):
+        spectroscopy_data_type = 'spectroscopy'
+    spectral_dataproducts = DataProduct.objects.filter(target=target,
+                                                       data_product_type=spectroscopy_data_type)
+    datums = ReducedDatum.objects.filter(data_product__in=spectral_dataproducts)
+    for datum in datums:
+        mjd = Time(datum.timestamp, scale="utc").mjd
+        fig.add_vline(mjd, line_width=2, line_dash="dot", line_color="black", 
+                            annotation_text="s", annotation_position="top left")
+        
+    return {
+        'target': target,
+        'plot': offline.plot(fig, output_type='div', show_link=False)
+    }

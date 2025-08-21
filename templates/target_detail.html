@@ -25,54 +25,236 @@ document.addEventListener("DOMContentLoaded", function () {
         document.querySelector(`a[href="#${tabQuery}"]`)?.click();
     }
 
-    // Redshift handling and plot updates.
+    // Main spectroscopy plot
     const plotDiv = document.querySelector("#spectroscopyPlot .js-plotly-plot");
+
+    // Redshift handling and plot updates.
     const redshiftSlider = document.querySelector("#redshiftSlider");
     const redshiftInput = document.querySelector("#redshiftInput");
 
-    const lines = {
-        "HydrogenCheckbox": { x: [4102.9351, 4341.69, 4862.68, 6564.61], color: "blue" },
-        "HeliumCheckbox2": { x: [4685.710], color: "olive" },
-        "NitrogenCheckbox2": { x: [6549.86, 6585.27], color: "deepskyblue"},
-        "OICheckbox": { x: [6302.046], color: "crimson"},
-        "OIICheckbox": {x: [3727.092, 3729.875], color: "darkred"},
-        "OIIICheckbox": { x: [4364.44, 4960.30, 5008.24], color: "red" },
-        "SIICheckbox": { x: [6718.29, 6732.68], color: "goldenrod"},
-        "NeIIICheckbox": {x: [3869.81], color: "lawngreen"},
-        "CIIICheckbox": {x: [1908.734], color: "brown"},
-        "CIVCheckbox": {x: [1548.187, 1550.772], color: "black"},
-        
-        "CHCheckboxAbs": {x: [4300.00], color: "rgb(31, 31, 43)"},
-        "CICheckboxAbs": {x: [9061.44, 9088.51, 9111.80], color: "brown"},
-        "CIICheckboxAbs": {x: [6578.05, 6582.88], color: "black"},
-        "NaICheckboxAbs": {x: [5889.95, 5895.92], color: "darkorange"},
-        "MgICheckboxAbs": {x: [5167.33, 5172.68, 5183.60], color: "gray"},
-        "CaIICheckboxAbs": {x: [3933.66, 3968.47], color: "purple"},
+    // Velocity handling and plot updates.
+    const velocitySlider = document.querySelector("#velocitySlider");
+    const velocityInput = document.querySelector("#velocityInput");
 
-    };
+    let lines = {};  // placeholder
 
-    function updateLines(z) {
+fetch("{% static 'json/line_data.json' %}")
+	.then(response => response.json())
+	.then(data => {
+		lines = data;
+
+		// Separate containers
+		const emissionContainer = document.getElementById("emission-lines");
+		const absorptionContainer = document.getElementById("absorption-lines");
+		const highEnergyContainer = document.getElementById("high-energy-lines");
+
+		// Build checkboxes dynamically from the .json file
+		Object.entries(lines).forEach(([id, { color, label, type }]) => {
+			const wrapper = document.createElement("label");
+			wrapper.innerHTML = `
+				<input type="checkbox" id="${id}">
+				<span style="color:${color};">${label}</span>
+			`;
+
+			if (type === "emission") {
+				emissionContainer.appendChild(wrapper);
+			} else if (type === "absorption") {
+				absorptionContainer.appendChild(wrapper);
+			} else if (type === "high-energy") {
+				highEnergyContainer.appendChild(wrapper);
+			}
+		});
+
+		// Add event listeners after building checkboxes
+		Object.keys(lines).forEach(id => {
+			const checkbox = document.getElementById(id);
+			if (checkbox) {
+				checkbox.addEventListener("change", updateRedshiftVelocity);
+			}
+		});
+	})
+	.catch(error => console.error("Error loading line data:", error));
+
+    function updateLines(z, v) {
         const newShapes = Object.entries(lines)
             .filter(([id]) => document.getElementById(id)?.checked)
             .flatMap(([_, { x, color }]) => x.map(value => ({
-                type: "line", x0: value * (1 + z), x1: value * (1 + z),
-                y0: 0, y1: 1, xref: "x", yref: "paper", line: { color, width: 1 }
+                type: "line",
+                x0: value * ( (1 + z) + (v/299792.458)),
+                x1: value * ( (1 + z) + (v/299792.458)),
+                y0: 0,
+                y1: 1,
+                xref: "x",
+                yref: "paper",
+                line: { color, width: 1},
+                layer: "below"
             })));
         Plotly.relayout(plotDiv, { shapes: newShapes });
     }
 
-    function handleRedshiftChange(event) {
-        const z = parseFloat(event.target.value);
-        if (isNaN(z) || z < 0 || z > 10) return;  // Validate redshift range
-        redshiftSlider.value = z;
-        redshiftInput.value = z.toFixed(2);
-        updateLines(z);
+    function updateRedshiftVelocity() {
+        // Always pull from the current slider values (force numbers)
+        const z = Number(redshiftSlider.value);
+        const v = Number(velocitySlider.value);
+
+        // Update paired inputs
+        redshiftInput.value = isFinite(z) ? z.toFixed(4) : "";
+        velocityInput.value = isFinite(v) ? v.toFixed(0) : "";
+
+        // Only call updateLines if both are valid
+        if (!isNaN(z) && z >= 0 && z <= 5 && !isNaN(v) && v >= -50000 && v <= 50000) {
+            updateLines(z, v);
+        }
     }
 
     // Attach event listeners.
-    redshiftSlider.addEventListener("input", handleRedshiftChange);
-    redshiftInput.addEventListener("change", handleRedshiftChange);
-    Object.keys(lines).forEach(id => document.getElementById(id)?.addEventListener("change", () => updateLines(parseFloat(redshiftSlider.value))));
+    redshiftSlider.addEventListener("input", updateRedshiftVelocity);
+    velocitySlider.addEventListener("input", updateRedshiftVelocity);
+
+    // --- Manual text inputs (push back into sliders) ---
+    redshiftInput.addEventListener("change", () => {
+        const z = Number(redshiftInput.value);
+        if (!isNaN(z)) {
+            redshiftSlider.value = z;
+            updateRedshiftVelocity();
+        }
+    });
+    velocityInput.addEventListener("change", () => {
+        const v = Number(velocityInput.value);
+        if (!isNaN(v)) {
+            velocitySlider.value = v;
+            updateRedshiftVelocity();
+        }
+    });
+
+    Object.keys(lines).forEach(id => {
+        document.getElementById(id)?.addEventListener("change", updateRedshiftVelocity);
+    });
+
+    // --- Binned-spectrum overlay ---
+
+    const BINNED_LABEL_PREFIX = 'Bin';
+
+    function getFigDiv() {
+      return document.querySelector("#spectroscopy .js-plotly-plot")
+          || document.querySelector("#spectroscopyPlot .js-plotly-plot");
+    }
+
+    function getRawSpectrum() {
+      const fig = getFigDiv();
+      if (!fig || !fig.data || !fig.data.length) return null;
+      let i = fig.data.findIndex(t => Array.isArray(t?.x) && Array.isArray(t?.y));
+      if (i < 0) i = 0;
+      const x = fig.data[i].x, y = fig.data[i].y;
+      if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length || x.length === 0) return null;
+      return { x, y };
+    }
+
+    function binByDeltaLambdaIndex(w, f, dlam){
+      if (!(dlam > 0) || !w || !w.length) return {x:[], y:[]};
+
+      const X = [], Y = [];
+      for (let i=0;i<w.length;i++){
+        const xi = Number(w[i]), yi = Number(f[i]);
+        if (Number.isFinite(xi) && Number.isFinite(yi)) { X.push(xi); Y.push(yi); }
+      }
+      if (!X.length) return {x:[], y:[]};
+
+      const minW = Math.min(...X), maxW = Math.max(...X);
+      const nBins = Math.max(1, Math.ceil((maxW - minW) / dlam));
+      const sum = new Array(nBins).fill(0);
+      const cnt = new Array(nBins).fill(0);
+
+      const inv = 1/dlam, eps = 1e-9;
+      for (let i=0;i<X.length;i++){
+        let idx = Math.floor((X[i] - minW) * inv + eps);
+        if (idx < 0) idx = 0;
+        if (idx >= nBins) idx = nBins - 1; // clamp right edge
+        sum[idx] += Y[i];
+        cnt[idx] += 1;
+      }
+
+      const bx = [], by = [];
+      for (let b=0;b<nBins;b++){
+        if (cnt[b] > 0){
+          const left = minW + b*dlam;
+          const right = left + dlam;
+          bx.push(0.5*(left + right));
+          by.push(sum[b] / cnt[b]);
+        }
+      }
+      return { x: bx, y: by };
+    }
+
+    function makeBinnedTrace() {
+      const raw = getRawSpectrum();
+      if (!raw) return null;
+
+      const dlam = Number(document.getElementById('bin-size').value);
+      const res = binByDeltaLambdaIndex(raw.x, raw.y, dlam);
+
+      return {
+        name: `Bin (${dlam} Å)`,
+        x: res.x, y: res.y,
+        mode: "lines",
+        line: { width: 2 },
+        showlegend: false,
+        hovertemplate: "λ=%{x:.1f} Å<br>F (binned) = %{y}<extra></extra>"
+      };
+    }
+
+    function ensureLegendOff(fig){
+      Plotly.relayout(fig, { showlegend: false });
+      const idx = (fig.data || []).findIndex(t => t.name && t.name.startsWith(BINNED_LABEL_PREFIX));
+      if (idx >= 0) Plotly.restyle(fig, { showlegend: [false] }, [idx]);
+    }
+
+    function refreshBinned(){
+      const fig = getFigDiv();
+      if (!fig) return;
+      const toggle = document.getElementById('toggle-binned');
+      const existingIndex = (fig.data || []).findIndex(t => t.name && t.name.startsWith(BINNED_LABEL_PREFIX));
+
+      if (!toggle.checked) {
+        if (existingIndex >= 0) Plotly.deleteTraces(fig, [existingIndex]);
+        ensureLegendOff(fig);
+        return;
+      }
+      const trace = makeBinnedTrace();
+      if (!trace) return;
+
+      if (existingIndex >= 0) {
+        Plotly.restyle(fig, {x:[trace.x], y:[trace.y], name:[trace.name], line:[trace.line], showlegend:[false]}, [existingIndex]);
+      } else {
+        Plotly.addTraces(fig, [trace]);
+      }
+      ensureLegendOff(fig);
+    }
+
+    ['toggle-binned','bin-size'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', refreshBinned);
+    });
+
+    (function ensureReady(){
+      const tryInit = () => {
+        const fig = getFigDiv();
+        if (fig && fig.data && fig.data.length) { refreshBinned(); return true; }
+        return false;
+      };
+      if (!tryInit()){
+        const iv = setInterval(() => { if (tryInit()) clearInterval(iv); }, 200);
+        setTimeout(() => clearInterval(iv), 8000);
+      }
+    })();
+
+    document.querySelectorAll('#tabs .nav-link').forEach(tab => {
+      tab.addEventListener('click', () => {
+        setTimeout(() => {
+          if (document.getElementById("spectroscopy-tab").classList.contains("active")) refreshBinned();
+        }, 60);
+      });
+    });
 
     // Show/hide spectroscopy elements based on active tab.
     const toggleSpectroscopyElements = () => {
@@ -217,44 +399,41 @@ document.addEventListener("DOMContentLoaded", function () {
         {% target_groups target %}
       </div>
       <div class="tab-pane" id="photometry">
-        {% photometry_for_target target %}
+        {% target_photometry target %}
         {% get_photometry_data object %}
         </div>
       <div class="tab-pane active" id="spectroscopy">
         {% target_spectroscopy target %}
+
+        <!-- Bin/Overplot controls -->
+        <div class="d-flex align-items-center gap-2 mb-4 spectroscopy-only">
+          <input class="form-check-input" type="checkbox" id="toggle-binned">
+          <label class="form-check-label me-3" for="toggle-binned">Bin (Å): </label>
+          <input id="bin-size" class="form-control form-control-sm me-2" style="width:8rem"
+            type="number" min="5" step="10" value="15">
+        </div>
+        <!-- Bin/Overplot controls -->
+
       </div>
       <!-- Checkboxes -->
       <div class="checkbox-container spectroscopy-only">
-        <div class="checkbox-group">
-            <h5>Emission Lines</h5>
-            <div class="checkbox-grid">
-                <label><input type="checkbox" id="HydrogenCheckbox"> <span style="color: blue;">H</span></label>
-                <label><input type="checkbox" id="HeliumCheckbox2"> <span style="color:olive">He II</span></label>
-                <label><input type="checkbox" id="CIIICheckbox"> <span style="color:brown">C III</span></label>
-                <label><input type="checkbox" id="CIVCheckbox"> <span style="color:black">C IV</span></label>
-                <label><input type="checkbox" id="NitrogenCheckbox2"> <span style="color:deepskyblue">N II</span></label>
-                <label><input type="checkbox" id="OICheckbox"> <span style="color:firebrick">O I</span></label>
-                <label><input type="checkbox" id="OIICheckbox"> <span style="color:darkred">O II</span></label>
-                <label><input type="checkbox" id="OIIICheckbox"> <span style="color: red;">O III</span></label>
-                <label><input type="checkbox" id="NeIIICheckbox"> <span style="color:lawngreen;">Ne III</span></label>
-                <label><input type="checkbox" id="SIICheckbox"> <span style="color:goldenrod;">S II</span></label>
-            </div>
-        </div>
-    
-        <div class="checkbox-group">
-            <h5>Absorption Lines</h5>
-            <div class="checkbox-grid">
-              <label><input type="checkbox" id="CHCheckboxAbs"> <span style="color:rgb(31, 31, 43)">CH</span></label>
-              <label><input type="checkbox" id="CICheckboxAbs"> <span style="color:brown">C I</span></label>
-              <label><input type="checkbox" id="CIICheckboxAbs"> <span style="color:black">C II</span></label>
-              <label><input type="checkbox" id="NaICheckboxAbs"> <span style="color:darkorange">Na I</span></label>
-              <label><input type="checkbox" id="MgICheckboxAbs"> <span style="color: gray">Mg I</span></label>
-              <label><input type="checkbox" id="CaIICheckboxAbs"> <span style="color:purple">Ca II</span></label>
-            </div>
-        </div>
+
+          <div class="checkbox-group">
+              <h5>Emission Lines</h5>
+              <div class="checkbox-grid" id="emission-lines"></div>
+          </div>
+
+          <div class="checkbox-group">
+              <h5>Absorption Lines</h5>
+              <div class="checkbox-grid" id="absorption-lines"></div>
+          </div>
+
+          <div class="checkbox-group">
+              <h5>High Energy Lines</h5>
+              <div class="checkbox-grid" id="high-energy-lines"></div>
+          </div>
+
     </div>
-    
-      
       
       {% comments_enabled as comments_are_enabled %}
       <hr/>
@@ -274,9 +453,19 @@ document.addEventListener("DOMContentLoaded", function () {
     {% endif %}
     <!-- Redshift Slider -->
     <div class="spectroscopy-only">
-      <label for="redshiftSlider">Redshift (z): </label>
-      <input type="range" id="redshiftSlider" min="0" max="10" step="0.01" value="0">
-      <input type="number" id="redshiftInput" min="0" max="10" step="0.01" value="0" style="width: 60px; text-align: center;">
+      <label for="redshiftSlider" style="display:block; width:250px;">
+          Redshift (z):
+      </label>
+      <input type="range" id="redshiftSlider" min="0" max="5" step="0.0001" value="0">
+      <input type="number" id="redshiftInput" min="0" max="5" step="0.0001" value="0" style="width: 80px; text-align: center;">
+    </div>
+      <!-- Velocity Slider -->
+    <div class="spectroscopy-only">
+        <label for="velocitySlider" style="display:block; width:250px;">
+          Additional line velocity (km\s):
+        </label>
+      <input type="range" id="velocitySlider" min="-50000" max="50000" step="100" value="0">
+      <input type="number" id="velocityInput" min="-50000" max="50000" step="100" value="0" style="width: 80px; text-align: center;">
     </div>
   </div>
 </div>

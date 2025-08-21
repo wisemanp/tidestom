@@ -1,8 +1,10 @@
 django-debug-toolbar
 django-bootstrap5
 django-htmx
-pandas
-matplotlib
+pandas>=2.3
+matplotlib>=3.9
+tomtoolkit>=2.26
+lasair>=0.1.1
 psycopg2 # PostgreSQL adapter for Python
 gunicorn>=21.2
 

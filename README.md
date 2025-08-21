@@ -11,6 +11,7 @@ To set up the Tides TOM, follow these steps:
 1. **Fork the repository**:  
    Go to the [Tides TOM GitHub repository](https://github.com/TiDES-4MOST/tidestom.git) and click the "Fork" button in the top-right corner to create your own copy of the repository.
 
+
 2. **Clone your fork**:  
    Clone your forked repository to your local machine:
     ```bash
@@ -41,8 +42,10 @@ If you want to contribute to the development of this project, follow these steps
 2. **Make your changes**:  
    Make the necessary changes to the codebase.
 
+
 3. **Edit `.gitignore`**:  
    Make sure that any data directories and the database (e.g., `db.sqlite`) are added to `.gitignore` so they are not tracked by Git.
+
 
 4. **Commit your changes**:  
    Stage and commit your changes:
@@ -118,22 +121,31 @@ To use the Tides TOM with test data, follow these steps:
     nano /path/to/tom_env/bin/activate
     ```
 
-4. Add the following line to the end of the file:
+4. **Add the following line to the end of the file**:
     ```bash
     export TIDES_TEST_DIR="/path/to/extracted/test/data"
     ```
 
-   Save the file and exit. Then, source the environment again to apply the changes:
+5.  **Save the file and exit. Then, source the environment again to apply the changes**:
     ```bash
     source /path/to/tom_env/bin/activate
     ```
 
-   Verify that the environment variable is set:
+6. **Verify that the environment variable is set**:
     ```bash
     echo $TIDES_TEST_DIR
     ```   
+7. **Run the `makemigrations` command**:
+   ```bash
+    python manage.py makemigrations
+    ```
+   
+8. **Run the `migrate` command to initialize the database**: 
+   ```bash
+    python manage.py migrate
+    ```
 
-5. **Run the `populate_tidesclasses` command**:  
+9. **Run the `populate_tidesclasses` command**:  
     Before adding targets, make sure to populate the `TidesClass` and `TidesClassSubClass` tables by running the following command:
     ```bash
     python manage.py migrate
@@ -142,7 +154,7 @@ To use the Tides TOM with test data, follow these steps:
 ---
 ## Loading Test Data into the Database
 
-Once the test data is set up, you can load it into the database using the following commands:
+Once the test data and database is set up using the above, you can load it into the database using the following commands:
 
 1. **Add targets**:  
    Run the following command to add targets from the test data:
@@ -158,7 +170,35 @@ Once the test data is set up, you can load it into the database using the follow
 
 These commands will populate the database with the test targets and spectra.
 
+---
+## Running the Server
 
+To run the Tides TOM server, follow these steps:
+
+1. **Navigate to the project directory**:
+    ```bash
+    cd tides_tom
+    ```
+
+2. **Create a superuser**:  
+   To access the Django admin interface and manage the application, create a superuser account:
+    ```bash
+    python manage.py createsuperuser
+    ```
+   Follow the prompts to set up a username and password. You can leave the e-mail blank for development purposes.
+
+
+3. **Start the development server**:
+    ```bash
+    python manage.py runserver
+    ```
+
+4. **Open your browser and navigate to**:
+    ```
+    http://127.0.0.1:8000/
+    ```
+
+You should now see the Tides TOM application running locally.
 
 ## Notes
 

@@ -16,13 +16,35 @@ Including another URLconf
 
 from django.urls import path, include
 from django.views.generic import TemplateView
-from .views import LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
+from .views import (
+    LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
+)
 urlpatterns = [
-   
-    path('about/', TemplateView.as_view(template_name='about.html'),name='about'),
-    path('latest/', LatestView.as_view(), name='latest'),
-    path('targets/<int:pk>/', MyTargetDetailView.as_view(template_name='target_detail.html'), name='target_detail'),
-    path('targets/<int:target_id>/submit_classification/', SubmitClassificationView.as_view(), name='submit_classification'),
-    path('api/get_subclasses/', get_subclasses, name='get_subclasses'),
-    path('', include('tom_common.urls')),
+    path(
+        'about/', TemplateView.as_view(template_name='about.html'),
+        name='about'
+    ),
+
+    path(
+        'latest/', LatestView.as_view(),
+        name='latest'
+    ),
+
+    path(
+        'targets/<int:pk>/',
+        MyTargetDetailView.as_view(template_name='target_detail.html'),
+        name='target_detail'
+    ),
+
+    path(
+        'targets/<int:target_id>/submit_classification/',
+        SubmitClassificationView.as_view(), name='submit_classification'
+    ),
+
+    path(
+        'api/get_subclasses/', get_subclasses, name='get_subclasses'
+    ),
+    path(
+        '', include('tom_common.urls')
+    ),
 ]

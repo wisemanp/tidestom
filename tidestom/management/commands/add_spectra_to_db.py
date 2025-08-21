@@ -21,23 +21,37 @@ from tidestom.tides_utils.target_utils import (
     generate_spectrum_plot  # removed add_spectrum_to_database
 )
 
+
 class Command(BaseCommand):
     help = 'Add spectra details to tides_spec and update auto classifications (no DataProducts)'
 
     def add_arguments(self, parser):
-        parser.add_argument('--mock', action='store_true', help='Add spectra from mock database')
-        parser.add_argument('--pipeline', action='store_true', help='Add spectra from pipeline results')
-        parser.add_argument('--pipeline-results', type=str, help='Path to the pipeline results file')
+        parser.add_argument(
+            '--mock', action='store_true', 
+            help=('Add spectra from mock database')
+        )
+
+        parser.add_argument(
+            '--pipeline', action='store_true',
+            help=('Add spectra from pipeline results')
+        )
+
+        parser.add_argument(
+            '--pipeline-results', type=str,
+            help='Path to the pipeline results file'
+        )
 
     def handle(self, *args, **kwargs):
         if kwargs['mock']:
             self.add_spectra_from_mock_db()
+
         elif kwargs['pipeline']:
             pipeline_results_path = kwargs['pipeline_results']
             if not pipeline_results_path:
                 print("ERROR: Pipeline results path must be provided when using --pipeline option")
                 return
             self.add_spectra_from_pipeline(pipeline_results_path)
+
         else:
             print("ERROR: Either --mock or --pipeline option must be specified")
 
@@ -138,6 +152,7 @@ class Command(BaseCommand):
             print(f"ERROR: Target CSV file not found at {target_csv_path}")
             return
 
+
         dbdf = pd.read_csv(target_csv_path, index_col=0)
         targets = Target.objects.all()
         for target in targets:
@@ -154,7 +169,9 @@ class Command(BaseCommand):
                 int_name = int(target.name)
                 if int_name in dbdf.index:
                     auto_class = dbdf.at[int_name, 'AutoClass']
-                    auto_class_subclass = dbdf.at[int_name, 'AutoClass_SubClass']
+                    auto_class_subclass = dbdf.at[
+                        int_name, 'AutoClass_SubClass'
+                    ]
                     auto_class_prob = dbdf.at[int_name, 'AutoClassProb']
                     if auto_class:
                         if auto_class_subclass:
