@@ -115,14 +115,22 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 
 DATABASES = {
     #DB contection rules for remote cannon DB
+    #'default':{
+    #    'ENGINE': 'django.db.backends.postgresql',
+    #    'NAME': 'tidestom',  # Main database
+    #    'USER': 'postgres',
+    #    'PASSWORD': DB_PASS,
+    #    'HOST': 'cannon.phys.soton.ac.uk',
+    #    'PORT': '5432',
+    #},
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tidestom',  # Main database
-        'USER': 'postgres',
-        'PASSWORD': DB_PASS,
-        'HOST': 'cannon.phys.soton.ac.uk',
+        'NAME': 'tides_db',  # Main database
+        'USER': 'pwise',
+        'PASSWORD':'',
+        'HOST': 'localhost',
         'PORT': '5432',
-    },
+    }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
 
@@ -210,10 +218,10 @@ CACHES = {
 
 # TOM Specific configuration
 TARGET_TYPE = 'SIDEREAL'
-TARGET_MODEL = 'custom_code.models.MirroredTidesTarget'
-TOM_TARGET_MODEL = 'custom_code.models.MirroredTidesTarget'
+TARGET_MODEL = 'custom_code.models.TidesTarget'
+TOM_TARGET_MODEL = 'custom_code.models.TidesTarget'
 # Set to the full path of a custom target model to extend the BaseTarget Model with custom fields.
-TARGET_MODEL_CLASS = 'custom_code.models.MirroredTidesTarget'
+TARGET_MODEL_CLASS = 'custom_code.models.TidesTarget'
 
 # Define MATCH_MANAGERS here. This is a dictionary that contains a dotted module path to the desired match manager
 # for a given model.
