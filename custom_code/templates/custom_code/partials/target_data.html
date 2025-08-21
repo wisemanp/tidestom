@@ -8,6 +8,9 @@
     {% endif %}
     <dd class="col-sm-6">{{ target_name }}</dd>
   {% endfor %}
+  <!-- Add tides_id to the list of names -->
+  <dt class="col-sm-6">&nbsp;</dt>
+  <dd class="col-sm-6">Tides ID: {{ target.tides_id }}</dd>
   {% for key, value in target.as_dict.items %}
     {% if value and key not in exclude_fields %}
       <dt class="col-sm-6" title="{% help_text target key %}">{% verbose_name target key %}</dt>

@@ -60,8 +60,43 @@ If you want to contribute to the development of this project, follow these steps
 6. **Open a pull request**:  
    Go to the original repository on GitHub and open a pull request to merge your changes into the main branch.
 
----
 
+
+---
+## Running the Server
+
+To run the Tides TOM server, follow these steps:
+
+1. Navigate to the project directory:
+    ```bash
+    cd tides_tom
+    ```
+
+2. Run database migrations to initialize the database:
+    ```bash
+    python manage.py migrate
+    ```
+
+3. Create a superuser:  
+   To access the Django admin interface and manage the application, create a superuser account:
+    ```bash
+    python manage.py createsuperuser
+    ```
+   Follow the prompts to set up a username and password. You can leave the e-mail blank for development purposes.
+
+4. Start the development server:
+    ```bash
+    python manage.py runserver
+    ```
+
+5. Open your browser and navigate to:
+    ```
+    http://127.0.0.1:8000/
+    ```
+
+You should now see the Tides TOM application running locally.
+
+---
 ## Setting Up Test Data
 
 To use the Tides TOM with test data, follow these steps:
@@ -101,6 +136,7 @@ To use the Tides TOM with test data, follow these steps:
 5. **Run the `populate_tidesclasses` command**:  
     Before adding targets, make sure to populate the `TidesClass` and `TidesClassSubClass` tables by running the following command:
     ```bash
+    python manage.py migrate
     python manage.py populate_tidesclasses
     ```
 ---
@@ -122,39 +158,7 @@ Once the test data is set up, you can load it into the database using the follow
 
 These commands will populate the database with the test targets and spectra.
 
----
-## Running the Server
 
-To run the Tides TOM server, follow these steps:
-
-1. Navigate to the project directory:
-    ```bash
-    cd tides_tom
-    ```
-
-2. Run database migrations to initialize the database:
-    ```bash
-    python manage.py migrate
-    ```
-
-3. Create a superuser:  
-   To access the Django admin interface and manage the application, create a superuser account:
-    ```bash
-    python manage.py createsuperuser
-    ```
-   Follow the prompts to set up a username and password. You can leave the e-mail blank for development purposes.
-
-4. Start the development server:
-    ```bash
-    python manage.py runserver
-    ```
-
-5. Open your browser and navigate to:
-    ```
-    http://127.0.0.1:8000/
-    ```
-
-You should now see the Tides TOM application running locally.
 
 ## Notes
 

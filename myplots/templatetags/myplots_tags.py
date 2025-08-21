@@ -1,54 +1,57 @@
 from plotly import offline
 import plotly.graph_objs as go
-from datetime import datetime, timedelta
 from django import template
-from django.conf import settings
+from custom_code.models import TidesSpec
+import numpy as np
 
-from tom_dataproducts.models import DataProduct, ReducedDatum
-from guardian.shortcuts import get_objects_for_user
-from tom_dataproducts.processors.data_serializers import SpectrumSerializer
-from tom_targets.models import Target
+from astropy.io import fits
 
 register = template.Library()
 
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
-def target_spectroscopy(context, target, dataproduct=None):
+def target_spectroscopy(context, target):
     """
-    Renders a spectroscopic plot for a ``Target``. If a ``DataProduct`` is specified, it will only render a plot with
-    that spectrum.
+    Renders a spectroscopic plot for a ``Target`` using the spectrum filepath from the tides_spec table.
     """
+    # Query the tides_spec table for the spectrum filepath
     try:
-        spectroscopy_data_type = settings.DATA_PRODUCT_TYPES['spectroscopy'][0]
-    except (AttributeError, KeyError):
-        spectroscopy_data_type = 'spectroscopy'
-    spectral_dataproducts = DataProduct.objects.filter(target=target,
-                                                       data_product_type=spectroscopy_data_type)
-    if dataproduct:
-        spectral_dataproducts = DataProduct.objects.get(data_product=dataproduct)
+        tides_spec = TidesSpec.objects.get(tides_id=target.tides_id)
+        spectrum_filepath = tides_spec.filepath
+    except TidesSpec.DoesNotExist:
+        return {
+            'target': target,
+            'plot': '<p>No spectrum available for this target.</p>'
+        }
 
-    plot_data = []
-    if settings.TARGET_PERMISSIONS_ONLY:
-        datums = ReducedDatum.objects.filter(data_product__in=spectral_dataproducts)
-    else:
-        datums = get_objects_for_user(context['request'].user,
-                                      'tom_dataproducts.view_reduceddatum',
-                                      klass=ReducedDatum.objects.filter(data_product__in=spectral_dataproducts))
-    for datum in datums:
-        deserialized = SpectrumSerializer().deserialize(datum.value)
-        plot_data.append(go.Scatter(
-            x=deserialized.wavelength.value,
-            y=deserialized.flux.value,
-            name=datetime.strftime(datum.timestamp, '%Y%m%d-%H:%M:%s')
-        ))
-    # Create a figure
+    # Load the spectrum data from the filepath
+    try:
+        if spectrum_filepath.endswith(['.txt', '.spec','.csv','.dat']):
+            # Load text file
+            spectrum_data = np.loadtxt(spectrum_filepath, delimiter=',')  # Assuming CSV format
+            wavelength = spectrum_data[:, 0]  # First column: Wavelength
+            flux = spectrum_data[:, 1]  # Second column: Flux
+        elif spectrum_filepath.endswith('.fits'):
+            spectrum_data = fits.getdata(spectrum_filepath)  # Assuming FITS format
+            wavelength = spectrum_data['WAVE']  # Assuming 'WAVE' is the column name for wavelength
+            flux = spectrum_data['FLUX']  # Assuming 'FLUX' is the column name for flux
+    except Exception as e:
+        return {
+            'target': target,
+            'plot': f'<p>Failed to load spectrum: {e}</p>'
+        }
+
+    # Create the plot
+    plot_data = [go.Scatter(x=wavelength, y=flux, name='Spectrum')]
     fig = go.Figure(data=plot_data)
 
-    fig.update_layout(autosize=True, 
-                      xaxis_title='Observed Wavelength [Å] ',
-                      yaxis_title='Flux',
-                      xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      shapes=[])
+    fig.update_layout(
+        autosize=True,
+        xaxis_title='Observed Wavelength [Å]',
+        yaxis_title='Flux',
+        xaxis=dict(showticklabels=True, ticks='outside', linewidth=2),
+        yaxis=dict(showticklabels=True, ticks='outside', linewidth=2),
+        shapes=[]
+    )
 
     return {
         'target': target,

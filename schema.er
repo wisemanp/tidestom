@@ -1,0 +1,310 @@
+[auth_user_user_permissions]
+    *id {label:"INTEGER"}
+    permission_id {label:"INTEGER"}
+    user_id {label:"INTEGER"}
+[auth_permission]
+    *id {label:"INTEGER"}
+    codename {label:"VARCHAR(100)"}
+    content_type_id {label:"INTEGER"}
+    name {label:"VARCHAR(255)"}
+[django_content_type]
+    *id {label:"INTEGER"}
+    app_label {label:"VARCHAR(100)"}
+    model {label:"VARCHAR(100)"}
+[auth_user]
+    *id {label:"INTEGER"}
+    date_joined {label:"TIMESTAMP"}
+    email {label:"VARCHAR(254)"}
+    first_name {label:"VARCHAR(150)"}
+    is_active {label:"BOOLEAN"}
+    is_staff {label:"BOOLEAN"}
+    is_superuser {label:"BOOLEAN"}
+    last_login {label:"TIMESTAMP"}
+    last_name {label:"VARCHAR(150)"}
+    password {label:"VARCHAR(128)"}
+    username {label:"VARCHAR(150)"}
+[django_comments]
+    *id {label:"INTEGER"}
+    comment {label:"TEXT"}
+    content_type_id {label:"INTEGER"}
+    ip_address {label:"INET"}
+    is_public {label:"BOOLEAN"}
+    is_removed {label:"BOOLEAN"}
+    object_pk {label:"VARCHAR(64)"}
+    site_id {label:"INTEGER"}
+    submit_date {label:"TIMESTAMP"}
+    user_email {label:"VARCHAR(254)"}
+    user_id {label:"INTEGER"}
+    user_name {label:"VARCHAR(50)"}
+    user_url {label:"VARCHAR(200)"}
+[django_site]
+    *id {label:"INTEGER"}
+    domain {label:"VARCHAR(100)"}
+    name {label:"VARCHAR(50)"}
+[django_migrations]
+    *id {label:"INTEGER"}
+    app {label:"VARCHAR(255)"}
+    applied {label:"TIMESTAMP"}
+    name {label:"VARCHAR(255)"}
+[django_session]
+    *session_key {label:"VARCHAR(40)"}
+    expire_date {label:"TIMESTAMP"}
+    session_data {label:"TEXT"}
+[auth_group]
+    *id {label:"INTEGER"}
+    name {label:"VARCHAR(150)"}
+[auth_user_groups]
+    *id {label:"INTEGER"}
+    group_id {label:"INTEGER"}
+    user_id {label:"INTEGER"}
+[authtoken_token]
+    *key {label:"VARCHAR(40)"}
+    created {label:"TIMESTAMP"}
+    user_id {label:"INTEGER"}
+[custom_code_tidestarget]
+    *basetarget_ptr_id {label:"INTEGER"}
+    auto_tidesclass {label:"VARCHAR(50)"}
+    auto_tidesclass_other {label:"VARCHAR(100)"}
+    auto_tidesclass_prob {label:"DOUBLE PRECISION"}
+    auto_tidesclass_subclass_id {label:"BIGINT"}
+    human_tidesclass {label:"VARCHAR(50)"}
+    human_tidesclass_other {label:"VARCHAR(100)"}
+    human_tidesclass_subclass_id {label:"BIGINT"}
+    tidesclass {label:"VARCHAR(50)"}
+    tidesclass_other {label:"VARCHAR(100)"}
+    tidesclass_subclass_id {label:"BIGINT"}
+[custom_code_tidesclasssubclass]
+    *id {label:"BIGINT"}
+    main_class_id {label:"BIGINT"}
+    sub_class {label:"VARCHAR(100)"}
+[custom_code_tidesclass]
+    *id {label:"BIGINT"}
+    name {label:"VARCHAR(50)"}
+[tom_targets_basetarget]
+    *id {label:"INTEGER"}
+    arg_of_perihelion {label:"DOUBLE PRECISION"}
+    created {label:"TIMESTAMP"}
+    dec {label:"DOUBLE PRECISION"}
+    distance {label:"DOUBLE PRECISION"}
+    distance_err {label:"DOUBLE PRECISION"}
+    eccentricity {label:"DOUBLE PRECISION"}
+    ephemeris_epoch {label:"DOUBLE PRECISION"}
+    ephemeris_epoch_err {label:"DOUBLE PRECISION"}
+    ephemeris_period {label:"DOUBLE PRECISION"}
+    ephemeris_period_err {label:"DOUBLE PRECISION"}
+    epoch {label:"DOUBLE PRECISION"}
+    epoch_of_elements {label:"DOUBLE PRECISION"}
+    epoch_of_perihelion {label:"DOUBLE PRECISION"}
+    galactic_lat {label:"DOUBLE PRECISION"}
+    galactic_lng {label:"DOUBLE PRECISION"}
+    inclination {label:"DOUBLE PRECISION"}
+    lng_asc_node {label:"DOUBLE PRECISION"}
+    mean_anomaly {label:"DOUBLE PRECISION"}
+    mean_daily_motion {label:"DOUBLE PRECISION"}
+    modified {label:"TIMESTAMP"}
+    name {label:"VARCHAR(100)"}
+    parallax {label:"DOUBLE PRECISION"}
+    perihdist {label:"DOUBLE PRECISION"}
+    pm_dec {label:"DOUBLE PRECISION"}
+    pm_ra {label:"DOUBLE PRECISION"}
+    ra {label:"DOUBLE PRECISION"}
+    scheme {label:"VARCHAR(50)"}
+    semimajor_axis {label:"DOUBLE PRECISION"}
+    type {label:"VARCHAR(100)"}
+[custom_code_humantidesclasssubmission]
+    *id {label:"BIGINT"}
+    target_id {label:"INTEGER"}
+    tidesclass {label:"VARCHAR(50)"}
+    tidesclass_other {label:"VARCHAR(100)"}
+    tidesclass_subclass_id {label:"BIGINT"}
+    timestamp {label:"TIMESTAMP"}
+    user_id {label:"INTEGER"}
+[django_admin_log]
+    *id {label:"INTEGER"}
+    action_flag {label:"SMALLINT"}
+    action_time {label:"TIMESTAMP"}
+    change_message {label:"TEXT"}
+    content_type_id {label:"INTEGER"}
+    object_id {label:"TEXT"}
+    object_repr {label:"VARCHAR(200)"}
+    user_id {label:"INTEGER"}
+[django_comment_flags]
+    *id {label:"INTEGER"}
+    comment_id {label:"INTEGER"}
+    flag {label:"VARCHAR(30)"}
+    flag_date {label:"TIMESTAMP"}
+    user_id {label:"INTEGER"}
+[tom_alerts_brokerquery]
+    *id {label:"INTEGER"}
+    broker {label:"VARCHAR(50)"}
+    created {label:"TIMESTAMP"}
+    last_run {label:"TIMESTAMP"}
+    modified {label:"TIMESTAMP"}
+    name {label:"VARCHAR(500)"}
+    parameters {label:"JSONB"}
+[guardian_groupobjectpermission]
+    *id {label:"INTEGER"}
+    content_type_id {label:"INTEGER"}
+    group_id {label:"INTEGER"}
+    object_pk {label:"VARCHAR(255)"}
+    permission_id {label:"INTEGER"}
+[tom_common_profile]
+    *id {label:"INTEGER"}
+    affiliation {label:"VARCHAR(100)"}
+    user_id {label:"INTEGER"}
+[tom_alerts_alertstreammessage]
+    *id {label:"INTEGER"}
+    date_shared {label:"TIMESTAMP"}
+    exchange_status {label:"VARCHAR(10)"}
+    message_id {label:"VARCHAR(50)"}
+    topic {label:"VARCHAR(500)"}
+[tom_dataproducts_dataproduct]
+    *id {label:"INTEGER"}
+    created {label:"TIMESTAMP"}
+    data {label:"VARCHAR(100)"}
+    data_product_type {label:"VARCHAR(50)"}
+    extra_data {label:"TEXT"}
+    featured {label:"BOOLEAN"}
+    modified {label:"TIMESTAMP"}
+    observation_record_id {label:"INTEGER"}
+    product_id {label:"VARCHAR(255)"}
+    target_id {label:"INTEGER"}
+    thumbnail {label:"VARCHAR(100)"}
+[tom_observations_observationrecord]
+    *id {label:"INTEGER"}
+    created {label:"TIMESTAMP"}
+    facility {label:"VARCHAR(50)"}
+    modified {label:"TIMESTAMP"}
+    observation_id {label:"VARCHAR(255)"}
+    parameters {label:"JSONB"}
+    scheduled_end {label:"TIMESTAMP"}
+    scheduled_start {label:"TIMESTAMP"}
+    status {label:"VARCHAR(200)"}
+    target_id {label:"INTEGER"}
+    user_id {label:"INTEGER"}
+[tom_dataproducts_dataproductgroup]
+    *id {label:"INTEGER"}
+    created {label:"TIMESTAMP"}
+    modified {label:"TIMESTAMP"}
+    name {label:"VARCHAR(200)"}
+[tom_observations_observationgroup_observation_records]
+    *id {label:"INTEGER"}
+    observationgroup_id {label:"INTEGER"}
+    observationrecord_id {label:"INTEGER"}
+[tom_observations_observationgroup]
+    *id {label:"INTEGER"}
+    created {label:"TIMESTAMP"}
+    modified {label:"TIMESTAMP"}
+    name {label:"VARCHAR(50)"}
+[tom_dataproducts_reduceddatum_message]
+    *id {label:"INTEGER"}
+    alertstreammessage_id {label:"INTEGER"}
+    reduceddatum_id {label:"INTEGER"}
+[tom_dataproducts_reduceddatum]
+    *id {label:"INTEGER"}
+    data_product_id {label:"INTEGER"}
+    data_type {label:"VARCHAR(100)"}
+    source_location {label:"VARCHAR(200)"}
+    source_name {label:"VARCHAR(100)"}
+    target_id {label:"INTEGER"}
+    timestamp {label:"TIMESTAMP"}
+    value {label:"JSONB"}
+[tom_observations_observationtemplate]
+    *id {label:"INTEGER"}
+    created {label:"TIMESTAMP"}
+    facility {label:"VARCHAR(50)"}
+    modified {label:"TIMESTAMP"}
+    name {label:"VARCHAR(200)"}
+    parameters {label:"JSONB"}
+[tom_targets_targetlist_targets]
+    *id {label:"INTEGER"}
+    basetarget_id {label:"INTEGER"}
+    targetlist_id {label:"INTEGER"}
+[tom_targets_targetlist]
+    *id {label:"INTEGER"}
+    created {label:"TIMESTAMP"}
+    modified {label:"TIMESTAMP"}
+    name {label:"VARCHAR(200)"}
+[tom_targets_targetextra]
+    *id {label:"INTEGER"}
+    bool_value {label:"BOOLEAN"}
+    float_value {label:"DOUBLE PRECISION"}
+    key {label:"VARCHAR(200)"}
+    target_id {label:"INTEGER"}
+    time_value {label:"TIMESTAMP"}
+    value {label:"TEXT"}
+[tom_targets_targetname]
+    *id {label:"INTEGER"}
+    created {label:"TIMESTAMP"}
+    modified {label:"TIMESTAMP"}
+    name {label:"VARCHAR(100)"}
+    target_id {label:"INTEGER"}
+[auth_group_permissions]
+    *id {label:"INTEGER"}
+    group_id {label:"INTEGER"}
+    permission_id {label:"INTEGER"}
+[guardian_userobjectpermission]
+    *id {label:"INTEGER"}
+    content_type_id {label:"INTEGER"}
+    object_pk {label:"VARCHAR(255)"}
+    permission_id {label:"INTEGER"}
+    user_id {label:"INTEGER"}
+[tom_dataproducts_dataproduct_group]
+    *id {label:"INTEGER"}
+    dataproduct_id {label:"INTEGER"}
+    dataproductgroup_id {label:"INTEGER"}
+[tom_observations_dynamiccadence]
+    *id {label:"INTEGER"}
+    active {label:"BOOLEAN"}
+    cadence_parameters {label:"JSONB"}
+    cadence_strategy {label:"VARCHAR(100)"}
+    created {label:"TIMESTAMP"}
+    modified {label:"TIMESTAMP"}
+    observation_group_id {label:"INTEGER"}
+auth_user."id" 1--* auth_user_user_permissions."user_id"
+auth_permission."id" 1--* auth_user_user_permissions."permission_id"
+django_content_type."id" 1--* auth_permission."content_type_id"
+auth_user."id" ?--* django_comments."user_id"
+django_site."id" 1--* django_comments."site_id"
+django_content_type."id" 1--* django_comments."content_type_id"
+auth_user."id" 1--* auth_user_groups."user_id"
+auth_group."id" 1--* auth_user_groups."group_id"
+auth_user."id" 1--* authtoken_token."user_id"
+custom_code_tidesclasssubclass."id" ?--* custom_code_tidestarget."tidesclass_subclass_id"
+custom_code_tidesclasssubclass."id" ?--* custom_code_tidestarget."auto_tidesclass_subclass_id"
+tom_targets_basetarget."id" 1--1 custom_code_tidestarget."basetarget_ptr_id"
+custom_code_tidesclasssubclass."id" ?--* custom_code_tidestarget."human_tidesclass_subclass_id"
+custom_code_tidesclass."id" 1--* custom_code_tidesclasssubclass."main_class_id"
+auth_user."id" 1--* custom_code_humantidesclasssubmission."user_id"
+custom_code_tidestarget."basetarget_ptr_id" 1--* custom_code_humantidesclasssubmission."target_id"
+custom_code_tidesclasssubclass."id" ?--* custom_code_humantidesclasssubmission."tidesclass_subclass_id"
+django_content_type."id" ?--* django_admin_log."content_type_id"
+auth_user."id" 1--* django_admin_log."user_id"
+auth_user."id" 1--* django_comment_flags."user_id"
+django_comments."id" 1--* django_comment_flags."comment_id"
+auth_permission."id" 1--* guardian_groupobjectpermission."permission_id"
+auth_group."id" 1--* guardian_groupobjectpermission."group_id"
+django_content_type."id" 1--* guardian_groupobjectpermission."content_type_id"
+auth_user."id" 1--* tom_common_profile."user_id"
+tom_targets_basetarget."id" 1--* tom_dataproducts_dataproduct."target_id"
+tom_observations_observationrecord."id" ?--* tom_dataproducts_dataproduct."observation_record_id"
+auth_user."id" ?--* tom_observations_observationrecord."user_id"
+tom_targets_basetarget."id" 1--* tom_observations_observationrecord."target_id"
+tom_observations_observationrecord."id" 1--* tom_observations_observationgroup_observation_records."observationrecord_id"
+tom_observations_observationgroup."id" 1--* tom_observations_observationgroup_observation_records."observationgroup_id"
+tom_dataproducts_reduceddatum."id" 1--* tom_dataproducts_reduceddatum_message."reduceddatum_id"
+tom_alerts_alertstreammessage."id" 1--* tom_dataproducts_reduceddatum_message."alertstreammessage_id"
+tom_targets_basetarget."id" 1--* tom_dataproducts_reduceddatum."target_id"
+tom_dataproducts_dataproduct."id" ?--* tom_dataproducts_reduceddatum."data_product_id"
+tom_targets_targetlist."id" 1--* tom_targets_targetlist_targets."targetlist_id"
+tom_targets_basetarget."id" 1--* tom_targets_targetlist_targets."basetarget_id"
+tom_targets_basetarget."id" 1--* tom_targets_targetextra."target_id"
+tom_targets_basetarget."id" 1--* tom_targets_targetname."target_id"
+auth_group."id" 1--* auth_group_permissions."group_id"
+auth_permission."id" 1--* auth_group_permissions."permission_id"
+auth_user."id" 1--* guardian_userobjectpermission."user_id"
+auth_permission."id" 1--* guardian_userobjectpermission."permission_id"
+django_content_type."id" 1--* guardian_userobjectpermission."content_type_id"
+tom_dataproducts_dataproductgroup."id" 1--* tom_dataproducts_dataproduct_group."dataproductgroup_id"
+tom_dataproducts_dataproduct."id" 1--* tom_dataproducts_dataproduct_group."dataproduct_id"
+tom_observations_observationgroup."id" 1--* tom_observations_dynamiccadence."observation_group_id"

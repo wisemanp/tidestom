@@ -107,22 +107,23 @@ document.addEventListener("DOMContentLoaded", function () {
       {% tides_target_data object %}
       <h3>Classifications</h3>
       <ul>
-        <li><strong>Auto Classification:</strong></li>
-        {% if object.auto_tidesclass %}
-          {{ object.auto_tidesclass }}
-          {% if object.auto_tidesclass_subclass %}
-            <ul>
-              <li>{{ object.auto_tidesclass_subclass.sub_class }}</li>
-            </ul>
-          {% endif %}
-          {% if object.auto_tidesclass_prob %}
-            <p>Probability: {{ object.auto_tidesclass_prob }}</p>
-          {% endif %}
+        <li><strong>Auto Classifications:</strong></li>
+        {% if auto_classifications %}
+          <ul>
+            {% for auto_classification in auto_classifications %}
+              <li>
+                <strong>Type:</strong> {{ auto_classification.sn_type }},
+                <strong>Probability:</strong> {{ auto_classification.probability|floatformat:2 }},
+                <strong>Version:</strong> {{ auto_classification.version }},
+                <strong>Notes:</strong> {{ auto_classification.notes }}
+              </li>
+            {% endfor %}
+          </ul>
         {% else %}
-          <p>No Auto Classification</p>
+          <p>No Auto Classifications</p>
         {% endif %}
       </ul>
-      
+
       <ul>
         <li><strong>Human Classification:</strong></li>
         {% if aggregated_human_class %}
@@ -134,16 +135,17 @@ document.addEventListener("DOMContentLoaded", function () {
         {% endif %}
       </ul>
       <ul>
-        <li><strong>All Human Classifications</strong></li>
+        <li><strong>All Human Classifications:</strong></li>
         {% if human_classifications %}
             <ul>
                 {% for submission in human_classifications %}
                     <li>
-                        <strong>{{ submission.user.username }}</strong> submitted 
-                        <strong>{{ submission.tidesclass }}</strong> 
-                        {% if submission.tidesclass_other %}(Other: {{ submission.tidesclass_other }}){% endif %}
-                        {% if submission.tidesclass_subclass %}(Subclass: {{ submission.tidesclass_subclass.name }}){% endif %}
-                        on {{ submission.timestamp|date:"Y-m-d H:i" }}
+                      <strong>User ID:</strong> {{ submission.person_id }},
+                      <strong>Type:</strong> {{ submission.sn_type }},
+                      {% if submission.sn_subtype %}<strong>Subtype:</strong> {{ submission.sn_subtype }}, {% endif %}
+                      {% if submission.sn_z %}<strong>Redshift:</strong> {{ submission.sn_z|floatformat:2 }}, {% endif %}
+                      <strong>Comments:</strong> {{ submission.comments }},
+                      <strong>Submitted on:</strong> {{ submission.created|date:"Y-m-d H:i" }}
                     </li>
                 {% endfor %}
             </ul>

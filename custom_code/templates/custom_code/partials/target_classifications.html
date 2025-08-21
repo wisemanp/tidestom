@@ -1,11 +1,15 @@
-{% if target.auto_tidesclass %}
-  <p><strong>Auto Classification:</strong> {{ target.auto_tidesclass }}</p>
-  {% if target.auto_tidesclass_subclass %}
-    <p><strong>Auto Sub-class:</strong> {{ target.auto_tidesclass_subclass.sub_class }}</p>
-  {% endif %}
-  {% if target.auto_tidesclass_prob %}
-    <p><strong>Probability of Auto Class:</strong> {{ target.auto_tidesclass_prob|floatformat:2 }}</p>
-  {% endif %}
+{% if auto_classifications %}
+  <p><strong>Auto Classifications:</strong></p>
+  <ul>
+    {% for auto_classification in auto_classifications %}
+      <li>
+        <strong>Type:</strong> {{ auto_classification.sn_type }},
+        <strong>Probability:</strong> {{ auto_classification.probability|floatformat:2 }},
+        <strong>Version:</strong> {{ auto_classification.version }},
+        <strong>Notes:</strong> {{ auto_classification.notes }}
+      </li>
+    {% endfor %}
+  </ul>
 {% else %}
-  <p><strong>Auto Classification:</strong> None</p>
+  <p><strong>Auto Classifications:</strong> None</p>
 {% endif %}

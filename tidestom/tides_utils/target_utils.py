@@ -64,25 +64,33 @@ def create_target(name, other_fields, update_existing=False, generate_plots=Fals
     return target
 
 def add_spectrum_to_database(target, spectrum_file_path):
-    try:
-        if os.path.exists(spectrum_file_path):
-        
-            if os.path.basename(spectrum_file_path).startswith('l1_obs_joined_'):
-                tom_file_path = os.path.join(settings.BASE_DIR,'data/spectra/test/',os.path.basename(spectrum_file_path))
-            else:
-                tom_file_path = os.path.join(settings.BASE_DIR,'data/spectra/',os.path.basename(spectrum_file_path))
-            if not os.path.isfile(tom_file_path):
-                os.symlink(spectrum_file_path,tom_file_path)
-            print('Adding', target, f'{target.name}', tom_file_path)
-            data_product = DataProduct.objects.create(
-                target=target,
-                data_product_type='spectroscopy',
-                product_id=f'{target.name}'+datetime.now().strftime('%Y%m%d%H%M%S'),
-                data=tom_file_path
-            )
-            run_data_processor(data_product)
-            return f'Added spectrum for {target.name} to the database'
+    #try:
+    if os.path.exists(spectrum_file_path):
+        # Determine the symlink path
+        if os.path.basename(spectrum_file_path).startswith('l1_obs_joined_'):
+            tom_file_path = os.path.join(settings.BASE_DIR, 'data/spectra/test/', os.path.basename(spectrum_file_path))
         else:
-            return f'Spectrum file for {target.name} does not exist'
-    except Exception as e:
-        return f'Error adding spectrum for {target.name}: {e}'
+            tom_file_path = os.path.join(settings.BASE_DIR, 'data/spectra/', os.path.basename(spectrum_file_path))
+        
+
+        if os.path.islink(tom_file_path):
+            print(f"Symlink already exists: {tom_file_path}")
+        else:
+            print(f"Creating symlink: {tom_file_path}")
+            os.symlink(spectrum_file_path, tom_file_path)
+        
+        # Add the spectrum to the database
+        print(f"Adding spectrum to database for target: {target.name}")
+        print(f"File path: {tom_file_path}")
+        data_product = DataProduct.objects.create(
+            target=target,
+            data_product_type='spectroscopy',
+            product_id=f'{target.name}' + datetime.now().strftime('%Y%m%d%H%M%S'),
+            data=tom_file_path
+        )
+        run_data_processor(data_product)
+        return f'Added spectrum for {target.name} to the database'
+    else:
+        return f'Spectrum file for {target.name} does not exist'
+    #except Exception as e:
+    #    return f'Error adding spectrum for {target.name}: {e}'

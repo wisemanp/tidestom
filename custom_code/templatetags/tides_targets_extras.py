@@ -41,6 +41,19 @@ def tides_target_data(target):
 
 @register.inclusion_tag('custom_code/partials/target_classifications.html')
 def target_classifications(target):
+    """
+    Displays the classifications of a target.
+    """
+    auto_classifications = PipelineClassificationGlobal.objects.filter(tides_id=target.tides_id).order_by('-probability')
+    human_classifications = HumanClassification.objects.filter(tides_id=target.tides_id).order_by('-created')
+    aggregated_human_class = HumanClassification.aggregate_human_tidesclass(target.tides_id)
+
+    return {
+        'target': target,
+        'auto_classifications': auto_classifications,
+        'human_classifications': human_classifications,
+        'aggregated_human_class': aggregated_human_class,
+    }
     return {'target': target}
 
 @register.inclusion_tag('custom_code/partials/aladin_finderchart.html')

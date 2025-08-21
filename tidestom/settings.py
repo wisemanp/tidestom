@@ -18,6 +18,7 @@ import tempfile
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+DB_PASS = os.environ.get('DB_PASS')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.postgres',
     'django_extensions',
      'debug_toolbar',
     'guardian',
@@ -112,15 +114,17 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+    #DB contection rules for remote cannon DB
+    'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tides_db',  # Use the remote database as default
-        'USER': 'pwise',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'NAME': 'tidestom',  # Main database
+        'USER': 'postgres',
+        'PASSWORD': DB_PASS,
+        'HOST': 'cannon.phys.soton.ac.uk',
         'PORT': '5432',
     },
 }
+#DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
@@ -173,7 +177,8 @@ DATE_FORMAT = 'Y-m-d'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, '_static')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
+                    os.path.join(TEST_DIR, 'sims'),]
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
 MEDIA_URL = '/data/'
 
@@ -186,11 +191,11 @@ LOGGING = {
         }
     },
     'loggers': {
-        '': {
+        'django.db.backends': {
             'handlers': ['console'],
-            'level': 'INFO'
-        }
-    }
+            'level': 'DEBUG',  # Log all SQL queries
+        },
+    },
 }
 
 # Caching
@@ -205,9 +210,10 @@ CACHES = {
 
 # TOM Specific configuration
 TARGET_TYPE = 'SIDEREAL'
-
+TARGET_MODEL = 'custom_code.models.MirroredTidesTarget'
+TOM_TARGET_MODEL = 'custom_code.models.MirroredTidesTarget'
 # Set to the full path of a custom target model to extend the BaseTarget Model with custom fields.
-TARGET_MODEL_CLASS = 'custom_code.models.TidesTarget'
+TARGET_MODEL_CLASS = 'custom_code.models.MirroredTidesTarget'
 
 # Define MATCH_MANAGERS here. This is a dictionary that contains a dotted module path to the desired match manager
 # for a given model.

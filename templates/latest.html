@@ -5,19 +5,29 @@
 <div class="row">
   <div class="col-md-10">
     <h2>Latest Targets</h2>
+
+    <!-- Form to specify custom range -->
+    <form method="get" action="{% url 'latest' %}" class="mb-4">
+      <label for="days_range">Show targets observed in the last:</label>
+      <input type="number" name="days_range" id="days_range" value="{{ default_days_range }}" min="1" class="form-control d-inline-block w-auto">
+      <button type="submit" class="btn btn-primary">Update</button>
+    </form>
+
     <div class="row">
       {% for target in targets %}
         <div class="col-12 col-sm-6 col-md-4 col-lg-4 mb-4">
           <div class="card">
             <div class="card-body">
               <h5 class="card-title">
-                <a href="{% url 'target_detail' target.id %}">{{ target.name }}</a>
-              </h5>
-              <p class="card-text">{{ target.created }}</p>
-              <a href="{% url 'target_detail' target.id %}">
-                <img src="{% static 'plots/spectrum_' %}{{ target.id }}.png" alt="Spectrum for {{ target.name }}" class="img-fluid">
-              </a>
-              {% target_classifications target %}
+                {% if target.mirrored_target %}
+                  <a href="{% url 'target_detail' target.mirrored_target.id %}">
+                    {{ target.mirrored_target.tides_id }}
+                  </a>
+                  <img src="{% static 'plots/spectrum_' %}{{ target.mirrored_target.tides_id }}.png" alt="Spectrum for {{ target.mirrored_target.tides_id }}" class="img-fluid">
+                  {% target_classifications target.mirrored_target %}
+                {% else %}
+                  <p>No linked target</p>
+                {% endif %}
             </div>
           </div>
         </div>

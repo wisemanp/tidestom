@@ -1,5 +1,4 @@
 from django import forms
-from .models import TidesTarget, TidesClass, TidesClassSubClass
 
 class TidesTargetForm(forms.Form):
     tidesclass = forms.ChoiceField(label='TiDES Classification')
