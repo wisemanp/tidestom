@@ -22,7 +22,7 @@
                   <a href="{% url 'target_detail' spec.target.id %}">
                     {{ spec.target.id }}
                   </a>
-                  <img src="{% static 'plots/spectrum_' %}{{ spec.target.id }}.png"
+                  <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
                        alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
                   {% target_classifications spec.target %}
                 {% else %}

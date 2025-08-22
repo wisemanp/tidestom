@@ -10,6 +10,7 @@ from pathlib import Path
 from astropy.io import fits
 from astropy import units as u
 from specutils import Spectrum1D
+import numpy as np
 
 from custom_code.models import TidesSpec
 from tidestom.settings import BROKERS
@@ -42,9 +43,16 @@ def target_spectroscopy(context, target, dataproduct=None):
             p = candidate
 
     try:
-        data = fits.getdata(str(p))
-        wave = data['WAVE'][0] * u.Angstrom
-        flux = data['FLUX'][0] * u.Unit('erg cm-2 s-1 AA-1')
+        if str(p).endswith('fits'):
+            data = fits.getdata(str(p))
+            wave = data['WAVE'][0] * u.Angstrom
+            flux = data['FLUX'][0] * u.Unit('erg cm-2 s-1 AA-1')
+        elif str(p).endswith('txt'):
+            data = np.loadtxt(str(p))
+            wave = data[:,0] * u.Angstrom
+            flux = data[:,1] * u.Unit('erg cm-2 s-1 AA-1')
+        else:
+            raise ValueError(f'Unsupported spectrum file format: {p}')
         spectrum = Spectrum1D(flux=flux, spectral_axis=wave)
 
         plot_data = [
