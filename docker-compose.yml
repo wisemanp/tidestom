@@ -6,6 +6,8 @@ services:
     command: gunicorn tidestom.wsgi:application --bind 0.0.0.0:8000
     expose:
       - "8000"
+    depends_on:
+      - snid_api 
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
@@ -15,6 +17,7 @@ services:
       DATABASE_URL: postgres://cf5g09:titanic2018@cannon.phys.soton.ac.uk/tidestom
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
+      SNID_API_URL: http://snid_api:8000
 
   nginx:
     image: nginx:1.25
@@ -26,6 +29,12 @@ services:
       - "8080:80"
     depends_on:
       - web
+
+  snid_api:
+    build: ../snid_tests/snid_docker/
+    #container_name: snid_api
+    ports:
+      - "8001:8000"
 
 volumes:
   static_volume:
