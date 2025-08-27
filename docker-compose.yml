@@ -11,6 +11,7 @@ services:
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+      - snid_api_runs:/snid_api_runs
     environment:
       TIDES_TEST_DIR: ${TIDES_TEST_DIR}
       DB_PASS: ${DB_PASS}
@@ -25,17 +26,22 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - static_volume:/static
       - media_volume:/media
+      - snid_api_runs:/snid_api_runs
     ports:
       - "8080:80"
     depends_on:
       - web
+      - snid_api
 
   snid_api:
-    build: ../snid_tests/snid_docker/
+    build: ./snid_docker/
     #container_name: snid_api
-    ports:
-      - "8001:8000"
+    expose:
+      - "8000"
+    volumes:
+      - snid_api_runs:/snid_api_runs 
 
 volumes:
   static_volume:
   media_volume:
+  snid_api_runs:
