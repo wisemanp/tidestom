@@ -1,4 +1,12 @@
 {% load tom_common_extras targets_extras %}
+
+<style>
+#target-info dl.row dt,
+#target-info dl.row dd {
+    margin-bottom: 0.3rem;
+}
+</style>
+
 <dl class="row">
   {% for target_name in target.names %}
     {% if forloop.first %}
@@ -14,7 +22,7 @@
   {% for key, value in target.as_dict.items %}
     {% if value and key not in exclude_fields %}
       <dt class="col-sm-6" title="{% help_text target key %}">{% verbose_name target key %}</dt>
-      <! This used to be value|truncate_number but sometimes truncate_number is not loaded properly/>
+      <!-- This used to be value|truncate_number but sometimes truncate_number is not loaded properly/-->
       <dd class="col-sm-6">{{ value }}</dd>
     {% endif %}
     {% if key == 'ra' %}
@@ -31,18 +39,20 @@
     {% endif %}
   {% endfor %}
 </dl>
+
 <dl class="row">
-{% for key, value in extras.items %}
-  <dt class="col-sm-6">{{ key }}</dt>
-  <dd class="col-sm-6">{{ value }}</dd>
-{% endfor %}
+	{% for key, value in extras.items %}
+		<dt class="col-sm-6">{{ key }}</dt>
+		<dd class="col-sm-6">{{ value }}</dd>
+	{% endfor %}
 </dl>
+
 {% if target.tags %}
-<p>Tags</p>
-<dl class="row">
-{% for key, value in target.tags.items %}
-  <dt class="col-sm-6">{{ key }}</dt>
-  <dd class="col-sm-6">{{ value }}</dd>
-{% endfor %}
-</dl>
+	<p>Tags</p>
+	<dl class="row">
+		{% for key, value in target.tags.items %}
+			<dt class="col-sm-6">{{ key }}</dt>
+			<dd class="col-sm-6">{{ value }}</dd>
+		{% endfor %}
+	</dl>
 {% endif %}

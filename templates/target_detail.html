@@ -102,7 +102,7 @@ fetch("{% static 'json/line_data.json' %}")
         velocityInput.value = isFinite(v) ? v.toFixed(0) : "";
 
         // Only call updateLines if both are valid
-        if (!isNaN(z) && z >= 0 && z <= 5 && !isNaN(v) && v >= -50000 && v <= 50000) {
+        if (!isNaN(z) && z >= 0 && z <= 3 && !isNaN(v) && v >= -25000 && v <= 25000) {
             updateLines(z, v);
         }
     }
@@ -276,72 +276,74 @@ fetch("{% static 'json/line_data.json' %}")
 </script>
 
 <div class="row">
+
   <div class="col-md-3">
-    <div id="target-info">
-      {% target_feature object %}
-      {% if object.future_observations %}
-      <div class="alert alert-success">
-        {{ object.future_observations|length }} upcoming observation{{ object.future_observations|pluralize }}
-      </div>
-      {% endif %}
-      {% target_unknown_statuses object %}
-      {% target_buttons object %}
-      {% tides_target_data object %}
-      <h3>Classifications</h3>
-      <ul>
-        <li><strong>Auto Classifications:</strong></li>
-        {% if auto_classifications %}
-          <ul>
-            {% for auto_classification in auto_classifications %}
-              <li>
-                <strong>Type:</strong> {{ auto_classification.sn_type }},
-                <strong>Probability:</strong> {{ auto_classification.probability|floatformat:2 }},
-                <strong>Version:</strong> {{ auto_classification.version }},
-                <strong>Notes:</strong> {{ auto_classification.notes }}
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p>No Auto Classifications</p>
-        {% endif %}
-      </ul>
+		<div id="target-info">
 
-      <ul>
-        <li><strong>Human Classification:</strong></li>
-        {% if aggregated_human_class %}
-            <p><strong>Most Common Classification:</strong> {{ aggregated_human_class.most_common_class }}</p>
-            <p><strong>Number of Submissions:</strong> {{ aggregated_human_class.total_submissions }}</p>
-            <p><strong>Count of Most Common Classification:</strong> {{ aggregated_human_class.count }}</p>
-        {% else %}
-            <p>No human classifications submitted yet.</p>
-        {% endif %}
-      </ul>
-      <ul>
-        <li><strong>All Human Classifications:</strong></li>
-        {% if human_classifications %}
-            <ul>
-                {% for submission in human_classifications %}
-                    <li>
-                      <strong>User ID:</strong> {{ submission.person_id }},
-                      <strong>Type:</strong> {{ submission.sn_type }},
-                      {% if submission.sn_subtype %}<strong>Subtype:</strong> {{ submission.sn_subtype }}, {% endif %}
-                      {% if submission.sn_z %}<strong>Redshift:</strong> {{ submission.sn_z|floatformat:2 }}, {% endif %}
-                      <strong>Comments:</strong> {{ submission.comments }},
-                      <strong>Submitted on:</strong> {{ submission.created|date:"Y-m-d H:i" }}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No classifications have been submitted yet.</p>
-        {% endif %}
-      </ul>
-      {% classification_form target.id %}
-      {% recent_photometry object limit=3 %}
-      {# {% endif %} #}
-      {# {% recent_photometry object num_points=3 %} #}
+			{% target_feature object %}
 
-    </div>
-  </div>
+			{% if object.future_observations %}
+				<div class="alert alert-success">
+					{{ object.future_observations|length }} upcoming observation{{ object.future_observations|pluralize }}
+				</div>
+			{% endif %}
+
+			{% target_unknown_statuses object %}
+			{% target_buttons object %}
+			{% tides_target_data object %}
+
+			<h3>Classifications</h3>
+
+			<p>
+				<u><strong>Auto Classification</strong></u>&emsp;
+				{% if object.auto_tidesclass %}
+					<br><strong>Class:</strong> {{ object.auto_tidesclass }}
+					{% if object.auto_tidesclass_subclass %}
+						<br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
+					{% endif %}
+					{% if object.auto_tidesclass_prob %}
+						<br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
+					{% endif %}
+				{% else %}
+					<br><strong>No Auto Classification</strong>
+				{% endif %}
+			</p>
+
+			<p>
+				<u><strong>Human Classification:</strong></u>
+				{% if aggregated_human_class %}
+					<br><strong>Most Common:</strong> {{ aggregated_human_class.most_common_class }}
+					<br><strong>Total Submissions:</strong> {{ aggregated_human_class.total_submissions }}
+					<br><strong>No. of Most Common:</strong> {{ aggregated_human_class.count }}
+                    <br><strong>Agreement:</strong> {% with ratio=aggregated_human_class.count|divide:aggregated_human_class.total_submissions %}{{ ratio|floatformat:3 }}{% endwith %}
+				{% else %}
+					<br><i>No human classifications submitted yet.</i>
+				{% endif %}
+			</p>
+
+			<p>
+				<u><strong>All Human Classifications:</strong></u>&emsp;
+				{% if human_classifications %}
+					{% for submission in human_classifications %}
+						<strong>{{ submission.user.username }}</strong> submitted
+						<strong>{{ submission.tidesclass }}</strong>
+						{% if submission.tidesclass_other %}(Other: {{ submission.tidesclass_other }}){% endif %}
+						{% if submission.tidesclass_subclass %}(Subclass: {{ submission.tidesclass_subclass }}){% endif %}
+						on {{ submission.timestamp|date:"Y-m-d H:i" }}<br>
+					{% endfor %}
+				{% else %}
+					<i>No human classifications submitted yet.</i>
+				{% endif %}
+			</p>
+
+			{% classification_form target.id %}
+			{% recent_photometry object limit=3 %}
+			{# {% recent_photometry object num_points=3 %} #}
+
+		</div>
+	</div>
+
+
   <div class="col-md-8">
     <ul class="nav nav-tabs" role="tablist" id="tabs">
       <li class="nav-item">
@@ -456,16 +458,16 @@ fetch("{% static 'json/line_data.json' %}")
       <label for="redshiftSlider" style="display:block; width:250px;">
           Redshift (z):
       </label>
-      <input type="range" id="redshiftSlider" min="0" max="5" step="0.0001" value="0">
-      <input type="number" id="redshiftInput" min="0" max="5" step="0.0001" value="0" style="width: 80px; text-align: center;">
+      <input type="range" id="redshiftSlider" min="0" max="3" step="0.0001" value="0" style="width: 150px">
+      <input type="number" id="redshiftInput" min="0" max="3" step="0.0001" value="0" style="width: 80px; text-align: center;">
     </div>
       <!-- Velocity Slider -->
     <div class="spectroscopy-only">
         <label for="velocitySlider" style="display:block; width:250px;">
           Additional line velocity (km\s):
         </label>
-      <input type="range" id="velocitySlider" min="-50000" max="50000" step="100" value="0">
-      <input type="number" id="velocityInput" min="-50000" max="50000" step="100" value="0" style="width: 80px; text-align: center;">
+      <input type="range" id="velocitySlider" min="-25000" max="25000" step="100" value="0" style="width: 150px">
+      <input type="number" id="velocityInput" min="-25000" max="25000" step="100" value="0" style="width: 80px; text-align: center;">
     </div>
   </div>
 </div>

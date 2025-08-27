@@ -1,5 +1,7 @@
 # Tides TOM
 
+[![CI Test](https://github.com/TiDES-4MOST/tidestom/actions/workflows/test_deploy.yml/badge.svg)](https://github.com/TiDES-4MOST/tidestom/actions/workflows/test_deploy.yml)
+
 This repository contains the Tides TOM (Target and Observation Manager) project, built using the [TOM Toolkit](https://tom-toolkit.readthedocs.io/en/stable/). Follow the instructions below to set up the project, contribute to its development, and run the server.
 
 ---
