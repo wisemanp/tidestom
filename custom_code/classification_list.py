@@ -1,5 +1,5 @@
 CLASSIFICATIONS = {
-    "SNIa": ["Normal", "91bg-like", "Super-Chandrasekhar" "91T-like","99aa-like","02cx-like","CSM","pec"],
+    "SNIa": ["Normal", "91bg-like", "Super-Chandrasekhar", "91T-like","99aa-like","02cx-like","CSM","pec"],
     "SNIb/c":[],
     "SNIb": ["Normal", "Ca-strong","n","pec"],
     "SNIc": ["Normal", "BL","n","pec"],
