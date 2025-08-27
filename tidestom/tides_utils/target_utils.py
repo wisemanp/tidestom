@@ -71,7 +71,6 @@ def create_target(
 
 
 def add_spectrum_to_database(target, spectrum_file_path):
-    #try:
     if os.path.exists(spectrum_file_path):
         # Determine the symlink path
         if os.path.basename(spectrum_file_path).startswith('l1_obs_joined_'):
