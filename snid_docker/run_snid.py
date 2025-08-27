@@ -17,7 +17,7 @@ class Params(BaseModel):
 
 app = FastAPI()
 
-@app.post("/params/")
+@app.post("/snid_params/")
 def run_snid(params: Params):
     params  = params.dict()
     print(params)

@@ -7,11 +7,13 @@ services:
     expose:
       - "8000"
     depends_on:
-      - snid_api 
+      - snid_api
+      - ngsf_api
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - snid_api_runs:/snid_api_runs
+      - ngsf_api_runs:/ngsf_api_runs
     environment:
       TIDES_TEST_DIR: ${TIDES_TEST_DIR}
       DB_PASS: ${DB_PASS}
@@ -19,6 +21,7 @@ services:
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
       SNID_API_URL: http://snid_api:8000
+      NGSF_API_URL: http://ngsf_api:8000
 
   nginx:
     image: nginx:1.25
@@ -27,21 +30,35 @@ services:
       - static_volume:/static
       - media_volume:/media
       - snid_api_runs:/snid_api_runs
+      - ngsf_api_runs:/ngsf_api_runs
     ports:
       - "8080:80"
     depends_on:
       - web
       - snid_api
+      - ngsf_api
 
   snid_api:
     build: ./snid_docker/
     #container_name: snid_api
     expose:
       - "8000"
+    environment:
+      DJANGO_URL: http://web:8000
     volumes:
-      - snid_api_runs:/snid_api_runs 
+      - snid_api_runs:/snid_api_runs
+
+  ngsf_api:
+    build: ./ngsf_docker/
+    expose:
+      - "8000"
+    environment:
+      DJANGO_URL: http://web:8000
+    volumes:
+      - ngsf_api_runs:/ngsf_api_runs
 
 volumes:
   static_volume:
   media_volume:
   snid_api_runs:
+  ngsf_api_runs:
