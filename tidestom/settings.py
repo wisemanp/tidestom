@@ -113,16 +113,24 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
-DATABASES = {
-    #DB contection rules for remote cannon DB
-    'default':{
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tidestom',  # Main database
-        'USER': 'postgres',
-        'PASSWORD': DB_PASS,
-        'HOST': 'cannon.phys.soton.ac.uk',
-        'PORT': '5432',
-    }
+if os.environ.get('LOCAL_MODE') == 'True':
+    DATABASES = {
+        #DB contection rules for remote cannon DB
+        'default':{
+            'ENGINE': "django.db.backends.sqlite3",
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            }
+        }
+else:
+    DATABASES = {
+        'default':{
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'tidestom',  # Main database
+            'USER': 'postgres',
+            'PASSWORD': DB_PASS,
+            'HOST': 'cannon.phys.soton.ac.uk',
+            'PORT': '5432',
+        }
     #'default':{
     #    'ENGINE': 'django.db.backends.postgresql',
     #    'NAME': 'tides_db',  # Main database
