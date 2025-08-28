@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+import shutil
 import os
 
 class Params(BaseModel):
+    file: str
     z: float | None = 0.1
 
 
@@ -12,6 +14,11 @@ app = FastAPI()
 def run_ngsf(params: Params):
     params = params.dict()
 
-    os.system(f"python run_ngsf.py sn2003jo.dat.txt -z {params['z']} --how_many_plots 0")
+    if os.path.exists('./tmp_save') is False:
+        os.mkdir('./tmp_save/')
 
-    return {"test": f"test:{params['z']}"}
+    os.system(f"python run_ngsf.py {params['file']} -z {params['z']} --how_many_plots 0 -s tmp_save/")
+
+    shutil.move(f"tmp_save/{params['file'][:-3]}csv", '/ngsf_api_runs/')
+
+    return {"path": f"{params['file'][:-3]}csv"}
