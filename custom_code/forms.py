@@ -1,3 +1,4 @@
+from typing import Required
 from django import forms
 from django.db import DatabaseError
 from .models import TidesClass, TidesClassSubClass, TidesTarget
@@ -54,3 +55,10 @@ class TidesTargetForm(forms.Form):
             self.add_error('tidesclass_subclass', 'Selected sub-class does not belong to the chosen main class.')
 
         return cleaned
+
+class SnidParamsForm(forms.Form):
+    wimn = forms.FloatField(initial=4000, required=True)
+    wmax = forms.FloatField(initial=9000, required=True)
+    zmin = forms.FloatField(initial=0, required=True)
+    zmax = forms.FloatField(initial=1.2, required=True)
+
