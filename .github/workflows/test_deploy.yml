@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LASAIR_API_KEY: ${{ secrets.LASAIR_API_KEY }}
+      TIDES_TEST_DIR: "dummy_dir"
     steps:
       # 1. Checkout repo
       - name: Checkout repository
