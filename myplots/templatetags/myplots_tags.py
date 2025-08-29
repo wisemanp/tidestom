@@ -1,4 +1,5 @@
 import warnings
+import numpy as np
 from plotly import offline
 import plotly.graph_objs as go
 from datetime import datetime
@@ -15,6 +16,7 @@ import numpy as np
 from custom_code.models import TidesSpec
 from tidestom.settings import BROKERS
 lasair_token = BROKERS['LASAIR']['api_key']
+from .spectroscopy_settings import add_snid_templates, add_ngsf_templates
 from .photometry_settings import plot_lightcurves, fetch_ztf_lasair
 
 register = template.Library()
@@ -43,6 +45,7 @@ def target_spectroscopy(context, target, dataproduct=None):
             p = candidate
 
     try:
+
         if str(p).endswith('fits'):
             data = fits.getdata(str(p))
             wave = data['WAVE'][0] * u.Angstrom
@@ -67,14 +70,44 @@ def target_spectroscopy(context, target, dataproduct=None):
         return {'target': target, 'plot': f'<p>Failed to load spectrum: {e}</p>'}
 
     fig = go.Figure(data=plot_data)
-    fig.update_layout(
-        autosize=True,
-        xaxis_title='Observed Wavelength [Å]',
-        yaxis_title='Flux',
-        xaxis=dict(showticklabels=True, ticks='outside', linewidth=2),
-        yaxis=dict(showticklabels=True, ticks='outside', linewidth=2),
-        shapes=[]
-    )
+        
+    # add templates - best matches
+    # SNID - mock templates for now
+    data_mean = np.mean(spectrum.flux.value)
+    try:
+      pysnid_file = '/home/tomas/Softwares/tests/pysnid/l1_obs_joined_87178841_snid.h5'
+      fig = add_snid_templates(pysnid_file,
+                             spectrum.spectral_axis.value, 
+                             spectrum.flux.value, 
+                             fig, 
+                             n=3
+                             )
+    except:
+      #TODO add better handling
+      pass
+    
+    
+    # NGSF - mock templates for now
+    try:
+      ngsf_file = '/home/tomas/Softwares/tests/ngsf/l1_obs_joined_87178841.csv'
+      fig = add_ngsf_templates(ngsf_file, 
+                             deserialized.wavelength.value, 
+                             deserialized.flux.value, 
+                             fig, 
+                             n=3
+                             )
+    except:
+      #TODO add better handling
+      pass
+    fig.update_layout(autosize=True, 
+                      xaxis_title='Observed Wavelength (Å)',
+                      yaxis_title='Flux (erg/s/cm²/Å)',
+                      xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
+                      yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
+                      legend_title="Best Templates",
+                      showlegend=True,
+                      )
+
 
     return {
         'target': target,
@@ -99,6 +132,8 @@ def target_photometry(context, target, dataproduct=None):
     
     photometry = fetch_ztf_lasair(49.1384664, 44.9725084)  # ZTF25aacedrs for testing
     #photometry = fetch_ztf_lasair(target.ra, target.dec)
+    if photometry is None:
+        return {'target': target}
     
     # plot photometry
     fig = plot_lightcurves(photometry)

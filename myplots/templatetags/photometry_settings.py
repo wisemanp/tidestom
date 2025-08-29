@@ -1,4 +1,5 @@
 import warnings
+import requests
 import numpy as np
 import pandas as pd
 from astropy.time import Time
@@ -7,10 +8,50 @@ import plotly.graph_objects as go
 from lasair import lasair_client
 from tidestom.settings import BROKERS
 lasair_token = BROKERS['LASAIR']['api_key']
+lasair_api_url = "https://lasair-ztf.lsst.ac.uk/api"
 
 ##########
 # Lasair #
 ##########
+def is_site_up(url: str) -> bool:
+    """Checks if a website is running.
+
+    Parameters
+    ----------
+    url: website to check.
+    
+    Returns:
+    --------
+    bool: whether is up (True) or down (False)
+    """
+    try:
+        response = requests.get(url, timeout=5)
+        content = response.text.lower()
+
+        # Look for maintenance / offline messages
+        downtime_keywords = ["offline", "down", "maintenance", "not available"]
+
+        if response.status_code == 200:
+            if any(word in content for word in downtime_keywords):
+                print(f"{url} is DOWN ❌ (Maintenance page detected)")
+                return False
+            else:
+                print(f"{url} is UP ✅ (Status: {response.status_code})")
+                return True
+        else:
+            print(f"{url} is reachable but returned status {response.status_code} ⚠️")
+            return False
+
+    except requests.ConnectionError:
+        print(f"{url} is DOWN ❌ (Connection error)")
+        return False
+    except requests.Timeout:
+        print(f"{url} is DOWN ❌ (Timeout)")
+        return False
+    except requests.RequestException as e:
+        print(f"{url} is DOWN ❌ (Error: {e})")
+        return False
+    
 def find_ztfname_lasair(ra: float, dec: float) -> str | None:
     """Finds the nearest ZTF target from the given coordinates.
 
@@ -26,7 +67,9 @@ def find_ztfname_lasair(ra: float, dec: float) -> str | None:
     ztfname: ZTF internal name or 'None' if not found.
     """
     # query objects
-    lasair = lasair_client(lasair_token, endpoint = "https://lasair-ztf.lsst.ac.uk/api")
+    if not is_site_up("https://lasair-ztf.lsst.ac.uk/"):
+        return None
+    lasair = lasair_client(lasair_token, endpoint = lasair_api_url)
     objects_list = lasair.cone(ra, dec)
     if len(objects_list) == 0:
         return None
@@ -60,7 +103,9 @@ def fetch_ztf_lasair(ra: float, dec: float, name: str=None) -> pd.DataFrame:
         return None
         
     # query photometry from Lasair
-    lasair = lasair_client(lasair_token, endpoint = "https://lasair-ztf.lsst.ac.uk/api")
+    if not is_site_up("https://lasair-ztf.lsst.ac.uk/"):
+        return None
+    lasair = lasair_client(lasair_token, endpoint = lasair_api_url)
     target_info = lasair.lightcurves([ztfname])
     phot_list = target_info[0]['candidates']
     det_list = []  # detections
@@ -98,6 +143,9 @@ def fetch_ztf_lasair(ra: float, dec: float, name: str=None) -> pd.DataFrame:
     ztf_df = ztf_df[['filter', 'mjd', 'mag', 'mag_err', 'upper_mag']]
     return ztf_df
 
+############
+# Plotting #
+############ 
 def get_hovertemplates(df: pd.DataFrame, columns: list) -> str:
     """Creates the hover template to show information when hovering 
     over the data.

@@ -7,4 +7,6 @@ tomtoolkit>=2.26
 lasair>=0.1.1
 psycopg2 # PostgreSQL adapter for Python
 gunicorn>=21.2
-
+extinction>=0.4.8
+pysnid>=0.6.0
+ngsf>=0.0.2

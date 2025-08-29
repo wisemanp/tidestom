@@ -217,7 +217,7 @@ fetch("{% static 'json/line_data.json' %}")
 
       if (!toggle.checked) {
         if (existingIndex >= 0) Plotly.deleteTraces(fig, [existingIndex]);
-        ensureLegendOff(fig);
+        //ensureLegendOff(fig);
         return;
       }
       const trace = makeBinnedTrace();
@@ -228,7 +228,7 @@ fetch("{% static 'json/line_data.json' %}")
       } else {
         Plotly.addTraces(fig, [trace]);
       }
-      ensureLegendOff(fig);
+      //ensureLegendOff(fig);
     }
 
     ['toggle-binned','bin-size'].forEach(id => {
