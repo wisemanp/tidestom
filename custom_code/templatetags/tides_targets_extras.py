@@ -86,3 +86,8 @@ def aladin_finderchart(target):
     """
     return {'target': target}
 
+@register.inclusion_tag('custom_code/partials/run_snid.html')
+def snid_form():
+
+    return None
+
