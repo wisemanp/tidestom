@@ -114,7 +114,7 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
-    #DB contection rules for remote cannon DB
+    #DB connection rules for remote cannon DB
     #'default':{
     #    'ENGINE': 'django.db.backends.postgresql',
     #    'NAME': 'tidestom',  # Main database
