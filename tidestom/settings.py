@@ -126,7 +126,7 @@ DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'tides_db',  # Main database
-        'USER': 'pwise',
+        'USER': 'tides',
         'PASSWORD':'',
         'HOST': 'localhost',
         'PORT': '5432',
