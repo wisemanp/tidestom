@@ -2,11 +2,12 @@ from django.views.generic.detail import DetailView
 from django_filters.views import FilterView
 from django.utils import timezone
 from django.views.generic.edit import FormView
-from django.db import models
-from django.contrib.auth.models import User
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
-from guardian.mixins import PermissionListMixin
+# from django.db import models
+# from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404, redirect
+# from django.shortcuts import render
+# from django.urls import reverse_lazy
+#from guardian.mixins import PermissionListMixin
 from tom_targets.models import Target
 from tom_dataproducts.models import DataProduct
 from datetime import timedelta
@@ -48,6 +49,7 @@ class LatestView(ListView):
 
         return context
 
+
 class MyTargetDetailView(DetailView):
     model = TidesTarget
     template_name = 'target_detail.html'
@@ -81,6 +83,7 @@ class MyTargetDetailView(DetailView):
         context['human_classifications'] = submissions.order_by('-created')
         return context
 
+
 class SubmitClassificationView(FormView):
     form_class = TidesTargetForm
 
@@ -103,7 +106,9 @@ class SubmitClassificationView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['object'] = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
+        context['object'] = get_object_or_404(
+            TidesTarget, id=self.kwargs['target_id']
+        )
         context['form'] = self.get_form()
         return context
     

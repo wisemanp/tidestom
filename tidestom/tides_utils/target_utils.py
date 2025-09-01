@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 from django.conf import settings
 from tom_targets.models import Target
-from django.core.management.base import BaseCommand
+# from django.core.management.base import BaseCommand
 from tom_dataproducts.models import DataProduct
 from tom_dataproducts.data_processor import run_data_processor
 from datetime import datetime
 from pathlib import Path  # Import pathlib
+
 
 def generate_light_curve_plot(target):
     # Generate the light curve plot for the target
@@ -15,15 +16,16 @@ def generate_light_curve_plot(target):
     # Example plot code
     plt.plot([1, 2, 3], [4, 5, 6])
     plt.title(f'Light Curve for {target.name}')
-    
+
     # Ensure the directory exists
     plot_dir = Path(settings.STATICFILES_DIRS[0]) / 'plots'
     plot_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Save the plot
     plot_path = plot_dir / f'light_curve_{target.id}.png'
     plt.savefig(plot_path)
     plt.close()
+
 
 def generate_spectrum_plot(target, spec_fn):
     # Generate the spectrum plot for the target
@@ -35,18 +37,22 @@ def generate_spectrum_plot(target, spec_fn):
         ax.set_xlim(4000, 9300)
     except OSError:
         pass
-    
+
     # Ensure the directory exists
     plot_dir = Path(settings.STATICFILES_DIRS[0]) / 'plots'
     plot_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Save the plot
     plot_path = plot_dir / f'spectrum_{target.id}.png'
     plt.savefig(plot_path)
     print("Saved spectrum plot to", plot_path)
     plt.close()
 
-def create_target(name, other_fields, update_existing=False, generate_plots=False, spec_fn=None):
+
+def create_target(
+        name, other_fields, update_existing=False,
+        generate_plots=False, spec_fn=None
+):
     if update_existing:
         target, created = Target.objects.update_or_create(
             name=name,
@@ -55,16 +61,16 @@ def create_target(name, other_fields, update_existing=False, generate_plots=Fals
         )
     else:
         target = Target.objects.create(name=name, **other_fields)
-    
+
     if generate_plots:
         # Generate the light curve and spectrum plots
         # generate_light_curve_plot(target, spec_fn)
         generate_spectrum_plot(target, spec_fn)
-    
+
     return target
 
+
 def add_spectrum_to_database(target, spectrum_file_path):
-    #try:
     if os.path.exists(spectrum_file_path):
         # Determine the symlink path
         if os.path.basename(spectrum_file_path).startswith('l1_obs_joined_'):

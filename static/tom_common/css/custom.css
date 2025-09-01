@@ -48,27 +48,24 @@ a:hover {
     width: 100%;
 }
 
-.checkbox-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    width: 100%;  /* Ensure the group takes up the full width */
-}
+	.checkbox-group h5 {
+		margin-bottom: 0.25rem; /* tighten gap under heading */
+	}
 
-.checkbox-group h5 {
-    margin-bottom: 10px;  /* Adds space below the group title */
-}
+	.checkbox-group .checkbox-grid {
+		margin-top: 0;  /* remove extra gap above the grid */
+	}
 
-.checkbox-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr); /* Adjust number of columns for the grid */
-    gap: 5px;  /* Adds space between checkboxes */
-}
+	/* optionally reduce the space between checkboxes inside the grid */
+	.checkbox-group .checkbox-grid label {
+		margin-bottom: 0.25rem;
+	}
 
-.checkbox-group label {
-    display: block;  /* Ensures each checkbox is on its own line */
-    margin-bottom: 5px;  /* Adds space between checkboxes */
-}
+    .checkbox-group .checkbox-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;   /* reduces space between items */
+    }
 
 
 

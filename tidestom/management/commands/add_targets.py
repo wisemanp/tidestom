@@ -9,26 +9,33 @@ from django.db import connection
 
 
 class Command(BaseCommand):
-    # Placeholder code that currently looks at a set of simulated spectra from Georgios.
+    # Placeholder code that currently looks at a set of simulated spectra from
+    # Georgios.
     help = 'Add new targets from a distant directory'
 
     def handle(self, *args, **kwargs):
-        #directory = os.environ['TARGET_DB']
+        # directory = os.environ['TARGET_DB']
         target_csv_path = os.path.join(settings.TEST_DIR, "mock_DB.csv")
 
         if not os.path.exists(target_csv_path):
-            self.stdout.write(self.style.ERROR(f"Target CSV file not found at {target_csv_path}"))
+            self.stdout.write(
+                self.style.ERROR(
+                    f"Target CSV file not found at {target_csv_path}"
+                )
+            )
             return
-        dbdf = pd.read_csv(target_csv_path, index_col=0)   
-        for index, row in dbdf.iterrows(): 
-            name=index
-            if row['OBS_STATUS_4MOST']:  # Check if the target has been observed by 4MOST
+        dbdf = pd.read_csv(target_csv_path, index_col=0)
+        for index, row in dbdf.iterrows():
+            name = index
+
+            # Check if the target has been observed by 4MOST
+            if row['OBS_STATUS_4MOST']:
                 external_id = name
                 other_fields = {
                     'ra': row['ra'],
                     'dec': row['dec'],
                     'created': row['MJD_DET'],
-                    'type':'SIDEREAL'
+                    'type': 'SIDEREAL'
                     # Add other fields as needed
                 }
 
@@ -39,7 +46,9 @@ class Command(BaseCommand):
                 )
 
                 if created:
-                    self.stdout.write(self.style.SUCCESS(f'Successfully added target {name}'))
+                    self.stdout.write(
+                        self.style.SUCCESS(f'Successfully added target {name}')
+                    )
                 else:
                     self.stdout.write(self.style.SUCCESS(f'Successfully updated target {name}'))
 
@@ -55,4 +64,9 @@ class Command(BaseCommand):
                     )
                 self.stdout.write(f'Ensured tides_cand row for target id={target.id}')
             else:
-                self.stdout.write(self.style.WARNING(f'Target {name} has not been observed by 4MOST and will not be added'))
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'Target {name} has not been observed '
+                        'by 4MOST and will not be added'
+                    )
+                )

@@ -1,5 +1,7 @@
 # Tides TOM
 
+[![CI Test](https://github.com/TiDES-4MOST/tidestom/actions/workflows/test_deploy.yml/badge.svg)](https://github.com/TiDES-4MOST/tidestom/actions/workflows/test_deploy.yml)
+
 This repository contains the Tides TOM (Target and Observation Manager) project, built using the [TOM Toolkit](https://tom-toolkit.readthedocs.io/en/stable/). Follow the instructions below to set up the project, contribute to its development, and run the server.
 
 ---
@@ -10,6 +12,7 @@ To set up the Tides TOM, follow these steps:
 
 1. **Fork the repository**:  
    Go to the [Tides TOM GitHub repository](https://github.com/TiDES-4MOST/tidestom.git) and click the "Fork" button in the top-right corner to create your own copy of the repository.
+
 
 2. **Clone your fork**:  
    Clone your forked repository to your local machine:
@@ -41,8 +44,10 @@ If you want to contribute to the development of this project, follow these steps
 2. **Make your changes**:  
    Make the necessary changes to the codebase.
 
+
 3. **Edit `.gitignore`**:  
    Make sure that any data directories and the database (e.g., `db.sqlite`) are added to `.gitignore` so they are not tracked by Git.
+
 
 4. **Commit your changes**:  
    Stage and commit your changes:
@@ -103,62 +108,86 @@ To use the Tides TOM with test data, follow these steps:
 
 1. **Download the test data**:  
    Download the test data from the following link:  
-   [Test Data](https://drive.google.com/file/d/1HxkHGde8RTyMZWAeSsQjQqdPiWQTlu3s/view?usp=sharing)
+   [Test Data](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing)
    
 
-2. **Unzip the test data**:  
-   Extract the downloaded file to a directory of your choice:
-    ```bash
-    tar -xvf /path/to/downloaded/file.tar.gz -C /path/to/extract/
     ```
 
-3. **Set the test directory path**:  
-   Add the test directory path to your environment by editing the `tom_env/bin/activate` script:
-    ```bash
-    nano /path/to/tom_env/bin/activate
-    ```
-
-4. Add the following line to the end of the file:
+4. **Add the following line to the end of the file**:
     ```bash
     export TIDES_TEST_DIR="/path/to/extracted/test/data"
     ```
 
-   Save the file and exit. Then, source the environment again to apply the changes:
-    ```bash
-    source /path/to/tom_env/bin/activate
-    ```
-
-   Verify that the environment variable is set:
-    ```bash
-    echo $TIDES_TEST_DIR
-    ```   
-
-5. **Run the `populate_tidesclasses` command**:  
-    Before adding targets, make sure to populate the `TidesClass` and `TidesClassSubClass` tables by running the following command:
-    ```bash
-    python manage.py migrate
-    python manage.py populate_tidesclasses
-    ```
 ---
-## Loading Test Data into the Database
 
-Once the test data is set up, you can load it into the database using the following commands:
+## Using tides_merged_schema.sql with TiDES TOM
 
-1. **Add targets**:  
-   Run the following command to add targets from the test data:
-    ```bash
-    python manage.py add_targets
-    ```
+This sets up a local Postgres schema compatible with TiDES and TOM, then seeds targets from a MEC file so you can run the pipeline locally.
 
-2. **Add spectra**:  
-   Run the following command to add spectra from the test data:
-    ```bash
-    python manage.py add_spectra_to_db --mock
-    ```
+Prerequisites:
+- PostgreSQL running locally (psql available)
+- A Python virtualenv with TOM Toolkit and this project installed
 
-These commands will populate the database with the test targets and spectra.
+Steps:
 
+1) Create database and role (adjust user/password as needed):
+```bash
+createdb tides_db
+psql -d tides_db -c "CREATE USER tides WITH PASSWORD 'tides';"
+psql -d tides_db -c "GRANT ALL PRIVILEGES ON DATABASE tides_db TO tides;"
+```
 
+2) Add DB credentials to your YAML config (used by scripts and pipeline):
+```yaml
+db_creds:
+  host: "localhost"
+  port: 5432
+  user: "tides"
+  password: "tides"
+  name: "tides_db"
+```
+
+3) Run Django migrations so TOM base tables exist:
+```bash
+cd tidestom
+python manage.py migrate
+```
+
+4) Apply the TiDES schema additions:
+- Clone the tides_db schema: https://github.com/TiDES-4MOST/tides-db-scripts
+```bash
+psql "host=localhost port=5432 user=tides password=tides dbname=tides_db" \
+  -f ../tides-db-scripts/tides_merged_schema.sql
+```
+
+5) Seed targets from a MEC file-with-transient-spectra:
+- The seeding script reads OBJ_NME from FIBMETATAB and creates matching rows in:
+  - public.tom_targets_basetarget (filling required fields)
+  - public.tides_cand (FK to BaseTarget)
+```bash
+python ../tides-db-scripts/populate_db_from_MEC.py \
+  --mec /path/to/deliveries_dir/mec_with_transients.fits \
+  --config ../tides_pipe/config/config.yml
+```
+Note: If your tides_cand.tides_id is INTEGER, the script downcasts IDs; for BIGINT, it uses full IDs.
+
+6) (Optional) Ingest spectra into tides_spec with the pipeline:
+- Clone the tides backend pipeline: https://github.com/TiDES-4MOST/tides_pipe
+- Configure data paths in tides_pipe/config/config.yml
+- Place your MEC delivery under deliveries_dir/<night> and run:
+```bash
+python -c "from tides_pipe.modules.data_ingestion import DataIngestion; \
+import yaml; cfg=yaml.safe_load(open('tides_pipe/config/config.yml')); \
+DataIngestion(cfg).process_night('<night>')"
+```
+
+Troubleshooting:
+- Check tables exist and FKs: psql -d tides_db -c "\d+ public.tides_cand" and "\d+ public.tom_targets_basetarget"
+- Verify seeded rows: psql -d tides_db -c "SELECT COUNT(*) FROM public.tides_cand;"
+- If FK errors occur, ensure BaseTarget rows are created before inserting tides_cand.
+- If JSON serialization errors occur in tides_spec, ensure metadata fields are native Python types.
+
+---
 
 ## Notes
 

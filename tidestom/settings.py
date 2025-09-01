@@ -10,7 +10,7 @@ https://docs.djangoproject.com/en/2.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
-import logging.config
+# import logging.config  # logging.config was imported but never used.
 import os
 import tempfile
 
@@ -46,12 +46,11 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.postgres',
     'django_extensions',
-     'debug_toolbar',
+    'debug_toolbar',
     'guardian',
     'tom_common',
     'django_comments',
     'bootstrap4',
-    #'bootstrap5',
     'django_bootstrap5',
     'crispy_bootstrap4',
     'crispy_forms',
@@ -69,6 +68,7 @@ INSTALLED_APPS = [
     'tidestom',
     'myplots',
 ]
+# 'bootstrap5',
 
 SITE_ID = 1
 
@@ -112,33 +112,15 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
-
-if os.environ.get('LOCAL_MODE') == 'True':
-    DATABASES = {
-        #DB contection rules for remote cannon DB
-        'default':{
-            'ENGINE': "django.db.backends.sqlite3",
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-            }
-        }
-else:
-    DATABASES = {
-        'default':{
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'tidestom',  # Main database
-            'USER': 'postgres',
-            'PASSWORD': DB_PASS,
-            'HOST': 'cannon.phys.soton.ac.uk',
-            'PORT': '5432',
-        }
-    #'default':{
-    #    'ENGINE': 'django.db.backends.postgresql',
-    #    'NAME': 'tides_db',  # Main database
-    #    'USER': 'pwise',
-    #    'PASSWORD':'',
-    #    'HOST': 'localhost',
-    #    'PORT': '5432',
-    #}
+DATABASES = {
+    'default':{
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'tides_db',  # Main database
+        'USER': 'tides',
+        'PASSWORD':'',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
 
@@ -149,16 +131,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': (
+            'django.contrib.auth.'
+            'password_validation.UserAttributeSimilarityValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.MinimumLengthValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.CommonPasswordValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.NumericPasswordValidator'
+        ),
     },
 ]
 
@@ -230,7 +221,8 @@ TOM_TARGET_MODEL = 'tom_targets.Target'
 # Set to the full path of a custom target model to extend the BaseTarget Model with custom fields.
 
 
-# Define MATCH_MANAGERS here. This is a dictionary that contains a dotted module path to the desired match manager
+# Define MATCH_MANAGERS here. This is a dictionary that contains a dotted
+# module path to the desired match manager
 # for a given model.
 # For example:
 # MATCH_MANAGERS = {
@@ -267,10 +259,11 @@ FACILITIES = {
 }
 
 # Define the valid data product types for your TOM.
-# This is a dictionary of tuples to be used as ChoiceField options, with the first element being the type and the
-# second being the display name.
+# This is a dictionary of tuples to be used as ChoiceField options, with the
+# first element being the type and the second being the display name.
 # Be careful when removing items, as previously valid types will no
-# longer be valid, and may cause issues unless the offending records are modified.
+# longer be valid, and may cause issues unless the offending records are
+# modified.
 DATA_PRODUCT_TYPES = {
     'photometry': ('photometry', 'Photometry'),
     'fits_file': ('fits_file', 'FITS File'),
@@ -279,10 +272,16 @@ DATA_PRODUCT_TYPES = {
 }
 
 DATA_PROCESSORS = {
-    'photometry': 'tom_dataproducts.processors.photometry_processor.PhotometryProcessor',
-    #'spectroscopy': 'tom_dataproducts.processors.spectroscopy_processor.SpectroscopyProcessor',
-    'spectroscopy': 'tidestom.tides_utils.tides_data_processor.QMOSTSpectroscopyProcessor',
+    'photometry': (
+        'tom_dataproducts.processors.photometry_processor.PhotometryProcessor'
+    ),
+
+    'spectroscopy': (
+        'tidestom.tides_utils.tides_data_processor.QMOSTSpectroscopyProcessor'
+    ),
 }
+# 'spectroscopy':
+# 'tom_dataproducts.processors.spectroscopy_processor.SpectroscopyProcessor',
 
 TOM_FACILITY_CLASSES = [
     'tom_observations.facilities.lco.LCOFacility',
@@ -306,13 +305,15 @@ BROKERS = {
         'bot_name': '',
     },
     'LASAIR': {
-        'api_key': '',
+        'api_key': os.environ.get('LASAIR_API_KEY'),
     }
 }
 
-# Include or exclude specific dot separated harvester classes. If not set, all harvesters will be included based on
-# app configurations. If INCLUDE_HARVESTER_CLASSES is set, only those harvesters will be included. If
-# EXCLUDE_HARVESTER_CLASSES is set, all harvesters except those will be included.
+# Include or exclude specific dot separated harvester classes. If not set, all
+# harvesters will be included based on app configurations. If
+# INCLUDE_HARVESTER_CLASSES is set, only those harvesters will be included. If
+# EXCLUDE_HARVESTER_CLASSES is set, all harvesters except those will be
+# included.
 # INCLUDE_HARVESTER_CLASSES = ['app.example.harvesters.ExampleHarvester']
 # EXCLUDE_HARVESTER_CLASSES = ['app.example.harvesters.ExampleHarvester']
 
@@ -322,8 +323,10 @@ HARVESTERS = {
     }
 }
 
-# Define extra target fields here. Types can be any of "number", "string", "boolean" or "datetime"
-# See https://tomtoolkit.github.io/docs/target_fields for documentation on this feature
+# Define extra target fields here. Types can be any of "number", "string",
+# "boolean" or "datetime"
+# See https://tomtoolkit.github.io/docs/target_fields for documentation on
+# this feature
 # For example:
 # EXTRA_FIELDS = [
 #     {'name': 'redshift', 'type': 'number'},
@@ -337,10 +340,13 @@ EXTRA_FIELDS = []
 # or READ_ONLY (read only access to views)
 AUTH_STRATEGY = 'READ_ONLY'
 
-# Row-level data permissions restrict users from viewing certain objects unless they are a member of the group to which
-# the object belongs. Setting this value to True will allow all `ObservationRecord`, `DataProduct`, and `ReducedDatum`
-# objects to be seen by everyone. Setting it to False will allow users to specify which groups can access
-# `ObservationRecord`, `DataProduct`, and `ReducedDatum` objects.
+# Row-level data permissions restrict users from viewing certain objects
+# unless they are a member of the group to which
+# the object belongs. Setting this value to True will allow all
+# `ObservationRecord`, `DataProduct`, and `ReducedDatum`
+# objects to be seen by everyone. Setting it to False will allow users to
+# specify which groups can access `ObservationRecord`, `DataProduct`, and
+# `ReducedDatum` objects.
 TARGET_PERMISSIONS_ONLY = True
 
 # URLs that should be allowed access even with AUTH_STRATEGY = LOCKED
@@ -350,9 +356,13 @@ OPEN_URLS = []
 HOOKS = {
     'target_post_save': 'tom_common.hooks.target_post_save',
     'observation_change_state': 'tom_common.hooks.observation_change_state',
-    'data_product_post_upload': 'tom_dataproducts.hooks.data_product_post_upload',
+    'data_product_post_upload': (
+        'tom_dataproducts.hooks.data_product_post_upload'
+    ),
     'data_product_post_save': 'tom_dataproducts.hooks.data_product_post_save',
-    'multiple_data_products_post_save': 'tom_dataproducts.hooks.multiple_data_products_post_save',
+    'multiple_data_products_post_save': (
+        'tom_dataproducts.hooks.multiple_data_products_post_save'
+    ),
 }
 
 AUTO_THUMBNAILS = False
@@ -368,7 +378,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
     ],
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'DEFAULT_PAGINATION_CLASS': (
+        'rest_framework.pagination.LimitOffsetPagination'
+    ),
     'PAGE_SIZE': 100
 }
 
