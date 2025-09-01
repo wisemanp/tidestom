@@ -1,9 +1,9 @@
 <div class="card">
     <div class="card-header">
-       Run SNID
+       Run NGSF
     </div>
     <div class="card-body">
-			<form id="snid-form" class='ajax-form' data-result-id='snid-result' method="post" action="{% url 'snid-run' %}">
+			<form id="snid-form" class='ajax-form' data-result-id='ngsf-result' method="post" action="{% url 'ngsf-run' %}">
 			{% csrf_token %}
 			<!-- Wavelength Inputs -->
 			<div class="form-row">
@@ -20,8 +20,8 @@
 			<!-- Z Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-6">
-			<label for="zmin">z Min:</label>
-			<input type="number" name="zmin" step="0.001" required value="0.1" class="form-control">
+			<label for="z">z:</label>
+			<input type="number" name="z" step="0.001" required value="0.1" class="form-control">
 			</div>
 			<div class="form-group col-md-6">
 			<label for="zmax">z Max:</label>
@@ -107,10 +107,11 @@
   				</label>
 			</div>
 			<div class="form-group mt-3">
-				<button type="submit" class="btn btn-primary btn-block">Run SNID</button>
+				<button type="submit" class="btn btn-primary btn-block">Run NGSF</button>
 			</div>
 			</div>
 		</form>
+		<div id="ngsf-result" class="mt-3"></div>
 	</div>
 	<div id="snid-result" class="mt-3"></div>
 </div>

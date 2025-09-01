@@ -4,8 +4,9 @@ import shutil
 import os
 
 class Params(BaseModel):
-    file: str
-    z: float | None = 0.1
+    file: str | None = 'sn2003jo.dat'
+    z: float | None = 0.0
+    z_min: float | None = 0.0
 
 
 app = FastAPI()

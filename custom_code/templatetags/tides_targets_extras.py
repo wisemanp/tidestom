@@ -91,3 +91,8 @@ def snid_form():
 
     return None
 
+@register.inclusion_tag('custom_code/partials/run_ngsf.html')
+def ngsf_form():
+
+    return None
+
