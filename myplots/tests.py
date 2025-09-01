@@ -18,8 +18,7 @@ class TestPhotometry(TestCase):
         if is_site_up("https://lasair-ztf.lsst.ac.uk/") is False:
             # skip test if Lasair website is down
             warnings.warn("Warning: Skipping photometry test -- Lasair website is currently down...", UserWarning)
-            return None
-        if lasair_token is None or lasair_token == "":
+        elif lasair_token is None or lasair_token == "":
             warnings.warn("Warning: Lasair API key not set!", UserWarning)
         else:
             photometry = fetch_ztf_lasair(self.target.ra, self.target.dec)

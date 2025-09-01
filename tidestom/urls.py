@@ -19,6 +19,7 @@ from django.views.generic import TemplateView
 from .views import (
     LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
+from custom_code.views import SnidFormAjaxView
 urlpatterns = [
     path(
         'about/', TemplateView.as_view(template_name='about.html'),
@@ -46,5 +47,8 @@ urlpatterns = [
     ),
     path(
         '', include('tom_common.urls')
+    ),
+    path(
+        "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"
     ),
 ]

@@ -112,17 +112,7 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
-
 DATABASES = {
-    #DB connection rules for remote cannon DB
-    #'default':{
-    #    'ENGINE': 'django.db.backends.postgresql',
-    #    'NAME': 'tidestom',  # Main database
-    #    'USER': 'postgres',
-    #    'PASSWORD': DB_PASS,
-    #    'HOST': 'cannon.phys.soton.ac.uk',
-    #    'PORT': '5432',
-    #},
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'tides_db',  # Main database
@@ -193,7 +183,7 @@ DATE_FORMAT = 'Y-m-d'
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, '_static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
                     os.path.join(TEST_DIR, 'sims'),]
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
