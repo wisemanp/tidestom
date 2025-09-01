@@ -59,7 +59,9 @@ jobs:
             sleep 2
           done
           echo "Postgres not ready" && exit 1
-
+      - name: Clean migration caches
+        run: |
+          find . -path "*/migrations/__pycache__/*" -delete
       # 5. Run tests
       - name: Run test suite
         run: |

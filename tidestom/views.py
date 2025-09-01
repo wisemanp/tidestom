@@ -7,7 +7,7 @@ from django.views.generic.edit import FormView
 from django.shortcuts import get_object_or_404, redirect
 # from django.shortcuts import render
 # from django.urls import reverse_lazy
-from guardian.mixins import PermissionListMixin
+#from guardian.mixins import PermissionListMixin
 from tom_targets.models import Target
 from tom_dataproducts.models import DataProduct
 from datetime import timedelta
