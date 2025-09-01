@@ -18,7 +18,10 @@ import tempfile
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
+DB_HOST = os.environ.get('DB_HOST')
+DB_PORT = os.environ.get('DB_PORT')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -117,11 +120,12 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tides_db',  # Main database
-        'USER': 'tides',
-        'PASSWORD':'',
-        'HOST': 'postgres',
-        'PORT': '5432',
+        'NAME': 'defaultdb',  # Main database
+        'USER': USER,
+        'PASSWORD': DB_PASS,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
+        'OPTIONS': {'sslmode': 'require'},
     }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']

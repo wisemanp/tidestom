@@ -3,11 +3,10 @@ version: "3.9"
 services:
   web:
     build: .
-    command: ['./wait-for-postgres.sh', 'postgres', 'gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000']
+    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000']
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
       - snid_api
       - ngsf_api
     volumes:
@@ -19,8 +18,13 @@ services:
       LOCAL_MODE: 'True'
       TIDES_TEST_DIR: 'test_data/'
       DB_PASS: ${DB_PASS}
-      # Remote PostgreSQL database connection
-      DATABASE_URL: postgresql://tides:@postgres:5432/tides_db
+      DATABASE_URL: ${DATABASE_URL}
+      PGHOST: ${DB_HOST}
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASS}
+      PGPORT: ${DB_PORT}
+      PGDATABSE: defaultdb
+      PGSSLMODE: require
 
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
@@ -62,21 +66,8 @@ services:
     volumes:
       - ngsf_api_runs:/ngsf_api_runs
 
-  postgres:
-    image: postgres:15-alpine
-    ports:
-      - 5432:5432
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: tides 
-      POSTGRES_DB: tides_db
-      POSTGRES_PASSWORD: ""
-      POSTGRES_HOST_AUTH_METHOD: trust
-
 volumes:
   static_volume:
   media_volume:
   snid_api_runs:
   ngsf_api_runs:
-  db_data:
