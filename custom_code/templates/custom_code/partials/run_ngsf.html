@@ -1,3 +1,8 @@
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
 <div class="card">
     <div class="card-header">
        Run NGSF
@@ -5,107 +10,88 @@
     <div class="card-body">
 			<form id="snid-form" class='ajax-form' data-result-id='ngsf-result' method="post" action="{% url 'ngsf-run' %}">
 			{% csrf_token %}
-			<!-- Wavelength Inputs -->
-			<div class="form-row">
-			<div class="form-group col-md-6">
-			<label for="wmin">Wavelength Min:</label>
-			<input type="number" name="wmin" step="0.1" required value="4000" class="form-control">
-			</div>
-			<div class="form-group col-md-6">
-			<label for="wmax">Wavelength Max:</label>
-			<input type="number" name="wmax" step="1" required value="9000" class="form-control">
-			</div>
-			</div>
 			
 			<!-- Z Inputs -->
 			<div class="form-row">
-			<div class="form-group col-md-6">
+			<div class="form-group col-md-3">
 			<label for="z">z:</label>
-			<input type="number" name="z" step="0.001" required value="0.1" class="form-control">
+			<input type="number" name="z" step="0.01" required value="0.00" class="form-control">
+			</div>
+			<div class="form-group col-md-3">
+			<label for="zmax">z Max:</label>
+			<input type="number" name="zmax" step="0.01" required value="0.1" class="form-control">
+			</div>
+			<div class="form-group col-md-3">
+			<label for="zmin">z Min:</label>
+			<input type="number" name="zmin" step="0.01" required value="0" class="form-control">
+			</div>
+			<div class="form-group col-md-3">
+			<label for="zint">z int:</label>
+			<input type="number" name="zint" step="0.01" required value="0.01" class="form-control">
+			</div>
+			</div>
+			
+			<!-- Wavelength Inputs -->
+			<div class="form-row">
+			<div class="form-group col-md-6">
+			<label for="wmin">Wavelength Min (&angst;):</label>
+			<input type="number" name="wmin" step="0.1" required value="0" class="form-control">
 			</div>
 			<div class="form-group col-md-6">
-			<label for="zmax">z Max:</label>
-			<input type="number" name="zmax" step="0.001" required value="1.2" class="form-control">
+			<label for="wmax">Wavelength Max (&angst;):</label>
+			<input type="number" name="wmax" step="1" required value="0" class="form-control">
+			</div>
+			</div>
+			
+			<!-- Epoch Inputs -->
+			<div class="form-row">
+			<div class="form-group col-md-6">
+			<label for="epochmin">Minimum Epoch:</label>
+			<input type="number" name="epochmin" step="1" value=0 class="form-control">
+			</div>
+			<div class="form-group col-md-6">
+			<label for="epochmax">Maximum Epoch:</label>
+			<input type="number" name="epochmax" step="1" value=0 class="form-control">
 			</div>
 			</div>
 			
 			<!-- Emission Clip Inputs -->
 			<div class="form-row">
-			<div class="form-group col-md-6">
-			<label for="emclip">Clip Emission at Redshift:</label>
-			<input type="number" name="emclip" step="0.001" class="form-control">
+			<div class="form-group col-md-4">
+			<label for="alam_low">Lower Extinction Law Contant:</label>
+			<input type="number" name="alam_low" step="0.1" required value=-2.0 class="form-control">
 			</div>
-			<div class="form-group col-md-6">
-			<label for="emwid">Clip Emission Width (&angst;):</label>
-			<input type="number" name="emwid" step="1" required value="40" class="form-control">
+			<div class="form-group col-md-4">
+			<label for="alam_high">Upper Extinction Law Contant:</label>
+			<input type="number" name="alam_high" step="0.1" required value="2" class="form-control">
 			</div>
-			</div>
-			
-			<!-- Age Inputs Inputs -->
-			<div class="form-row">
-			<div class="form-group col-md-6">
-			<label for="agemin">Minimum Age:</label>
-			<input type="number" name="agemin" step="1" value=-90 class="form-control">
-			</div>
-			<div class="form-group col-md-6">
-			<label for="agemax">Maximum age:</label>
-			<input type="number" name="agemax" step="1" value=1000 class="form-control">
+			<div class="form-group col-md-4">
+			<label for="alam_int">Extinction Law Interval:</label>
+			<input type="number" name="alam_int" step="0.01" required value="0.2" class="form-control">
 			</div>
 			</div>
 			
-			<div class="form-row">
-			<div class='form-group col-md-6 text-center'>
-			<label for="use" class="d-block"> Use these types:</label>
-			<select id='use' name='use' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
-			</select>
-			</div>
-			
-			<div class='form-group col-md-6 text-center'>
-			<label for="usesub" class="d-block"> Use these subtypes:</label>
-			<select id='usesub' name='usesub' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
-			</select>
-			</div>
-			</div>
-						
-			<div class="form-row">
-			<div class='form-group col-md-6 text-center'>
-			<label for="avoid" class="d-block"> Avoid these types:</label>
-			<select id='avoid' name='avoid' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
-			</select>
-			</div>
-			
-			<div class='form-group col-md-6 text-center'>
-			<label for="avoidsub" class="d-block"> Avoid these subtypes:</label>
-			<select id='avoidsub' name='avoidsub' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
-			</select>
-			</div>
-			</div>
-			<div class="form-group mt-3">
-  				<label for="aband" class="form-check-label">
-    				Tellurics:
-    				<input class="form-check-input ml-2" type="checkbox" value="" id="aband" name='aband'>
-  				</label>
-			</div>
+<div class="form-row mt-3 text-center">
+  <!-- Input box -->
+  <div class="form-group col-md-4">
+    <label for="resolution">Resolution (&angst;):</label>
+    <input type="number" name="resolution" step="1" required value="10" class="form-control">
+  </div>
+
+  <!-- First checkbox -->
+  <div class="form-group col-md-4 d-flex align-items-center justify-content-center">
+    <label for="telluric" class="mb-0">Mask Telluric Lines:</label>
+    <input class="ml-3" type="checkbox" id="telluric" name="Telluric" checked>
+  </div>
+
+  <!-- Second checkbox -->
+  <div class="form-group col-md-4 d-flex align-items-center justify-content-center">
+    <label for="galaxy" class="mb-0">Mask Galaxy Lines:</label>
+    <input class="ml-3" type="checkbox" id="galaxy" name="Galaxy" checked>
+  </div>
+</div>
+
+
 			<div class="form-group mt-3">
 				<button type="submit" class="btn btn-primary btn-block">Run NGSF</button>
 			</div>
@@ -113,7 +99,6 @@
 		</form>
 		<div id="ngsf-result" class="mt-3"></div>
 	</div>
-	<div id="snid-result" class="mt-3"></div>
 </div>
 
 <script>
