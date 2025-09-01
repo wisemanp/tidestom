@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.postgres',
     'django_extensions',
     'debug_toolbar',
-    'django-guardian',
+    'guardian',
     'tom_common',
     'django_comments',
     'bootstrap4',
