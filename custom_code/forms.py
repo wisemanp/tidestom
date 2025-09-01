@@ -55,7 +55,7 @@ class TidesTargetForm(forms.Form):
             self.add_error('tidesclass_subclass', 'Selected sub-class does not belong to the chosen main class.')
 
         return cleaned
-        
+
 USE_CHOICES=[
     ('type1', 'type1'),
     ('type2', 'type2'),
@@ -79,6 +79,10 @@ class SnidParamsForm(forms.Form):
     zmax = forms.FloatField(initial=1.2, required=True)
     emclip = forms.FloatField(required=False)
     emwid = forms.IntegerField(required=True, initial=40)
+    agemin = forms.IntegerField(required=True, initial=-90)
+    agemax = forms.IntegerField(required=True, initial=1000)
+    aband = forms.BooleanField(required=False)
+
 
     # Multi-selects as MultipleChoiceField
     use = forms.MultipleChoiceField(

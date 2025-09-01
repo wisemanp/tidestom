@@ -4,7 +4,6 @@ import requests
 from .forms import SnidParamsForm
 
 class SnidFormAjaxView(FormView):
-    print('cheeese')
     form_class = SnidParamsForm
 
     def form_invalid(self, form):

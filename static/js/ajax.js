@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
   document.querySelectorAll(".ajax-form").forEach(form => {
     const resultDiv = document.getElementById(form.dataset.resultId);
+    const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
 
     form.addEventListener("submit", async function(e) {
       e.preventDefault();
@@ -13,6 +14,18 @@ document.addEventListener("DOMContentLoaded", function() {
           formData.append(select.name, option.value);
         });
       });
+      
+      // Normalise checkboxes: always send true/false
+	  form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+  		formData.set(cb.name, cb.checked ? "true" : "false");
+	  });
+
+
+      // Grey out form + show spinner in button
+      form.classList.add("form-disabled");
+      let originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span>';
 
       try {
         const response = await fetch(form.action, {
@@ -31,6 +44,11 @@ document.addEventListener("DOMContentLoaded", function() {
       } catch (err) {
         resultDiv.innerHTML = `<p style="color:red;">AJAX failed: ${err}</p>`;
         console.error(err);
+      } finally {
+        // Restore form + button
+        form.classList.remove("form-disabled");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
       }
     });
   });
