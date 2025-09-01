@@ -1,0 +1,3 @@
+ngsf
+fastapi[standard]
+pydantic

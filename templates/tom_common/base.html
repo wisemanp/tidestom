@@ -17,7 +17,8 @@
     {% bootstrap_javascript jquery='True' %}
     <!-- htmx.min.js was downloaded manually and added to the project. see https://htmx.org/docs/#download-a-copy -->
     <script src="{% static 'tom_common/js/htmx.min.js' %}" defer></script>
-
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/css/bootstrap-multiselect.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js"></script>
     <title>{% tom_name %} | {% block title %}{% endblock %}</title>
   </head>
   <body>

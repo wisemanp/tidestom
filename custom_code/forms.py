@@ -1,3 +1,4 @@
+from typing import Required
 from django import forms
 from django.db import DatabaseError
 from .models import TidesClass, TidesClassSubClass, TidesTarget
@@ -54,3 +55,45 @@ class TidesTargetForm(forms.Form):
             self.add_error('tidesclass_subclass', 'Selected sub-class does not belong to the chosen main class.')
 
         return cleaned
+
+USE_CHOICES=[
+    ('type1', 'type1'),
+    ('type2', 'type2'),
+    ('type3', 'type3'),
+    ('type4', 'type4'),
+    ('type5', 'type5'),
+]
+
+SUBTYPE_CHOICES = [
+    ('type1', 'type1'),
+    ('type2', 'type2'),
+    ('type3', 'type3'),
+    ('type4', 'type4'),
+    ('type5', 'type5'),
+]
+
+class SnidParamsForm(forms.Form):
+    wmin = forms.FloatField(initial=4000, required=True)
+    wmax = forms.FloatField(initial=9000, required=True)
+    zmin = forms.FloatField(initial=0.1, required=True)
+    zmax = forms.FloatField(initial=1.2, required=True)
+    emclip = forms.FloatField(required=False)
+    emwid = forms.IntegerField(required=True, initial=40)
+    agemin = forms.IntegerField(required=True, initial=-90)
+    agemax = forms.IntegerField(required=True, initial=1000)
+    aband = forms.BooleanField(required=False)
+
+
+    # Multi-selects as MultipleChoiceField
+    use = forms.MultipleChoiceField(
+        choices=USE_CHOICES, required=False
+    )
+    usesub = forms.MultipleChoiceField(
+        choices=SUBTYPE_CHOICES, required=False
+    )
+    avoid = forms.MultipleChoiceField(
+        choices=USE_CHOICES, required=False
+    )
+    avoidsub = forms.MultipleChoiceField(
+        choices=SUBTYPE_CHOICES, required=False
+    )

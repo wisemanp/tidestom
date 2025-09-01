@@ -1,6 +1,7 @@
 django-debug-toolbar
 django-bootstrap5
 django-htmx
+django-admin
 pandas
 matplotlib
 psycopg2 # PostgreSQL adapter for Python

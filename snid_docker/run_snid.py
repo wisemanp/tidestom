@@ -14,10 +14,20 @@ class Params(BaseModel):
     wmax: Optional[float] = 9000
     zmin: Optional[float] = 0
     zmax: Optional[float] = 1.2
+    emclip: Optional[float] = None #Not yet added to PySNID
+    emwid: Optional[float] = 40 #Not yet added to PySNID
+    agemin: Optional[float] = -90
+    agemax: Optional[float] = 1000 #Needs added to PySNID
+    use: object #Need to apply logic to get these working Dummy for now
+    usesub: object
+    avoid: object
+    avoidsub: object
+    aband: Optional[bool] = False
+
 
 app = FastAPI()
 
-@app.post("/params/")
+@app.post("/snid_params/")
 def run_snid(params: Params):
     params  = params.dict()
     print(params)
@@ -47,7 +57,7 @@ def run_snid(params: Params):
     #run pysnid
     snidres = pysnid.run_snid(file_spec_binned_ascii,get_results=False,lbda_range=
                               [params['wmin'],params['wmax']], redshift_bounds=
-                              [params['zmin'],params['zmax']])
+                              [params['zmin'],params['zmax']], aband=params['aband'])
 
     #test = snidres.get_results()
     shutil.move(snidres, '/snid_api_runs/test.h5')
