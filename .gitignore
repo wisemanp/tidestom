@@ -15,6 +15,6 @@ custom_code/__pycache__/
 tidestom/__pycache__/
 .env
 *pyc
-
+.fits
 static/.DS_Store
 static/tom_common/.DS_Store
