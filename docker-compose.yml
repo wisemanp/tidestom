@@ -8,7 +8,7 @@ services:
       TIDES_TEST_DIR: ${TIDES_TEST_DIR}
       DB_PASS: ${DB_PASS}
       # Remote PostgreSQL database connection
-      DATABASE_URL: postgres://cf5g09:titanic2018@cannon.phys.soton.ac.uk/tidestom
+      DATABASE_URL: ${DB_URL}
 
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
