@@ -1,22 +1,60 @@
 {
-  "HydrogenCheckbox": { "x": [4102.9351, 4341.69, 4862.68, 6564.61], "color": "blue", "label": "H", "type": "emission" },
-  "HeliumCheckbox2": { "x": [4685.710], "color": "olive", "label": "He II", "type": "emission" },
-  "NitrogenCheckbox2": { "x": [6549.86, 6585.27], "color": "deepskyblue", "label": "N II", "type": "emission" },
-  "OICheckbox": { "x": [6302.046], "color": "crimson", "label": "O I", "type": "emission" },
-  "OIICheckbox": { "x": [3727.092, 3729.875], "color": "darkred", "label": "O II", "type": "emission" },
-  "OIIICheckbox": { "x": [4364.44, 4960.30, 5008.24], "color": "red", "label": "O III", "type": "emission" },
-  "SIICheckbox": { "x": [6718.29, 6732.68], "color": "goldenrod", "label": "S II", "type": "emission" },
-  "NeIIICheckbox": { "x": [3869.81], "color": "lawngreen", "label": "Ne III", "type": "emission" },
-  "CIIICheckbox": { "x": [1908.734], "color": "brown", "label": "C III", "type": "emission" },
-  "CIVCheckbox": { "x": [1548.187, 1550.772], "color": "black", "label": "C IV", "type": "emission" },
+  "HydrogenCheckbox": { "x": [3970, 4102, 4341, 4861, 6563, 10052, 10941, 12822, 18756], "color": "#0066cc", "label": "H", "type": "common" },
+
+  "HeliumICheckbox": { "x": [3889, 4471, 5876, 6678, 7065, 10830, 20581], "color": "#cc0000", "label": "He I", "type": "common" },
+  "HeliumIICheckbox": { "x": [3203, 4686, 5411, 6560, 6683, 6891, 8237, 10124], "color": "#ff8000", "label": "He II", "type": "common" },
+
+  "CIICheckbox": {"x": [3919, 3921, 4267, 5145, 5890, 6578, 7231, 7236, 9230, 9234, 9891, 9903, 17846, 18905], "color": "#cccc00", "label": "C II", "type": "common"},
+  "CIIICheckbox": { "x": [4647, 4650, 5696, 6742, 8500, 8665, 9711], "color": "#4c9900", "label": "C III", "type": "common" },
+  "CIVCheckbox": { "x": [4658, 5801, 5812, 7061, 7726, 8859], "color": "#0066cc", "label": "C IV", "type": "common" },
+
+  "NitrogenIICheckbox": { "x": [3995, 4631, 5005, 5680, 5942, 6482, 6611], "color": "#ff8000", "label": "N II", "type": "common" },
+  "NitrogenIIICheckbox": { "x": [4634, 4641, 4687, 5321, 5327, 6467], "color": "#4c9900", "label": "N III", "type": "common" },
+  "NitrogenIVCheckbox": { "x": [3479, 3483, 3485, 4058, 6381, 7115], "color": "#0066cc", "label": "N IV", "type": "common" },
+  "NitrogenVCheckbox": { "x": [4604, 4620, 4945], "color": "#6600cc", "label": "N V", "type": "common" },
+
+  "OICheckbox": { "x": [6158, 7772, 7774, 7775, 8446, 9263, 11290, 13165], "color": "#cc0000", "label": "O I", "type": "common" },
+  "OIForbiddenCheckbox": { "x": [5577, 6300, 6363], "color": "#cc0000", "label": "[O I]", "type": "common" },
+  "OIICheckbox": { "x": [3390, 3377, 4416, 6641, 6721, 11667, 12500, 13029, 13811, 14008, 21085], "color": "#cccc00", "label": "O II", "type": "common" },
+  "OIIForbiddenCheckbox": { "x": [3726, 3729], "color": "#4c9900", "label": "[O II]", "type": "common" },
+  "OIIIForbiddenCheckbox": { "x": [4364.44, 4960.30, 5008.24], "color": "#0066cc", "label": "[O III]", "type": "common" },
+  "OVCheckbox": { "x": [3145, 4124, 4930, 5598, 6500], "color": "#4c9900", "label": "O V", "type": "common" },
+  "OVICheckbox": { "x": [3811, 3834], "color": "#4c9900", "label": "O VI", "type": "common" },
+
+  "NaICheckbox": { "x": [5890, 5896, 8183, 8195], "color": "#666600", "label": "Na I", "type": "common" },
+
+  "MgICheckbox": { "x": [3829, 3832, 3838, 4571, 4703, 5167, 5173, 5184, 5528, 8807, 11828, 12083, 14878, 15033, 17109], "color": "#cc0000", "label": "Mg I", "type": "common" },
+  "MgIICheckbox": { "x": [2796, 2798, 2803, 4481, 7877, 7896, 8214, 8235, 9218, 9244, 9632, 10092, 10927, 16787, 21369], "color": "#cccc00", "label": "Mg II", "type": "common" },
+
+  "SiICheckbox": { "x": [4128, 4131, 5958, 5979, 6347, 6371, 9413, 11311, 11737, 13681, 16930, 17183], "color": "#006666", "label": "Si I", "type": "common" },
+
+  "SIICheckbox": { "x": [5433, 5454, 5606, 5640, 5647, 6715, 8315, 8855, 13529, 14501], "color": "#003366", "label": "S II", "type": "common" },
+
+  "CaIICheckbox": { "x": [3159, 3180, 3706, 3737, 8498, 8542, 8662, 8202, 8249, 8921, 9931, 11839, 11950], "color": "#660066", "label": "Ca II", "type": "common" },
+  "CaIIForbiddenCheckbox": { "x": [7292, 7324], "color": "#660066", "label": "[Ca II]", "type": "common" },
+
+  "FeIICheckbox": { "x": [4303, 4352, 4515, 4549, 4924, 5018, 5169, 5198, 5235, 5363, 9550, 9998, 10500, 10863, 11126], "color": "#660033", "label": "Fe II", "type": "common" },
+  "FeIIICheckbox": { "x": [4397, 4421, 4432, 5129, 5158, 9124, 12039, 12786, 16672, 16722], "color": "#99004C", "label": "Fe III", "type": "common" },
+
+  "NeIIICheckbox": { "x": [3869.81], "color": "lawngreen", "label": "Ne III", "type": "common" },
+
+
 
   "CHCheckboxAbs": { "x": [4300.00], "color": "rgb(31, 31, 43)", "label": "CH", "type": "absorption" },
+
   "CICheckboxAbs": { "x": [9061.44, 9088.51, 9111.80], "color": "brown", "label": "C I", "type": "absorption" },
   "CIICheckboxAbs": { "x": [6578.05, 6582.88], "color": "black", "label": "C II", "type": "absorption" },
+
   "NaICheckboxAbs": { "x": [5889.95, 5895.92], "color": "darkorange", "label": "Na I", "type": "absorption" },
+
   "MgICheckboxAbs": { "x": [5167.33, 5172.68, 5183.60], "color": "gray", "label": "Mg I", "type": "absorption" },
-  "CaIICheckboxAbs": { "x": [3933.66, 3968.47], "color": "purple", "label": "Ca II", "type": "absorption" },
-  
-  "CrFeCheckbox": { "x": [6088, 6376, 7894, 5304], "color": "orange", "label": "Cr Fe", "type": "high-energy" },
-  "NeVCheckbox": { "x": [3347, 3427], "color": "cornflowerblue", "label": "Ne V", "type": "high-energy" }
+
+  "CaIIH&KCheckbox": { "x": [3934, 3969], "color": "#660066", "label": "Ca II H&K", "type": "absorption" },
+
+
+
+
+  "CrFeCheckbox": { "x": [6088, 6376, 7894, 5304], "color": "orange", "label": "Cr Fe", "type": "transient-specific" },
+  "NeVCheckbox": { "x": [3347, 3427], "color": "cornflowerblue", "label": "Ne V", "type": "transient-specific" },
+  "OIISLSNOICheckbox": { "x": [3738, 3960, 4115, 4358, 4651], "color": "#cccc00", "label": "SLSN-I Blends", "type": "transient-specific"}
 }

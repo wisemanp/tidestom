@@ -2,9 +2,10 @@
 {% load comments bootstrap4 tom_common_extras targets_extras observation_extras dataproduct_extras static cache classification_extras tides_targets_extras myplots_tags %}
 {% block title %}Target {{ object.name }}{% endblock %}
 {% block additional_css %}
-<link rel="stylesheet" href="{% static 'tom_targets/css/main.css' %}">
+<link rel="stylesheet" href="../static/tom_common/css/custom.css">
 {% endblock %}
 {% block content %}
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Function to update the URL with the selected tab.
@@ -44,9 +45,9 @@ fetch("{% static 'json/line_data.json' %}")
 		lines = data;
 
 		// Separate containers
-		const emissionContainer = document.getElementById("emission-lines");
+		const commonContainer = document.getElementById("common-lines");
 		const absorptionContainer = document.getElementById("absorption-lines");
-		const highEnergyContainer = document.getElementById("high-energy-lines");
+		const transientSpecificContainer = document.getElementById("transient-specific-lines");
 
 		// Build checkboxes dynamically from the .json file
 		Object.entries(lines).forEach(([id, { color, label, type }]) => {
@@ -56,12 +57,12 @@ fetch("{% static 'json/line_data.json' %}")
 				<span style="color:${color};">${label}</span>
 			`;
 
-			if (type === "emission") {
-				emissionContainer.appendChild(wrapper);
+			if (type === "common") {
+				commonContainer.appendChild(wrapper);
 			} else if (type === "absorption") {
 				absorptionContainer.appendChild(wrapper);
-			} else if (type === "high-energy") {
-				highEnergyContainer.appendChild(wrapper);
+			} else if (type === "transient-specific") {
+				transientSpecificContainer.appendChild(wrapper);
 			}
 		});
 
@@ -86,7 +87,7 @@ fetch("{% static 'json/line_data.json' %}")
                 y1: 1,
                 xref: "x",
                 yref: "paper",
-                line: { color, width: 1},
+                line: { color, width: 2},
                 layer: "below"
             })));
         Plotly.relayout(plotDiv, { shapes: newShapes });
@@ -102,7 +103,7 @@ fetch("{% static 'json/line_data.json' %}")
         velocityInput.value = isFinite(v) ? v.toFixed(0) : "";
 
         // Only call updateLines if both are valid
-        if (!isNaN(z) && z >= 0 && z <= 3 && !isNaN(v) && v >= -25000 && v <= 25000) {
+        if (!isNaN(z) && z >= 0 && z <= 2 && !isNaN(v) && v >= -25000 && v <= 25000) {
             updateLines(z, v);
         }
     }
@@ -194,7 +195,7 @@ fetch("{% static 'json/line_data.json' %}")
       const res = binByDeltaLambdaIndex(raw.x, raw.y, dlam);
 
       return {
-        name: `Bin (${dlam} Å)`,
+        name: `Binned (${dlam} Å)`,
         x: res.x, y: res.y,
         mode: "lines",
         line: { width: 2 },
@@ -410,9 +411,9 @@ fetch("{% static 'json/line_data.json' %}")
         <!-- Bin/Overplot controls -->
         <div class="d-flex align-items-center gap-2 mb-4 spectroscopy-only">
           <input class="form-check-input" type="checkbox" id="toggle-binned">
-          <label class="form-check-label me-3" for="toggle-binned">Bin (Å): </label>
-          <input id="bin-size" class="form-control form-control-sm me-2" style="width:8rem"
-            type="number" min="5" step="10" value="15">
+          <label class="form-check-label me-3" for="toggle-binned">Binned (Å): </label>
+            <label for="bin-size"></label><input id="bin-size" class="form-control form-control-sm me-2" style="width:4rem"
+                                                 type="number" min="5" step="10" value="15">
         </div>
         <!-- Bin/Overplot controls -->
 
@@ -421,8 +422,8 @@ fetch("{% static 'json/line_data.json' %}")
       <div class="checkbox-container spectroscopy-only">
 
           <div class="checkbox-group">
-              <h5>Emission Lines</h5>
-              <div class="checkbox-grid" id="emission-lines"></div>
+              <h5>Common Lines</h5>
+              <div class="checkbox-grid" id="common-lines"></div>
           </div>
 
           <div class="checkbox-group">
@@ -431,8 +432,8 @@ fetch("{% static 'json/line_data.json' %}")
           </div>
 
           <div class="checkbox-group">
-              <h5>High Energy Lines</h5>
-              <div class="checkbox-grid" id="high-energy-lines"></div>
+              <h5>Transient Specific Lines</h5>
+              <div class="checkbox-grid" id="transient-specific-lines"></div>
           </div>
 
     </div>
@@ -458,16 +459,16 @@ fetch("{% static 'json/line_data.json' %}")
       <label for="redshiftSlider" style="display:block; width:250px;">
           Redshift (z):
       </label>
-      <input type="range" id="redshiftSlider" min="0" max="3" step="0.0001" value="0" style="width: 150px">
-      <input type="number" id="redshiftInput" min="0" max="3" step="0.0001" value="0" style="width: 80px; text-align: center;">
+      <input type="range" id="redshiftSlider" min="0" max="2" step="0.0001" value="0" style="width: 300px">
+        <label for="redshiftInput"></label><input type="number" id="redshiftInput" min="0" max="2" step="0.0001" value="0" style="width: 80px; text-align: center;">
     </div>
       <!-- Velocity Slider -->
     <div class="spectroscopy-only">
         <label for="velocitySlider" style="display:block; width:250px;">
           Additional line velocity (km\s):
         </label>
-      <input type="range" id="velocitySlider" min="-25000" max="25000" step="100" value="0" style="width: 150px">
-      <input type="number" id="velocityInput" min="-25000" max="25000" step="100" value="0" style="width: 80px; text-align: center;">
+      <input type="range" id="velocitySlider" min="-25000" max="25000" step="100" value="0" style="width: 300px">
+        <label for="velocityInput"></label><input type="number" id="velocityInput" min="-25000" max="25000" step="100" value="0" style="width: 80px; text-align: center;">
     </div>
   </div>
 </div>
