@@ -5,19 +5,30 @@
 <div class="row">
   <div class="col-md-10">
     <h2>Latest Targets</h2>
+
+    <form method="get" action="{% url 'latest' %}" class="mb-4">
+      <label for="days_range">Show targets observed in the last:</label>
+      <input type="number" name="days_range" id="days_range" value="{{ default_days_range }}" min="1" class="form-control d-inline-block w-auto">
+      <button type="submit" class="btn btn-primary">Update</button>
+    </form>
+
     <div class="row">
-      {% for target in targets %}
+      {% for spec in targets %}
         <div class="col-12 col-sm-6 col-md-4 col-lg-4 mb-4">
           <div class="card">
             <div class="card-body">
               <h5 class="card-title">
-                <a href="{% url 'target_detail' target.id %}">{{ target.name }}</a>
+                {% if spec.target %}
+                  <a href="{% url 'target_detail' spec.target.id %}">
+                    {{ spec.target.id }}
+                  </a>
+                  <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
+                       alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
+                  {% target_classifications spec.target %}
+                {% else %}
+                  <p>No linked target</p>
+                {% endif %}
               </h5>
-              <p class="card-text">{{ target.created }}</p>
-              <a href="{% url 'target_detail' target.id %}">
-                <img src="{% static 'plots/spectrum_' %}{{ target.id }}.png" alt="Spectrum for {{ target.name }}" class="img-fluid">
-              </a>
-              {% target_classifications target %}
             </div>
           </div>
         </div>

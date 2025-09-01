@@ -8,38 +8,36 @@
 </style>
 
 <dl class="row">
-	{% for target_name in target.names %}
-		{% if forloop.first %}
-			<dt class="col-sm-6">Names:</dt>
-		{% else %}
-			<dt class="col-sm-6">&nbsp;</dt>
-		{% endif %}
-		<dd class="col-sm-6">{{ target_name }}</dd>
-	{% endfor %}
-
-	{% for key, value in target.as_dict.items %}
-		{% if value and key not in exclude_fields %}
-			<dt class="col-sm-6" title="{% help_text target key %}">
-				{% verbose_name target key %}
-			</dt>
-			<!-- This used to be value|truncate_number but sometimes truncate_number is not loaded properly -->
-			<dd class="col-sm-6">{{ value }}</dd>
-		{% endif %}
-
-		{% if key == 'ra' %}
-			<dt class="col-sm-6">RA:</dt>
-			<dd class="col-sm-6">{{ value|deg_to_sexigesimal:"hms" }}</dd>
-		{% endif %}
-
-		{% if key == 'dec' %}
-			<dt class="col-sm-6">Dec:</dt>
-			<dd class="col-sm-6">{{ value|deg_to_sexigesimal:"dms" }}</dd>
-			{% if target.constellation %}
-				<dt class="col-sm-6">Constellation:</dt>
-				<dd class="col-sm-6">{{ target.constellation }}</dd>
-			{% endif %}
-		{% endif %}
-	{% endfor %}
+  {% for target_name in target.names %}
+    {% if forloop.first %}
+      <dt class="col-sm-6">Names</dt>
+    {% else %}
+      <dt class="col-sm-6">&nbsp;</dt>
+    {% endif %}
+    <dd class="col-sm-6">{{ target_name }}</dd>
+  {% endfor %}
+  <!-- Add tides_id to the list of names -->
+  <dt class="col-sm-6">&nbsp;</dt>
+  <dd class="col-sm-6">Tides ID: {{ target.tides_id }}</dd>
+  {% for key, value in target.as_dict.items %}
+    {% if value and key not in exclude_fields %}
+      <dt class="col-sm-6" title="{% help_text target key %}">{% verbose_name target key %}</dt>
+      <!-- This used to be value|truncate_number but sometimes truncate_number is not loaded properly/-->
+      <dd class="col-sm-6">{{ value }}</dd>
+    {% endif %}
+    {% if key == 'ra' %}
+      <dt class="col-sm-6">RA</dt>
+      <dd class="col-sm-6">{{ value|deg_to_sexigesimal:"hms" }}</dd>
+    {% endif %}
+    {% if key == 'dec' %}
+      <dt class="col-sm-6">Dec</dt>
+      <dd class="col-sm-6">{{ value|deg_to_sexigesimal:"dms" }}</dd>
+      {% if target.constellation %}
+        <dt class="col-sm-6">Constellation</dt>
+        <dd class="col-sm-6">{{ target.constellation }}</dd>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
 </dl>
 
 <dl class="row">

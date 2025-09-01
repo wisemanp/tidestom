@@ -7,41 +7,45 @@ from django.views.generic.edit import FormView
 from django.shortcuts import get_object_or_404, redirect
 # from django.shortcuts import render
 # from django.urls import reverse_lazy
-from guardian.mixins import PermissionListMixin
+#from guardian.mixins import PermissionListMixin
 from tom_targets.models import Target
-from tom_targets.filters import TargetFilter
-# from tom_dataproducts.models import DataProduct
+from tom_dataproducts.models import DataProduct
 from datetime import timedelta
 from collections import Counter
-from custom_code.models import TidesTarget, HumanTidesClassSubmission
+from custom_code.models import TidesTarget, HumanClassification, PipelineClassificationGlobal, TidesSpec
 from custom_code.forms import TidesTargetForm
-# from datetime import timedelta
+import psycopg2
+from django.conf import settings
+from django.db import transaction
+from django.views.generic.list import ListView
 from django.utils.timezone import now
-from django.http import JsonResponse
-from custom_code.models import TidesClass, TidesClassSubClass
-# from tom_common.mixins import Raise403PermissionRequiredMixin
-# from django.views.generic import TemplateView
+import logging
 
+logger = logging.getLogger(__name__)
 
-class LatestView(PermissionListMixin, FilterView):
+class LatestView(ListView):
     template_name = 'latest.html'
     paginate_by = 200
-    strict = False
-    model = Target
-    filterset_class = TargetFilter
-    # Set app_name for Django-Guardian Permissions in case of Custom Target
-    # Model
-    permission_required = f'{Target._meta.app_label}.view_target'
-    ordering = ['-created']
+    model = TidesSpec
+    context_object_name = 'targets'
+
+    def get_queryset(self):
+        days_range = int(self.request.GET.get('days_range', 30))
+        date_threshold = now() - timedelta(days=days_range)
+        return TidesSpec.objects.filter(obs_date__gte=date_threshold).order_by('-obs_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        recent = timezone.now() - timedelta(days=356)
-        # Filter targets that have associated spectra
-        context['targets'] = Target.objects.filter(
-            created__gte=recent,
-            dataproduct__data_product_type='spectroscopy'
-        ).distinct()
+        context['default_days_range'] = self.request.GET.get('days_range', 30)
+
+        specs = context[self.context_object_name]
+        # Collect tides_ids from TidesSpec (Django exposes <fk>_id)
+        tides_ids = [s.tides_id for s in specs if getattr(s, 'tides_id', None) is not None]
+        target_map = {t.pk: t for t in TidesTarget.objects.filter(pk__in=tides_ids)}
+
+        # Attach the corresponding TidesTarget to each spec as .target
+        for s in specs:
+            s.target = target_map.get(getattr(s, 'tides_id', None))
 
         return context
 
@@ -50,80 +54,54 @@ class MyTargetDetailView(DetailView):
     model = TidesTarget
     template_name = 'target_detail.html'
     context_object_name = 'target'
-    print('MyTargetDetailView called')
-
-    def __init__(self, *args, **kwargs):
-        print("MyTargetDetailView initialized")  # Debug statement
-        super().__init__(*args, **kwargs)
-
-    @classmethod
-    def as_view(cls, **initkwargs):
-        print("MyTargetDetailView as_view called")  # Debug statement
-        return super().as_view(**initkwargs)
-
-    def dispatch(self, request, *args, **kwargs):
-        print("TMyargetDetailView dispatch called")  # Debug statement
-        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        print("MyTargetDetailView get context data called")  # Debug statement
         context = super().get_context_data(**kwargs)
-        context['view'] = self  # Explicitly set the view in the context
         target = self.get_object()
-        submissions = HumanTidesClassSubmission.objects.filter(target=target)
-        print(f"Submissions retrieved: {submissions}")  # Debug statement
-        # Debug each submission
-        for submission in submissions:
-            print(f"Submission ID: {submission.id}")
-            print(f"Target: {submission.target}")
-            print(f"Tidesclass Class: {submission.tidesclass}")
-            print(f"Tidesclass Subclass: {submission.tidesclass_subclass}")
+        # Use remote-backed HumanClassification (FK: tides or tides_id)
+        submissions = HumanClassification.objects.filter(tides_id=target.pk)
+
         context['form'] = TidesTargetForm()
 
-        # Get all human classification submissions for this target
-        submissions = HumanTidesClassSubmission.objects.filter(target=target)
-        # Aggregate the most common classification
+        # Aggregate the most common classification from sn_type
         if submissions.exists():
-            print("Submissions exist, now trying to count ")  # Debug statement
-            tidesclass_counts = Counter(
-                sub.tidesclass
-                for sub in submissions
-                if sub.tidesclass is not None
+            aggregated = (
+                submissions.values('sn_type')
+                .annotate(count=models.Count('id'))
+                .order_by('-count')
+                .first()
             )
-
-            print("counted ", tidesclass_counts)
-            most_common_class, count = tidesclass_counts.most_common(1)[0]
-            print("counted, here is most common", most_common_class, count)
             context['aggregated_human_class'] = {
-                'most_common_class': most_common_class,
-                'count': count,
+                'most_common_class': aggregated['sn_type'],
+                'count': aggregated['count'],
                 'total_submissions': submissions.count(),
             }
         else:
             context['aggregated_human_class'] = None
 
-        # Add all individual submissions to the context
-        context['human_classifications'] = submissions.order_by('-timestamp')
+        # Individual submissions (ordered by remote 'created' column)
+        context['human_classifications'] = submissions.order_by('-created')
         return context
 
 
 class SubmitClassificationView(FormView):
-
     form_class = TidesTargetForm
 
     def form_valid(self, form):
         target = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
-        # Save the classification as a new submission
-        submission = HumanTidesClassSubmission.objects.create(
-            target=target,
-            user=self.request.user,
-            tidesclass=form.cleaned_data['tidesclass'],
-            tidesclass_other=form.cleaned_data['tidesclass_other'],
-            tidesclass_subclass=form.cleaned_data['tidesclass_subclass'],
-            timestamp=now()
-        )
 
-        print(f"Submission saved: {submission}")  # Debug statement
+        # Map form fields to remote schema fields
+        subclass_obj = form.cleaned_data.get('tidesclass_subclass')
+        sn_subtype = getattr(subclass_obj, 'sub_class', None) if subclass_obj else None
+
+        submission = HumanClassification.objects.create(
+            tides=target,                           # FK mapped to db_column='tides_id'
+            person_id=self.request.user.id,         # remote integer column
+            sn_type=form.cleaned_data['tidesclass'],# remote sn_type
+            sn_subtype=sn_subtype,                  # remote sn_subtype (text)
+            comments=form.cleaned_data.get('tidesclass_other') or '',  # map "other" to comments
+            created=now()                           # remote created timestamp
+        )
         return redirect('target_detail', pk=self.kwargs['target_id'])
 
     def get_context_data(self, **kwargs):
@@ -133,16 +111,12 @@ class SubmitClassificationView(FormView):
         )
         context['form'] = self.get_form()
         return context
-
+    
+from django.http import JsonResponse
+from custom_code.classification_list import CLASSIFICATIONS
 
 def get_subclasses(request):
     main_class_name = request.GET.get('main_class')
-    try:
-        main_class = TidesClass.objects.get(name=main_class_name)
-        subclasses = (
-            TidesClassSubClass.objects.filter(main_class=main_class)
-            .values('id', 'sub_class')
-        )
-        return JsonResponse(list(subclasses), safe=False)
-    except TidesClass.DoesNotExist:
-        return JsonResponse([], safe=False)
+    subclasses = CLASSIFICATIONS.get(main_class_name, [])
+    return JsonResponse(subclasses, safe=False)
+

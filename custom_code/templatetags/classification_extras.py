@@ -7,10 +7,13 @@ register = template.Library()
 
 
 @register.inclusion_tag('custom_code/partials/classification_form.html', takes_context=True)
+
 def classification_form(context, target_id):
 	"""
     Renders the human classification submission form for a given target.
+    pk == tides_id because TidesTarget uses parent_link to TOM's Target.
     """
+
 	target = get_object_or_404(TidesTarget, id=target_id)
 	form = TidesTargetForm()
 	return {
@@ -26,3 +29,4 @@ def divide(value, arg):
 		return float(value) / float(arg)
 	except (ValueError, ZeroDivisionError, TypeError):
 		return None
+

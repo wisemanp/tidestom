@@ -18,6 +18,7 @@ import tempfile
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+DB_PASS = os.environ.get('DB_PASS')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.postgres',
     'django_extensions',
     'debug_toolbar',
     'guardian',
@@ -112,20 +114,25 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    #DB connection rules for remote cannon DB
+    #'default':{
+    #    'ENGINE': 'django.db.backends.postgresql',
+    #    'NAME': 'tidestom',  # Main database
+    #    'USER': 'postgres',
+    #    'PASSWORD': DB_PASS,
+    #    'HOST': 'cannon.phys.soton.ac.uk',
+    #    'PORT': '5432',
+    #},
+    'default':{
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'tides_db',  # Main database
+        'USER': 'pwise',
+        'PASSWORD':'',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
-
-# USE THESE WHEN DOING A DUMP FOR SETTING UP THE FULL TIDES DB
-# 'ENGINE': 'django.db.backends.postgresql',
-# 'NAME': 'temp_schema_export_db',
-# 'USER': 'pwise',
-# 'PASSWORD': '',
-# 'HOST': 'localhost',
-# 'PORT': '5432',
-# }
+#DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
@@ -187,7 +194,8 @@ DATE_FORMAT = 'Y-m-d'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, '_static')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
+                    os.path.join(TEST_DIR, 'sims'),]
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
 MEDIA_URL = '/data/'
 
@@ -200,11 +208,11 @@ LOGGING = {
         }
     },
     'loggers': {
-        '': {
+        'django.db.backends': {
             'handlers': ['console'],
-            'level': 'INFO'
-        }
-    }
+            'level': 'INFO',  # Log all SQL queries
+        },
+    },
 }
 
 # Caching
@@ -219,10 +227,9 @@ CACHES = {
 
 # TOM Specific configuration
 TARGET_TYPE = 'SIDEREAL'
+TOM_TARGET_MODEL = 'tom_targets.Target'
+# Set to the full path of a custom target model to extend the BaseTarget Model with custom fields.
 
-# Set to the full path of a custom target model to extend the BaseTarget Model
-# with custom fields.
-TARGET_MODEL_CLASS = 'custom_code.models.TidesTarget'
 
 # Define MATCH_MANAGERS here. This is a dictionary that contains a dotted
 # module path to the desired match manager

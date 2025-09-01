@@ -13,5 +13,8 @@ db*
 *ipynb_checkpoints*
 custom_code/__pycache__/
 tidestom/__pycache__/
+.env
+*pyc
+
 static/.DS_Store
 static/tom_common/.DS_Store

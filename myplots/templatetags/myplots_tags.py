@@ -7,10 +7,13 @@ from astropy.time import Time
 from django import template
 from django.conf import settings
 
-from tom_dataproducts.models import DataProduct, ReducedDatum
-from guardian.shortcuts import get_objects_for_user
-from tom_dataproducts.processors.data_serializers import SpectrumSerializer
+from pathlib import Path
+from astropy.io import fits
+from astropy import units as u
+from specutils import Spectrum1D
+import numpy as np
 
+from custom_code.models import TidesSpec
 from tidestom.settings import BROKERS
 lasair_token = BROKERS['LASAIR']['api_key']
 from .spectroscopy_settings import add_snid_templates, add_ngsf_templates
@@ -21,60 +24,81 @@ register = template.Library()
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
 def target_spectroscopy(context, target, dataproduct=None):
     """
-    Renders a spectroscopic plot for a ``Target``. If a ``DataProduct`` is specified, it will only render a plot with
-    that spectrum.
+    Render a spectroscopic plot for a Target.
+    Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
     """
+    # Pick the latest spectrum for this target
+    spec = (
+        TidesSpec.objects
+        .filter(tides=target)
+        .order_by('-obs_date', '-qmost_id')
+        .first()
+    )
+    if not spec:
+        return {'target': target, 'plot': '<p>No spectrum available for this target.</p>'}
+
+    # Resolve file path (use stored path; fallback to symlink convention if missing)
+    p = Path(spec.filepath)
+    if not p.exists():
+        candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
+        if candidate.exists():
+            p = candidate
+
     try:
-        spectroscopy_data_type = settings.DATA_PRODUCT_TYPES['spectroscopy'][0]
-    except (AttributeError, KeyError):
-        spectroscopy_data_type = 'spectroscopy'
-    spectral_dataproducts = DataProduct.objects.filter(target=target,
-                                                       data_product_type=spectroscopy_data_type)
-    if dataproduct:
-        spectral_dataproducts = DataProduct.objects.get(data_product=dataproduct)
-    if settings.TARGET_PERMISSIONS_ONLY:
-        datums = ReducedDatum.objects.filter(data_product__in=spectral_dataproducts)
-    else:
-        datums = get_objects_for_user(context['request'].user,
-                                      'tom_dataproducts.view_reduceddatum',
-                                      klass=ReducedDatum.objects.filter(data_product__in=spectral_dataproducts))
-    
-    # Create a figure
-    fig = go.Figure()
-    
-    # add spectra
-    for datum in datums:
-        deserialized = SpectrumSerializer().deserialize(datum.value)
-        fig.add_trace(go.Scatter(
-            x=deserialized.wavelength.value,
-            y=deserialized.flux.value,
-            #name=datetime.strftime(datum.timestamp, '%Y%m%d-%H:%M:%s'), 
-            #name=target.name, 
-            showlegend=False,
-            hoverinfo='skip',
-            line=dict(color="grey")
-        ))
-    
+
+        if str(p).endswith('fits'):
+            data = fits.getdata(str(p))
+            wave = data['WAVE'][0] * u.Angstrom
+            flux = data['FLUX'][0] * u.Unit('erg cm-2 s-1 AA-1')
+        elif str(p).endswith('txt'):
+            data = np.loadtxt(str(p))
+            wave = data[:,0] * u.Angstrom
+            flux = data[:,1] * u.Unit('erg cm-2 s-1 AA-1')
+        else:
+            raise ValueError(f'Unsupported spectrum file format: {p}')
+        spectrum = Spectrum1D(flux=flux, spectral_axis=wave)
+
+        plot_data = [
+            go.Scatter(
+                x=spectrum.spectral_axis.value,
+                y=spectrum.flux.value,
+                name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
+                      else datetime.now().strftime('%Y%m%d-%H:%M:%S'))
+            )
+        ]
+    except Exception as e:
+        return {'target': target, 'plot': f'<p>Failed to load spectrum: {e}</p>'}
+
+    fig = go.Figure(data=plot_data)
+        
     # add templates - best matches
     # SNID - mock templates for now
-    data_mean = np.mean(deserialized.flux.value)
-    pysnid_file = '/home/tomas/Softwares/tests/pysnid/l1_obs_joined_87178841_snid.h5'
-    fig = add_snid_templates(pysnid_file,
-                             deserialized.wavelength.value, 
-                             deserialized.flux.value, 
+    data_mean = np.mean(spectrum.flux.value)
+    try:
+      pysnid_file = '/home/tomas/Softwares/tests/pysnid/l1_obs_joined_87178841_snid.h5'
+      fig = add_snid_templates(pysnid_file,
+                             spectrum.spectral_axis.value, 
+                             spectrum.flux.value, 
                              fig, 
                              n=3
                              )
+    except:
+      #TODO add better handling
+      pass
+    
     
     # NGSF - mock templates for now
-    ngsf_file = '/home/tomas/Softwares/tests/ngsf/l1_obs_joined_87178841.csv'
-    fig = add_ngsf_templates(ngsf_file, 
+    try:
+      ngsf_file = '/home/tomas/Softwares/tests/ngsf/l1_obs_joined_87178841.csv'
+      fig = add_ngsf_templates(ngsf_file, 
                              deserialized.wavelength.value, 
                              deserialized.flux.value, 
                              fig, 
                              n=3
                              )
-    
+    except:
+      #TODO add better handling
+      pass
     fig.update_layout(autosize=True, 
                       xaxis_title='Observed Wavelength (Å)',
                       yaxis_title='Flux (erg/s/cm²/Å)',
@@ -83,6 +107,7 @@ def target_spectroscopy(context, target, dataproduct=None):
                       legend_title="Best Templates",
                       showlegend=True,
                       )
+
 
     return {
         'target': target,

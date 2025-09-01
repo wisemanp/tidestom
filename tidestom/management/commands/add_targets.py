@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 from tom_targets.models import Target
 from tidestom.tides_utils.target_utils import create_target
 from django.conf import settings
+from django.db import connection
 ### TODO: WRITE CORRECT DIRECTORY IN HER, USING AN ENVIRONMENT VARIABLE
 
 
@@ -49,11 +50,19 @@ class Command(BaseCommand):
                         self.style.SUCCESS(f'Successfully added target {name}')
                     )
                 else:
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f'Successfully updated target {name}'
-                        )
+                    self.stdout.write(self.style.SUCCESS(f'Successfully updated target {name}'))
+
+                # Ensure a child row exists in tides_cand for this Target
+                with connection.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO public.tides_cand (tides_id)
+                        VALUES (%s)
+                        ON CONFLICT (tides_id) DO NOTHING
+                        """,
+                        [target.id],
                     )
+                self.stdout.write(f'Ensured tides_cand row for target id={target.id}')
             else:
                 self.stdout.write(
                     self.style.WARNING(

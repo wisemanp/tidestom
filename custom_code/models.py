@@ -1,90 +1,259 @@
 from django.db import models
-from tom_targets.base_models import BaseTarget
-from django.contrib.auth.models import User
-from django.utils.timezone import now
-from collections import Counter
+from django.contrib.auth import get_user_model
+from tom_targets.models import Target as TomTarget
+
+User = get_user_model()
 
 class TidesClass(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
 
+    class Meta:
+        managed = False
+        db_table = 'tides_class'
+        ordering = ['name']
+
+
 class TidesClassSubClass(models.Model):
-    main_class = models.ForeignKey(TidesClass, on_delete=models.CASCADE, related_name='sub_classes')
+    main_class = models.ForeignKey(
+        TidesClass, on_delete=models.CASCADE, related_name='sub_classes'
+    )
     sub_class = models.CharField(max_length=100)
 
     def __str__(self):
         return f"{self.main_class.name} - {self.sub_class}"
 
-class TidesTarget(BaseTarget):
-    """
-    A target with fields defined by a user.
-    """
-    TIDES_CLASS_CHOICES = [
-        ('SN', 'SN'),
-        ('SNI','SNI'),
-        ('SNIa', 'SNIa'),
-        ('SNIbc', 'SNIbc'),
-        ('SNIb', 'SNIb'),
-        ('SNIc', 'SNIc'),
-        ('SNId', 'SNId'),
-        ('SNIe', 'SNIe'),
-        ('SNII', 'SNII'),
-        ('SLSN-I', 'SLSN-I'),
-        ('SLSN-II', 'SLSN-II'),
-        ('TDE', 'TDE'),
-        ('KN', 'KN'),
-        ('AGN', 'AGN'),
-        ('LRN', 'LRN'),
-        ('CV', 'CV'),
-        ('LBV', 'LBV'),
-        ('Other', 'Other'),
-    ]
-
-    tidesclass = models.CharField(max_length=50, choices=TIDES_CLASS_CHOICES, verbose_name='TiDES Classification', default='SN')
-    tidesclass_other = models.CharField(max_length=100, blank=True, null=True, verbose_name='TiDES Classification (Other)')
-    tidesclass_subclass = models.ForeignKey(TidesClassSubClass, on_delete=models.SET_NULL, blank=True, null=True, verbose_name='TiDES Sub-classification')
-
-    auto_tidesclass = models.CharField(max_length=50, choices=TIDES_CLASS_CHOICES, verbose_name='Auto TiDES Classification', blank=True, null=True)
-    auto_tidesclass_other = models.CharField(max_length=100, blank=True, null=True, verbose_name='Auto TiDES Classification (Other)')
-    auto_tidesclass_subclass = models.ForeignKey(TidesClassSubClass, on_delete=models.SET_NULL, blank=True, null=True, related_name='auto_subclass', verbose_name='Auto TiDES Sub-classification')
-    auto_tidesclass_prob = models.FloatField(blank=True, null=True, verbose_name='Auto TiDES Classification Probability')
-
-    human_tidesclass = models.CharField(max_length=50, choices=TIDES_CLASS_CHOICES, verbose_name='Human TiDES Classification', blank=True, null=True)
-    human_tidesclass_other = models.CharField(max_length=100, blank=True, null=True, verbose_name='Human TiDES Classification (Other)')
-    human_tidesclass_subclass = models.ForeignKey(TidesClassSubClass, on_delete=models.SET_NULL, blank=True, null=True, related_name='human_subclass', verbose_name='Human TiDES Sub-classification')
-    
-    def aggregate_human_tidesclass(self):
-        submissions = self.human_classifications.all()
-        if not submissions:
-            return None
-
-        # Aggregate the most common classification
-        tidesclass_counts = Counter(sub.tidesclass for sub in submissions)
-        most_common_class, count = tidesclass_counts.most_common(1)[0]
-
-        return {
-            'most_common_class': most_common_class,
-            'count': count,
-            'total_submissions': len(submissions),
-        }
-    
     class Meta:
-        verbose_name = "target"
-        permissions = (
-            ('view_target', 'View Target'),
-            ('add_target', 'Add Target'),
-            ('change_target', 'Change Target'),
-            ('delete_target', 'Delete Target'),
-        )
-class HumanTidesClassSubmission(models.Model):
-    target = models.ForeignKey(TidesTarget, on_delete=models.CASCADE, related_name='human_classifications')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Submitted By')
-    tidesclass = models.CharField(max_length=50, choices=TidesTarget.TIDES_CLASS_CHOICES, verbose_name='Human TiDES Classification')
-    tidesclass_other = models.CharField(max_length=100, blank=True, null=True, verbose_name='Human TiDES Classification (Other)')
-    tidesclass_subclass = models.ForeignKey(TidesClassSubClass, on_delete=models.SET_NULL, blank=True, null=True, verbose_name='Human TiDES Sub-classification')
-    timestamp = models.DateTimeField(auto_now_add=True, verbose_name='Submission Time')  # Automatically set timestamp
+        managed = False
+        db_table = 'tides_class_subclass'
+        unique_together = (('main_class', 'sub_class'),)
+        ordering = ['main_class_id', 'sub_class']
 
-    def __str__(self):
-        return f"{self.user.username} - {self.target.name} - {self.tidesclass}"
+# ----------------------------
+# Main Target row in tides_cand
+# ----------------------------
+class TidesTarget(TomTarget):
+    target_ptr = models.OneToOneField(
+        TomTarget,
+        on_delete=models.CASCADE,
+        parent_link=True,
+        db_column='tides_id',
+        primary_key=True,
+    )
+
+    lsst_sn_id = models.BigIntegerField(unique=True, null=True, blank=True)
+    lsst_host_id = models.BigIntegerField(null=True, blank=True)
+    last_date = models.DateTimeField(null=True, blank=True)
+    classification = models.CharField(max_length=50, null=True, blank=True)
+    z_best = models.FloatField(null=True, blank=True)
+    z_sn = models.FloatField(null=True, blank=True)
+    z_gal = models.FloatField(null=True, blank=True)
+    z_source = models.CharField(max_length=50, null=True, blank=True)
+    confidence = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tides_cand'
+        verbose_name = 'target'
+
+    # Provide an integer tides_id like your old code expects
+    @property
+    def tides_id(self):
+        return self.pk
+
+    @property
+    def human_tidesclass(self):
+        rec = self.human_classifications.order_by('-created').only('sn_type').first()
+        return rec.sn_type if rec else None
+
+    @property
+    def human_tidesclass_subclass(self):
+        rec = self.human_classifications.order_by('-created').only('sn_subtype').first()
+        return rec.sn_subtype if rec else None
+
+    def add_human_classification(self, *, user: User | None, sn_type: str, sn_subtype: str | None = None,
+                                 sn_z: float | None = None, comments: str | None = None, obs_id: int | None = None,
+                                 person_id: int | None = None):
+        return HumanClassification.objects.create(
+            tides=self,
+            user=user,
+            obs_id=obs_id,
+            person_id=person_id,
+            sn_type=sn_type,
+            sn_z=sn_z,
+            sn_subtype=sn_subtype,
+            comments=comments,
+        )
+
+    @property
+    def auto_tidesclass(self):
+        g = self.pipeline_classifications_global.order_by('-probability').only('sn_type').first()
+        if g:
+            return g.sn_type
+        best = max(
+            [
+                self.pipeline_classifications_superfit.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_snid.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_dash.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_ed.order_by('-probability').only('sn_type', 'probability').first(),
+            ],
+            key=lambda r: (r.probability if r else -1.0),
+            default=None,
+        )
+        return best.sn_type if best else None
+
+    @property
+    def auto_tidesclass_prob(self):
+        g = self.pipeline_classifications_global.order_by('-probability').only('probability').first()
+        if g:
+            return g.probability
+        best = max(
+            [
+                self.pipeline_classifications_superfit.order_by('-probability').only('probability').first(),
+                self.pipeline_classifications_snid.order_by('-probability').only('probability').first(),
+                self.pipeline_classifications_dash.order_by('-probability').only('probability').first(),
+                self.pipeline_classifications_ed.order_by('-probability').only('probability').first(),
+            ],
+            key=lambda r: (r.probability if r else -1.0),
+            default=None,
+        )
+        return best.probability if best else None
+
+
+# ----------------------------
+# Human classifications (remote)
+# ----------------------------
+class HumanClassification(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget,
+        on_delete=models.CASCADE,
+        related_name='human_classifications',
+        db_column='tides_id',
+    )
+    user = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, db_column='person_id'
+    )
+    obs_id = models.IntegerField(null=True, blank=True)
+    sn_type = models.CharField(max_length=50)
+    sn_z = models.FloatField(null=True, blank=True)
+    sn_subtype = models.CharField(max_length=50, null=True, blank=True)
+    comments = models.TextField(null=True, blank=True)
+    created = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'human_classifications'
+        ordering = ['-created']
+
+
+# ----------------------------
+# Pipeline classifications (remote)
+# ----------------------------
+class PipelineClassificationGlobal(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget, on_delete=models.CASCADE,
+        related_name='pipeline_classifications_global',
+        db_column='tides_id'
+    )
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    probability = models.FloatField(null=True, blank=True)
+    version = models.CharField(max_length=20, null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pipeline_classification_global'
+        ordering = ['-probability']
+
+
+class PipelineClassificationSuperfit(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget, on_delete=models.CASCADE,
+        related_name='pipeline_classifications_superfit',
+        db_column='tides_id'
+    )
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    probability = models.FloatField(null=True, blank=True)
+    version = models.CharField(max_length=20, null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pipeline_classification_superfit'
+        ordering = ['-probability']
+
+
+class PipelineClassificationSnid(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget, on_delete=models.CASCADE,
+        related_name='pipeline_classifications_snid',
+        db_column='tides_id'
+    )
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    probability = models.FloatField(null=True, blank=True)
+    version = models.CharField(max_length=20, null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pipeline_classification_snid'
+        ordering = ['-probability']
+
+
+class PipelineClassificationDash(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget, on_delete=models.CASCADE,
+        related_name='pipeline_classifications_dash',
+        db_column='tides_id'
+    )
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    probability = models.FloatField(null=True, blank=True)
+    version = models.CharField(max_length=20, null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pipeline_classification_dash'
+        ordering = ['-probability']
+
+
+class PipelineClassificationEd(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget, on_delete=models.CASCADE,
+        related_name='pipeline_classifications_ed',
+        db_column='tides_id'
+    )
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    probability = models.FloatField(null=True, blank=True)
+    version = models.CharField(max_length=20, null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'pipeline_classification_ed'
+        ordering = ['-probability']
+
+
+# ----------------------------
+# Spectra (remote)
+# ----------------------------
+class TidesSpec(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget,
+        db_column='tides_id',
+        on_delete=models.CASCADE,
+        related_name='spectra'
+    )
+    qmost_id = models.BigIntegerField(primary_key=True)
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    obs_date = models.DateTimeField(null=True, blank=True)
+    obs_mjd = models.FloatField(null=True, blank=True)
+    snr = models.FloatField(null=True, blank=True)
+    seeing = models.FloatField(null=True, blank=True)
+    sky_brightness = models.FloatField(null=True, blank=True)
+    filepath = models.TextField(null=True, blank=True)
+    version = models.IntegerField(null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tides_spec'
+        ordering = ['-obs_date']
