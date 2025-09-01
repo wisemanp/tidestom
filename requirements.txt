@@ -2,6 +2,7 @@ django-debug-toolbar
 django-bootstrap5
 django-htmx
 django-guardian
+django-admin
 pandas>=2.3
 matplotlib>=3.9
 tomtoolkit>=2.26
