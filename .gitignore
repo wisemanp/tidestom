@@ -18,3 +18,4 @@ tidestom/__pycache__/
 .fits
 static/.DS_Store
 static/tom_common/.DS_Store
+.DS_Store
