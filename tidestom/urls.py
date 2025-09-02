@@ -52,6 +52,6 @@ urlpatterns = [
         "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"
     ),
     path(
-    	"ngsf/run/", NGSFFormAJAXView.as_view(), name="ngsf-run"
+        "ngsf/run/", NGSFFormAJAXView.as_view(), name="ngsf-run"
     ),
 ]
