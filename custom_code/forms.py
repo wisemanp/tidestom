@@ -97,3 +97,6 @@ class SnidParamsForm(forms.Form):
     avoidsub = forms.MultipleChoiceField(
         choices=SUBTYPE_CHOICES, required=False
     )
+
+class NGSFParamsForm(forms.Form):
+    z = forms.FloatField(initial=0.1, required=True)

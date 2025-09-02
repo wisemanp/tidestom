@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.views.generic.edit import FormView
 import requests
-from .forms import SnidParamsForm
+from .forms import SnidParamsForm, NGSFParamsForm
 
 class SnidFormAjaxView(FormView):
     form_class = SnidParamsForm
@@ -20,4 +20,22 @@ class SnidFormAjaxView(FormView):
             return JsonResponse({"success": True, "data":response.json()})
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+class NGSFFormAJAXView(FormView):
+    form_class = NGSFParamsForm
+
+    def form_invalid(self, form):
+        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
+    def form_valid(self, form):
+        try:
+            response = requests.post(
+                    "http://ngsf_api:8000/ngsf_params/",
+                    json=form.cleaned_data,
+                    timeout=20
+                    )
+            response.raise_for_status()
+            return JsonResponse({"success": True, "data": response.json()})
+        except Exception as e:
+            return JsonResponse({"sucess": False, "errors": str(e)}, status=500)
 
