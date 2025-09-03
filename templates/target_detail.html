@@ -6,6 +6,7 @@
 {% endblock %}
 {% block content %}
 
+<script src="{% static 'js/ajax.js' %}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Function to update the URL with the selected tab.
@@ -470,6 +471,231 @@ fetch("{% static 'json/line_data.json' %}")
       <input type="range" id="velocitySlider" min="-25000" max="25000" step="100" value="0" style="width: 300px">
         <label for="velocityInput"></label><input type="number" id="velocityInput" min="-25000" max="25000" step="100" value="0" style="width: 80px; text-align: center;">
     </div>
+    
+<div class="spectroscopy-only" style="width:300px;">
+  <!-- Inner Tabs Navigation -->
+  <ul class="nav nav-tabs" id="fittingTabs" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link active" id="snid-tab" data-toggle="tab" href="#snid-pane" role="tab" aria-controls="snid-pane" aria-selected="true">SNID</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" id="ngsf-tab" data-toggle="tab" href="#ngsf-pane" role="tab" aria-controls="ngsf-pane" aria-selected="false">NGSF</a>
+    </li>
+  </ul>
+  <!-- Inner Tabs Content -->
+  <div class="tab-content mt-3" id="fittingTabsContent">
+    <div class="tab-pane fade show active" id="snid-pane" role="tabpanel" aria-labelledby="snid-tab">
+      {% snid_form %}
+    </div>
+    <div class="tab-pane fade" id="ngsf-pane" role="tabpanel" aria-labelledby="ngsf-tab">
+      {% ngsf_form %}
+    </div>
+  </div>
+</div>
+<script>
+$(document).ready(function() {
+    
+    // Debug what's available
+    console.log('jQuery version:', $.fn.jquery);
+    console.log('Bootstrap loaded:', typeof $.fn.modal !== 'undefined');
+    console.log('Multiselect available:', typeof $.fn.multiselect !== 'undefined');
+    console.log('Multiselect function:', $.fn.multiselect);
+    
+    // Function to manually load multiselect if it's not available
+    function ensureMultiselect(callback) {
+        if (typeof $.fn.multiselect !== 'undefined') {
+            console.log('Multiselect is available');
+            callback();
+            return;
+        }
+        
+        console.log('Multiselect not available, attempting to reload...');
+        
+        // Try to reload the multiselect script
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js';
+        script.onload = function() {
+            console.log('Multiselect reloaded, checking again...');
+            setTimeout(function() {
+                if (typeof $.fn.multiselect !== 'undefined') {
+                    console.log('Multiselect now available!');
+                    callback();
+                } else {
+                    console.error('Multiselect still not available after reload');
+                    // Fallback: convert to regular selects
+                    fallbackToRegularSelects();
+                }
+            }, 100);
+        };
+        script.onerror = function() {
+            console.error('Failed to load multiselect script');
+            fallbackToRegularSelects();
+        };
+        document.head.appendChild(script);
+    }
+    
+    // Fallback function to style regular selects
+    function fallbackToRegularSelects() {
+        console.log('Using fallback styling for regular selects');
+        ['#use', '#usesub', '#avoid', '#avoidsub'].forEach(function(selector) {
+            const $select = $(selector);
+            if ($select.length) {
+                $select.addClass('form-control').css({
+                    'height': 'auto',
+                    'min-height': '38px'
+                });
+                
+                // Add "Select All" functionality manually
+                const selectAllId = selector.replace('#', '') + '-select-all';
+                const $selectAllBtn = $('<button type="button" class="btn btn-sm btn-secondary mb-2" id="' + selectAllId + '">Select All</button>');
+                
+                $select.before($selectAllBtn);
+                
+                $selectAllBtn.on('click', function() {
+                    if ($select.find('option:selected').length === $select.find('option').length) {
+                        // Deselect all
+                        $select.find('option').prop('selected', false);
+                        $(this).text('Select All');
+                    } else {
+                        // Select all
+                        $select.find('option').prop('selected', true);
+                        $(this).text('Deselect All');
+                    }
+                });
+            }
+        });
+    }
+    
+    // Function to initialize multiselects (same as before but with better error handling)
+    function initializeMultiselects() {
+        console.log('Attempting to initialize multiselects...');
+        
+        // Destroy existing multiselects safely
+        ['#use', '#usesub', '#avoid', '#avoidsub'].forEach(function(selector) {
+            try {
+                const $select = $(selector);
+                if ($select.length && $select.data('multiselect')) {
+                    console.log('Destroying existing multiselect for', selector);
+                    $select.multiselect('destroy');
+                }
+            } catch (e) {
+                console.log('Error destroying multiselect for', selector, ':', e);
+            }
+        });
+        
+        setTimeout(function() {
+            try {
+                const multiselectOptions = {
+                    includeSelectAllOption: true,
+                    enableFiltering: true,
+                    enableCaseInsensitiveFiltering: true,
+                    buttonWidth: '100%',
+                    nonSelectedText: 'Select options',
+                    maxHeight: 200
+                };
+                
+                // Initialize each multiselect
+                if ($('#use').length) {
+                    $('#use').multiselect(multiselectOptions);
+                    $('#use').multiselect('selectAll', false);
+                    $('#use').multiselect('updateButtonText');
+                }
+                
+                if ($('#usesub').length) {
+                    $('#usesub').multiselect(multiselectOptions);
+                    $('#usesub').multiselect('selectAll', false);
+                    $('#usesub').multiselect('updateButtonText');
+                }
+                
+                if ($('#avoid').length) {
+                    $('#avoid').multiselect(multiselectOptions);
+                }
+                
+                if ($('#avoidsub').length) {
+                    $('#avoidsub').multiselect(multiselectOptions);
+                }
+                
+                console.log('All multiselects initialized successfully');
+                
+            } catch (error) {
+                console.error('Error during multiselect initialization:', error);
+                console.log('Falling back to regular selects...');
+                fallbackToRegularSelects();
+            }
+        }, 100);
+    }
+    
+    // Tab switching function (simplified)
+    function switchTab(activeTabId, targetPaneId) {
+        console.log('Switching to tab:', activeTabId, 'pane:', targetPaneId);
+        
+        // Remove active from all tabs
+        $('#fittingTabs .nav-link').removeClass('active');
+        
+        // Hide all panes
+        $('#fittingTabsContent .tab-pane').removeClass('show active').hide();
+        
+        // Activate target
+        $('#' + activeTabId).addClass('active');
+        $('#' + targetPaneId).addClass('show active').show();
+        
+        // Initialize multiselects for SNID tab
+        if (targetPaneId === 'snid-pane') {
+            setTimeout(function() {
+                ensureMultiselect(initializeMultiselects);
+            }, 200);
+        }
+    }
+    
+    function initInnerTabs() {
+        if (!$('.spectroscopy-only').is(':visible')) {
+            return;
+        }
+        
+        console.log('Initializing inner tabs...');
+        
+        // Remove existing handlers
+        $('#fittingTabs a[data-toggle="tab"]').off('click.inner-tabs');
+        
+        // Add click handlers
+        $('#fittingTabs a[data-toggle="tab"]').on('click.inner-tabs', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const tabId = $(this).attr('id');
+            const href = $(this).attr('href');
+            const targetPaneId = href.substring(1);
+            
+            switchTab(tabId, targetPaneId);
+        });
+        
+        // Initialize default tab
+        if (!$('#fittingTabs .nav-link.active').length) {
+            switchTab('snid-tab', 'snid-pane');
+        } else if ($('#snid-tab').hasClass('active')) {
+            setTimeout(function() {
+                ensureMultiselect(initializeMultiselects);
+            }, 200);
+        }
+    }
+    
+    // Initialize when spectroscopy tab becomes active
+    $(document).on('shown.bs.tab', 'a#spectroscopy-tab', function () {
+        console.log('Spectroscopy tab shown');
+        setTimeout(initInnerTabs, 200);
+    });
+    
+    // Initialize on page load
+    setTimeout(function() {
+        if ($('.spectroscopy-only').is(':visible')) {
+            console.log('Initializing on page load...');
+            initInnerTabs();
+        }
+    }, 1000);
+});
+</script>
+
+</div>
   </div>
 </div>
 {% endblock %}

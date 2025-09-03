@@ -8,21 +8,22 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
 import shutil
+import pandas as pd
 
 class Params(BaseModel):
-    wmin: Optional[float] = 4000
-    wmax: Optional[float] = 9000
-    zmin: Optional[float] = 0
-    zmax: Optional[float] = 1.2
-    emclip: Optional[float] = None #Not yet added to PySNID
-    emwid: Optional[float] = 40 #Not yet added to PySNID
-    agemin: Optional[float] = -90
-    agemax: Optional[float] = 1000 #Needs added to PySNID
-    use: object #Need to apply logic to get these working Dummy for now
-    usesub: object
-    avoid: object
-    avoidsub: object
-    aband: Optional[bool] = False
+    wmin: Optional[float] = 4000 ##Done
+    wmax: Optional[float] = 9000 ##Done
+    zmin: Optional[float] = 0 ##Done
+    zmax: Optional[float] = 1.2 ##Done
+    emclip: Optional[float] = None #TODO:Not yet added to PySNID
+    emwid: Optional[float] = 40 #DONE
+    agemin: Optional[float] = -90 #Done
+    agemax: Optional[float] = 1000 #Done
+    use: object #TODO Need to apply logic to get these working Dummy for now
+    usesub: object #TODO
+    avoid: object #TODO
+    avoidsub: object #TODO
+    aband: Optional[bool] = False #Done
 
 
 app = FastAPI()
@@ -30,9 +31,22 @@ app = FastAPI()
 @app.post("/snid_params/")
 def run_snid(params: Params):
     params  = params.dict()
+
+    if len(params['use']) > 0:
+        params['use'] = ", ".join(params['use'])
+
+    if len(params['usesub']) > 0:
+        params['usesub'] = ", ".join(params['usesub'])
+
+    if len(params['use']) > 0:
+        params['use'] = ", ".join(params['use'])
+
+    if len(params['use']) > 0:
+        params['use'] = ", ".join(params['use'])
+
     print(params)
+
     file_spec='/home/sniduser/snid-5.0/examples/sn2003jo.dat'
-    file_spec_ascii='/home/sniduser/snid-5.0/examples/sn2003jo.ascii'
     file_spec_binned_ascii='/home/sniduser/snid-5.0/examples/sn2003jo_binned.ascii'
 
     #read fits spec
@@ -57,9 +71,23 @@ def run_snid(params: Params):
     #run pysnid
     snidres = pysnid.run_snid(file_spec_binned_ascii,get_results=False,lbda_range=
                               [params['wmin'],params['wmax']], redshift_bounds=
-                              [params['zmin'],params['zmax']], aband=params['aband'])
+                              [params['zmin'],params['zmax']], phase_range=
+                              [params['agemin'], params['agemax']], emwid=
+                              params['emwid'], aband=params['aband'])
 
     #test = snidres.get_results()
     shutil.move(snidres, '/snid_api_runs/test.h5')
 # this will create a file named file_spec_binned_ascii+'_snid.h5'
-    return {"path": snidres}
+    test = pysnid.snid.SNIDReader.from_filename('/snid_api_runs/test.h5')
+    print(test.results)
+    df = test.results.copy()
+
+    # Replace non-finite values with None
+    df = df.replace([np.inf, -np.inf], np.nan).where(pd.notnull(df), None)
+    df = df[['sn', 'typing', 'subtyping', 'lap', 'rlap', 'z', 'zerr', 'age']]
+
+    return {"success": True, "data": {"table": df.to_dict(orient='records')[:10]}}
+
+#Remove age_flag, type, grade
+
+#Show the first match of different type
