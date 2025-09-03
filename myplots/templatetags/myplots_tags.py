@@ -11,7 +11,6 @@ from pathlib import Path
 from astropy.io import fits
 from astropy import units as u
 from specutils import Spectrum1D
-import numpy as np
 
 from custom_code.models import TidesSpec
 from tidestom.settings import BROKERS
@@ -22,7 +21,7 @@ from .photometry_settings import plot_lightcurves, fetch_ztf_lasair
 register = template.Library()
 
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
-def target_spectroscopy(context, target, dataproduct=None):
+def target_spectroscopy(context, target, dataproduct=None, snid_path=None):
     """
     Render a spectroscopic plot for a Target.
     Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
@@ -35,7 +34,9 @@ def target_spectroscopy(context, target, dataproduct=None):
         .first()
     )
     if not spec:
-        return {'target': target, 'plot': '<p>No spectrum available for this target.</p>'}
+        return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
+    #else:
+    #	return {'target': target, 'plot': f'<p> spectrum available for this target:{target}.</p>'}
 
     # Resolve file path (use stored path; fallback to symlink convention if missing)
     p = Path(spec.filepath)
@@ -70,36 +71,38 @@ def target_spectroscopy(context, target, dataproduct=None):
         return {'target': target, 'plot': f'<p>Failed to load spectrum: {e}</p>'}
 
     fig = go.Figure(data=plot_data)
-        
+
     # add templates - best matches
     # SNID - mock templates for now
     data_mean = np.mean(spectrum.flux.value)
-    try:
-      pysnid_file = '/home/tomas/Softwares/tests/pysnid/l1_obs_joined_87178841_snid.h5'
-      fig = add_snid_templates(pysnid_file,
-                             spectrum.spectral_axis.value, 
-                             spectrum.flux.value, 
-                             fig, 
+
+    if snid_path is not None:
+        try:
+            #pysnid_file = '/home/tomas/Softwares/tests/pysnid/l1_obs_joined_87178841_snid.h5'
+            pysnid_file = snid_path
+            fig = add_snid_templates(pysnid_file,
+                             spectrum.spectral_axis.value,
+                             spectrum.flux.value,
+                             fig,
                              n=3
                              )
-    except:
-      #TODO add better handling
-      pass
-    
-    
+        except:
+            pass
+
+
     # NGSF - mock templates for now
     try:
       ngsf_file = '/home/tomas/Softwares/tests/ngsf/l1_obs_joined_87178841.csv'
-      fig = add_ngsf_templates(ngsf_file, 
-                             deserialized.wavelength.value, 
-                             deserialized.flux.value, 
-                             fig, 
+      fig = add_ngsf_templates(ngsf_file,
+                             deserialized.wavelength.value,
+                             deserialized.flux.value,
+                             fig,
                              n=3
                              )
     except:
       #TODO add better handling
       pass
-    fig.update_layout(autosize=True, 
+    fig.update_layout(autosize=True,
                       xaxis_title='Observed Wavelength (Å)',
                       yaxis_title='Flux (erg/s/cm²/Å)',
                       xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
@@ -129,15 +132,15 @@ def target_photometry(context, target, dataproduct=None):
     if lasair_token is None or lasair_token == "":
         warnings.warn("Warning: Lasair API key not set!", UserWarning)
         return {'target': target}
-    
+
     photometry = fetch_ztf_lasair(49.1384664, 44.9725084)  # ZTF25aacedrs for testing
     #photometry = fetch_ztf_lasair(target.ra, target.dec)
     if photometry is None:
         return {'target': target}
-    
+
     # plot photometry
     fig = plot_lightcurves(photometry)
-    
+
     # add epochs with spectra
     try:
         spectroscopy_data_type = settings.DATA_PRODUCT_TYPES['spectroscopy'][0]
@@ -148,9 +151,9 @@ def target_photometry(context, target, dataproduct=None):
     datums = ReducedDatum.objects.filter(data_product__in=spectral_dataproducts)
     for datum in datums:
         mjd = Time(datum.timestamp, scale="utc").mjd
-        fig.add_vline(mjd, line_width=2, line_dash="dot", line_color="black", 
+        fig.add_vline(mjd, line_width=2, line_dash="dot", line_color="black",
                             annotation_text="s", annotation_position="top left")
-        
+
     return {
         'target': target,
         'plot': offline.plot(fig, output_type='div', show_link=False)

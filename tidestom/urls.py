@@ -20,6 +20,7 @@ from .views import (
     LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
 from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView
+from myplots.views import target_spectroscopy_partial
 urlpatterns = [
     path(
         'about/', TemplateView.as_view(template_name='about.html'),
@@ -54,4 +55,8 @@ urlpatterns = [
     path(
         "ngsf/run/", NGSFFormAJAXView.as_view(), name="ngsf-run"
     ),
+    path(
+        "target_spectroscopy/<int:target_id>/", target_spectroscopy_partial,
+        name="target_spectroscopy"
+        ),
 ]

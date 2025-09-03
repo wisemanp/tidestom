@@ -87,7 +87,7 @@ def run_snid(params: Params):
     df = df.replace([np.inf, -np.inf], np.nan).where(pd.notnull(df), None)
     df = df[['sn', 'typing', 'subtyping', 'lap', 'rlap', 'z', 'zerr', 'age']]
 
-    return {"success": True, "data": {"table": df.to_dict(orient='records')[:10]}}
+    return {"success": True, "data": {"file_path": "/snid_api_runs/test.h5" ,"table": df.to_dict(orient='records')[:10]}}
 
 #Remove age_flag, type, grade
 

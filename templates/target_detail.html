@@ -406,7 +406,7 @@ fetch("{% static 'json/line_data.json' %}")
         {% target_photometry target %}
         {% get_photometry_data object %}
         </div>
-      <div class="tab-pane active" id="spectroscopy">
+      <div class="tab-pane active" id="spectroscopy" data-target-id="{{ target.id }}">
         {% target_spectroscopy target %}
 
         <!-- Bin/Overplot controls -->
@@ -694,6 +694,34 @@ $(document).ready(function() {
         }
     }, 1000);
 });
+</script>
+
+<script>
+  $(document).on("submit", "#snid-form", function(e) {
+    e.preventDefault();
+
+    $.ajax({
+      url: $(this).attr("action"),
+      type: "POST",
+      data: $(this).serialize(),
+      success: function(response) {
+        if (response.success) {
+          const filePath = response.data.data.file_path;
+          const container = document.getElementById('spectroscopy');
+          const targetId = container.dataset.targetId;
+          console.log(`variable = ${targetId}`);
+
+          // Ask HTMX to reload the spectroscopy block
+          htmx.ajax('GET',
+            `/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
+            { target: '#spectroscopy' }
+          );
+        } else {
+          $("#snid-result").text("Error: " + response.error);
+        }
+      }
+    });
+  });
 </script>
 
 </div>
