@@ -486,7 +486,7 @@ fetch("{% static 'json/line_data.json' %}")
   <!-- Inner Tabs Content -->
   <div class="tab-content mt-3" id="fittingTabsContent">
     <div class="tab-pane fade show active" id="snid-pane" role="tabpanel" aria-labelledby="snid-tab">
-      {% snid_form %}
+      {% snid_form spectrum=object.id %}
     </div>
     <div class="tab-pane fade" id="ngsf-pane" role="tabpanel" aria-labelledby="ngsf-tab">
       {% ngsf_form %}

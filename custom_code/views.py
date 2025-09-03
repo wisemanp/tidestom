@@ -1,6 +1,9 @@
 from django.http import JsonResponse
 from django.views.generic.edit import FormView
+from django.conf import settings
 import requests
+from pathlib import Path
+from custom_code.models import TidesSpec
 from .forms import SnidParamsForm, NGSFParamsForm
 
 class SnidFormAjaxView(FormView):
@@ -10,6 +13,25 @@ class SnidFormAjaxView(FormView):
         return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
     def form_valid(self, form):
+        spectrum_id = form.cleaned_data.pop('spectrum', None)
+        if not spectrum_id:
+            return JsonResponse({"success": False, "error": "No spectrum selected"},
+                                status=400)
+        spec = (TidesSpec.objects
+                .filter(tides=spectrum_id)
+                .order_by('-obs_date', '-qmost_id')
+                .first()
+            )
+        if not spec:
+            return JsonResponse({"success": False, "error": "No spectrum found"},
+                                status=400)
+        p = Path(spec.filepath)
+        if not p.exists():
+            candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
+            if candidate.exists():
+                p = candidate
+
+        form.cleaned_data["spectrum"] = str(p)
         try:
             response = requests.post(
                     "http://snid_api:8000/snid_params/",

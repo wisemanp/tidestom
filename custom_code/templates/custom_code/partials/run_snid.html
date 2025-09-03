@@ -6,6 +6,8 @@
     <div class="card-body">
 			<form id="snid-form" class='ajax-form' data-result-id='snid-result' method="post" action="{% url 'snid-run' %}">
 			{% csrf_token %}
+			<!--Spectrum Inputs-->
+			<input type="hidden" name="spectrum" value="{{ spectrum }}" class=form-control>
 			<!-- Wavelength Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-6">

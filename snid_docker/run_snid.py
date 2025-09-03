@@ -11,6 +11,7 @@ import shutil
 import pandas as pd
 
 class Params(BaseModel):
+    spectrum: str
     wmin: Optional[float] = 4000 ##Done
     wmax: Optional[float] = 9000 ##Done
     zmin: Optional[float] = 0 ##Done

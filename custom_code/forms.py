@@ -73,6 +73,7 @@ SUBTYPE_CHOICES = [
 ]
 
 class SnidParamsForm(forms.Form):
+    spectrum = forms.CharField(required=True)
     wmin = forms.FloatField(initial=4000, required=True)
     wmax = forms.FloatField(initial=9000, required=True)
     zmin = forms.FloatField(initial=0.1, required=True)
