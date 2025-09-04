@@ -48,12 +48,18 @@ def run_snid(params: Params):
     print(params)
 
     file_spec='/home/sniduser/snid-5.0/examples/sn2003jo.dat'
-    file_spec_binned_ascii='/home/sniduser/snid-5.0/examples/sn2003jo_binned.ascii'
+    file_spec_binned_path='/home/sniduser/snid-5.0/examples'
+
+    file_table = Table.read(params['spectrum'])
+    print(file_table)
 
     #read fits spec
-    hdult =  Table.read(file_spec, format='ascii')
-    wl=hdult['col1']
-    fl=hdult['col2']
+    hdult =  Table.read(params['spectrum'], format='fits')
+    wl=hdult['WAVE'][0]
+    fl=hdult['FLUX'][0]
+
+    print(len(wl))
+    print(len(fl))
 
     # create a Spectrum1D object for specutils
     spec = Spectrum1D(spectral_axis=wl* u.AA , flux=fl* u.Unit('erg cm-2 s-1 AA-1') )
@@ -67,10 +73,12 @@ def run_snid(params: Params):
 
     # make an ascii file of the binned spectrum to run pysnid
     data_spec = np.column_stack([fl_smooth.spectral_axis.value, fl_smooth.flux.value])
-    np.savetxt(file_spec_binned_ascii , data_spec, fmt=['%.2f','%.4e'])
+    np.savetxt(f"{file_spec_binned_path}/binned.ascii",
+               data_spec, fmt=['%.2f','%.4e'])
 
     #run pysnid
-    snidres = pysnid.run_snid(file_spec_binned_ascii,get_results=False,lbda_range=
+    snidres = pysnid.run_snid(f"{file_spec_binned_path}/binned.ascii",
+                              get_results=False,lbda_range=
                               [params['wmin'],params['wmax']], redshift_bounds=
                               [params['zmin'],params['zmax']], phase_range=
                               [params['agemin'], params['agemax']], emwid=
