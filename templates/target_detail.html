@@ -91,7 +91,7 @@ fetch("{% static 'json/line_data.json' %}")
                 line: { color, width: 2},
                 layer: "below"
             })));
-        Plotly.relayout(plotDiv, { shapes: newShapes });
+        Plotly.relayout(getFigDiv(), { shapes: newShapes });
     }
 
     function updateRedshiftVelocity() {
@@ -408,7 +408,8 @@ fetch("{% static 'json/line_data.json' %}")
         </div>
       <div class="tab-pane active" id="spectroscopy" data-target-id="{{ target.id }}">
         {% target_spectroscopy target %}
-
+      </div>
+	  <div>
         <!-- Bin/Overplot controls -->
         <div class="d-flex align-items-center gap-2 mb-4 spectroscopy-only">
           <input class="form-check-input" type="checkbox" id="toggle-binned">
