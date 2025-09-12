@@ -21,7 +21,7 @@ from .photometry_settings import plot_lightcurves, fetch_ztf_lasair
 register = template.Library()
 
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
-def target_spectroscopy(context, target, dataproduct=None, snid_path=None):
+def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_path=None):
     """
     Render a spectroscopic plot for a Target.
     Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
@@ -91,17 +91,19 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None):
 
 
     # NGSF - mock templates for now
-    try:
-      ngsf_file = '/home/tomas/Softwares/tests/ngsf/l1_obs_joined_87178841.csv'
-      fig = add_ngsf_templates(ngsf_file,
+    if ngsf_path is not None:
+        try:
+            #ngsf_file = '/home/tomas/Softwares/tests/ngsf/l1_obs_joined_87178841.csv'
+            ngsf_file = ngsf_path
+            fig = add_ngsf_templates(ngsf_file,
                              deserialized.wavelength.value,
                              deserialized.flux.value,
                              fig,
                              n=3
                              )
-    except:
-      #TODO add better handling
-      pass
+        except:
+            #TODO add better handling
+            pass
     fig.update_layout(autosize=True,
                       xaxis_title='Observed Wavelength (Å)',
                       yaxis_title='Flux (erg/s/cm²/Å)',

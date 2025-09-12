@@ -58,9 +58,6 @@ def run_snid(params: Params):
     wl=hdult['WAVE'][0]
     fl=hdult['FLUX'][0]
 
-    print(len(wl))
-    print(len(fl))
-
     # create a Spectrum1D object for specutils
     spec = Spectrum1D(spectral_axis=wl* u.AA , flux=fl* u.Unit('erg cm-2 s-1 AA-1') )
 
