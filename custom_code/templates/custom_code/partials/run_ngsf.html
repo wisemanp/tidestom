@@ -1,16 +1,11 @@
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-
 <div class="card">
     <div class="card-header">
        Run NGSF
     </div>
     <div class="card-body">
-			<form id="snid-form" class='ajax-form' data-result-id='ngsf-result' method="post" action="{% url 'ngsf-run' %}">
+			<form id="ngsf-form" class='ajax-form' data-result-id='ngsf-result' method="post" action="{% url 'ngsf-run' %}">
 			{% csrf_token %}
-			
+			<input type='hidden', name="spectrum" value="{{ spectrum }}" class="form-control">	
 			<!-- Z Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-3">
@@ -19,15 +14,15 @@
 			</div>
 			<div class="form-group col-md-3">
 			<label for="zmax">z Max:</label>
-			<input type="number" name="zmax" step="0.01" required value="0.1" class="form-control">
+			<input type="number" name="z_max" step="0.01" required value="0.1" class="form-control">
 			</div>
 			<div class="form-group col-md-3">
 			<label for="zmin">z Min:</label>
-			<input type="number" name="zmin" step="0.01" required value="0" class="form-control">
+			<input type="number" name="z_min" step="0.01" required value="0" class="form-control">
 			</div>
 			<div class="form-group col-md-3">
 			<label for="zint">z int:</label>
-			<input type="number" name="zint" step="0.01" required value="0.01" class="form-control">
+			<input type="number" name="z_int" step="0.01" required value="0.01" class="form-control">
 			</div>
 			</div>
 			
@@ -35,11 +30,11 @@
 			<div class="form-row">
 			<div class="form-group col-md-6">
 			<label for="wmin">Wavelength Min (&angst;):</label>
-			<input type="number" name="wmin" step="0.1" required value="0" class="form-control">
+			<input type="number" name="lower_lam" step="0.1" required value="0" class="form-control">
 			</div>
 			<div class="form-group col-md-6">
 			<label for="wmax">Wavelength Max (&angst;):</label>
-			<input type="number" name="wmax" step="1" required value="0" class="form-control">
+			<input type="number" name="upper_lam" step="1" required value="0" class="form-control">
 			</div>
 			</div>
 			
@@ -47,11 +42,11 @@
 			<div class="form-row">
 			<div class="form-group col-md-6">
 			<label for="epochmin">Minimum Epoch:</label>
-			<input type="number" name="epochmin" step="1" value=0 class="form-control">
+			<input type="number" name="epoch_low" step="1" value=0 class="form-control">
 			</div>
 			<div class="form-group col-md-6">
 			<label for="epochmax">Maximum Epoch:</label>
-			<input type="number" name="epochmax" step="1" value=0 class="form-control">
+			<input type="number" name="epoch_high" step="1" value=0 class="form-control">
 			</div>
 			</div>
 			
@@ -67,7 +62,7 @@
 			</div>
 			<div class="form-group col-md-4">
 			<label for="alam_int">Extinction Law Interval:</label>
-			<input type="number" name="alam_int" step="0.01" required value="0.2" class="form-control">
+			<input type="number" name="alam_interval" step="0.01" required value="0.2" class="form-control">
 			</div>
 			</div>
 			
@@ -101,60 +96,3 @@
 	</div>
 </div>
 
-<script>
-  $(document).ready(function() {
-    $('#use').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  $('#use').multiselect('selectAll', false);  // false means don’t trigger onChange
-  $('#use').multiselect('updateButtonText');  // refresh the button text
-  });
-</script>
-
-
-<script>
-  $(document).ready(function() {
-    $('#usesub').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  $('#usesub').multiselect('selectAll', false);  // false means don’t trigger onChange
-  $('#usesub').multiselect('updateButtonText');  // refresh the button text
-  });
-</script>
-
-<script>
-  $(document).ready(function() {
-    $('#avoid').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  });
-</script>
-
-
-<script>
-  $(document).ready(function() {
-    $('#avoidsub').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  });
-</script>

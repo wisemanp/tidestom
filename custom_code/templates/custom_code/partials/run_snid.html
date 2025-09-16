@@ -1,3 +1,4 @@
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js"></script> -->
 <div class="card">
     <div class="card-header">
        Run SNID
@@ -5,6 +6,8 @@
     <div class="card-body">
 			<form id="snid-form" class='ajax-form' data-result-id='snid-result' method="post" action="{% url 'snid-run' %}">
 			{% csrf_token %}
+			<!--Spectrum Inputs-->
+			<input type="hidden" name="spectrum" value="{{ spectrum }}" class=form-control>
 			<!-- Wavelength Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-6">
@@ -111,64 +114,6 @@
 			</div>
 			</div>
 		</form>
+		<div id="snid-result" class="mt-3"></div>
 	</div>
-	<div id="snid-result" class="mt-3"></div>
 </div>
-
-<script>
-  $(document).ready(function() {
-    $('#use').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  $('#use').multiselect('selectAll', false);  // false means don’t trigger onChange
-  $('#use').multiselect('updateButtonText');  // refresh the button text
-  });
-</script>
-
-
-<script>
-  $(document).ready(function() {
-    $('#usesub').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  $('#usesub').multiselect('selectAll', false);  // false means don’t trigger onChange
-  $('#usesub').multiselect('updateButtonText');  // refresh the button text
-  });
-</script>
-
-<script>
-  $(document).ready(function() {
-    $('#avoid').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  });
-</script>
-
-
-<script>
-  $(document).ready(function() {
-    $('#avoidsub').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  });
-</script>

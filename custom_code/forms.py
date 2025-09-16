@@ -73,6 +73,7 @@ SUBTYPE_CHOICES = [
 ]
 
 class SnidParamsForm(forms.Form):
+    spectrum = forms.CharField(required=True)
     wmin = forms.FloatField(initial=4000, required=True)
     wmax = forms.FloatField(initial=9000, required=True)
     zmin = forms.FloatField(initial=0.1, required=True)
@@ -99,4 +100,18 @@ class SnidParamsForm(forms.Form):
     )
 
 class NGSFParamsForm(forms.Form):
-    z = forms.FloatField(initial=0.1, required=True)
+    spectrum = forms.CharField(required=True)
+    z = forms.FloatField(initial=0.0, required=True)
+    z_min = forms.FloatField(initial=0.0, required=True)
+    z_max = forms.FloatField(initial=0.1, required=True)
+    z_int = forms.FloatField(initial=0.01, required=True)
+    resolution = forms.FloatField(initial=10, required=True)
+    lower_lam = forms.FloatField(initial=0.00, required=True)
+    upper_lam = forms.FloatField(initial=0.0, required=True)
+    mask_galaxy = forms.BooleanField(required=False)
+    mask_telluric = forms.BooleanField(required=False)
+    epoch_high = forms.IntegerField(initial=0, required=True)
+    epoch_low = forms.IntegerField(initial=0, required=True)
+    alam_high = forms.FloatField(initial=2, required=True)
+    alam_low = forms.FloatField(initial=-2, required=True)
+    alam_interval = forms.FloatField(initial=0.2, required=True)
