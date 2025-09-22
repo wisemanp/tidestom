@@ -29,29 +29,38 @@ jobs:
     env:
       LASAIR_API_KEY: ${{ secrets.LASAIR_API_KEY }}
       TIDES_TEST_DIR: "dummy_dir"
+      DB_USER: tides
+      DB_PASS: tides
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DATABSE_URL: postgres://tides:tides@localhost:5423/tides_db
     steps:
       # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # 2. Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. Cache Docker Layers
+      - name: Cache Docker Layers
+        uses: actions/cache@v4
         with:
-          python-version: "3.11"
+          path: /tmp/.buildx-cache
+          key: ${{ runder.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runder.os }}-buildx-
 
-      # 3. Create & activate virtual environment
-      - name: Create virtual environment
-        run: |
-          python -m venv tom_env
-          source tom_env/bin/activate
-          python -m pip install --upgrade pip
+      # 4. Build Images
+      - name: Build Services
+        run: docker compose build
 
-      # 4. Install dependencies
-      - name: Install dependencies
-        run: |
-          source tom_env/bin/activate
-          pip install -r requirements.txt
+      # 5. Start Containers
+      - name: Start Services
+        run: docker compose up -d web snid_api ngsf_api
+
+      # 6. Wait for Postgres
       - name: Wait for Postgres
         run: |
           for i in {1..30}; do
@@ -62,14 +71,16 @@ jobs:
       - name: Clean migration caches
         run: |
           find . -path "*/migrations/__pycache__/*" -delete
-      # 5. Run tests
+          
+      # 7. Run tests
       - name: Run test suite
-        run: |
-          source tom_env/bin/activate
-          python manage.py test
+        run: docker compose run --rm web python manage.py test
 
-      # 6. Deploy TOM Toolkit server (Django runserver)
-      - name: Deploy TOM Toolkit server
-        run: |
-          source tom_env/bin/activate
-          python manage.py check
+      # 8. Deploy TOM Toolkit server (Django runserver)
+      - name: Check server deployment
+        run: docker compose run -rm web python manage.py check
+
+      # 9 . Shut down containers
+      - name: Shut down containers
+        run: docker compose down -v
+
