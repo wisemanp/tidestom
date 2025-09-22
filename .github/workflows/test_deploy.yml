@@ -13,27 +13,27 @@ on:
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        ports: ['5432:5432']
-        env:
-          POSTGRES_USER: tides
-          POSTGRES_DB: tides_db
-          POSTGRES_HOST_AUTH_METHOD: trust  # allow passwordless connections
-        options: >-
-          --health-cmd="pg_isready -U tides -d tides_db"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+    #services:
+    #  postgres:
+    #    image: postgres:15
+    #    ports: ['5432:5432']
+    #    env:
+    #      POSTGRES_USER: tides
+    #      POSTGRES_DB: tides_db
+    #      POSTGRES_HOST_AUTH_METHOD: trust  # allow passwordless connections
+    #    options: >-
+    #      --health-cmd="pg_isready -U tides -d tides_db"
+    #      --health-interval=10s
+    #      --health-timeout=5s
+    #      --health-retries=10
     env:
       LASAIR_API_KEY: ${{ secrets.LASAIR_API_KEY }}
       TIDES_TEST_DIR: "dummy_dir"
-      DB_USER: tides
-      DB_PASS: tides
-      DB_HOST: host.docker.internal
-      DB_PORT: 5432
-      DATABASE_URL: postgres://tides:tides@host.docker.internal:5432/tides_db
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASS }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       # 1. Checkout repo
       - name: Checkout repository
@@ -61,16 +61,16 @@ jobs:
         run: docker compose up -d web snid_api ngsf_api
 
       # 6. Wait for Postgres
-      - name: Wait for Postgres
-        run: |
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U tides -d tides_db; then exit 0; fi
-            sleep 2
-          done
-          echo "Postgres not ready" && exit 1
-      - name: Clean migration caches
-        run: |
-          find . -path "*/migrations/__pycache__/*" -delete
+      #- name: Wait for Postgres
+      #  run: |
+      #    for i in {1..30}; do
+      #      if pg_isready -h localhost -p 5432 -U tides -d tides_db; then exit 0; fi
+      #      sleep 2
+      #    done
+      #    echo "Postgres not ready" && exit 1
+      #- name: Clean migration caches
+      #  run: |
+      #    find . -path "*/migrations/__pycache__/*" -delete
           
       # 7. Run tests
       - name: Run test suite
