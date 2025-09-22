@@ -33,7 +33,7 @@ jobs:
       DB_PASS: tides
       DB_HOST: localhost
       DB_PORT: 5432
-      DATABSE_URL: postgres://tides:tides@localhost:5423/tides_db
+      DATABASE_URL: postgres://tides:tides@localhost:5432/tides_db
     steps:
       # 1. Checkout repo
       - name: Checkout repository
@@ -64,7 +64,7 @@ jobs:
       - name: Wait for Postgres
         run: |
           for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U pwise -d tides_db; then exit 0; fi
+            if pg_isready -h localhost -p 5432 -U tides -d tides_db; then exit 0; fi
             sleep 2
           done
           echo "Postgres not ready" && exit 1
