@@ -31,9 +31,9 @@ jobs:
       TIDES_TEST_DIR: "dummy_dir"
       DB_USER: tides
       DB_PASS: tides
-      DB_HOST: postgres
+      DB_HOST: host.docker.interal
       DB_PORT: 5432
-      DATABASE_URL: postgres://tides:tides@postgres:5432/tides_db
+      DATABASE_URL: postgres://tides:tides@host.docker.internal:5432/tides_db
     steps:
       # 1. Checkout repo
       - name: Checkout repository
