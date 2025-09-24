@@ -69,11 +69,11 @@ jobs:
           
       # 7. Run tests
       - name: Run test suite
-        run: docker compose run --rm web python manage.py test
+        run: docker compose -f docker-compose.yml -f docker-compose-override.yml run --rm web python manage.py test
 
       # 8. Deploy TOM Toolkit server (Django runserver)
       - name: Check server deployment
-        run: docker compose run --rm web python manage.py check
+        run: docker compose -f docker-compose.yml -f docker-compose-override.yml run --rm web python manage.py check
 
       # 9 . Shut down containers
       - name: Shut down containers
