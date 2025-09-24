@@ -7,11 +7,12 @@ services:
       DB_PASS: tides
       DB_HOST: postgres
       DB_PORT: 5432
-      DATABASE_URL: postgres://tides:tides@postgres:5432/tides_db?sslmode=disable
+      DATABASE_URL: postgres://tides:tides@postgres:5432/tides_db?sslmode=allow
       PGHOST: postgres
       PGUSER: tides
       PGPASSWORD: tides
       PGPORT: 5432
+      PGSSLMODE: allow
     depends_on:
       postgres:
         condition: service_healthy
