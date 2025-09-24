@@ -3,7 +3,7 @@ version: "3.9"
 services:
   postgres:
     image: postgres:15
-    enviroment:
+    environment:
       POSTGRES_USER: tides
       POSTGRES_PASSWORD: tides
       POSTGRES_DB: tides_db
@@ -11,7 +11,7 @@ services:
       - "5432:5432"
 
 web:
-  enviroment:
+  environment:
     DB_USER: tides
     DB_PASS: tides
     DB_HOST: tides
