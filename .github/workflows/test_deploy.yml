@@ -29,11 +29,11 @@ jobs:
     env:
       LASAIR_API_KEY: ${{ secrets.LASAIR_API_KEY }}
       TIDES_TEST_DIR: "dummy_dir"
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASS: ${{ secrets.DB_PASS }}
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_PORT: ${{ secrets.DB_PORT }}
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DATABASE_URL: ${DATABASE_URL}
     steps:
       # 1. Checkout repo
       - name: Checkout repository
