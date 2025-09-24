@@ -10,12 +10,12 @@ services:
     ports:
       - "5432:5432"
 
-web:
-  environment:
-    DB_USER: tides
-    DB_PASS: tides
-    DB_HOST: tides
-    DB_PORT: 5432
-    DATABASE_URL: postgres://tides:tides@postgres:5432/tides_db
-  depends_on:
-    - postgres
+  web:
+    environment:
+      DB_USER: tides
+      DB_PASS: tides
+      DB_HOST: tides
+      DB_PORT: 5432
+      DATABASE_URL: postgres://tides:tides@postgres:5432/tides_db
+    depends_on:
+      - postgres
