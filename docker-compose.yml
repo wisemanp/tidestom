@@ -11,7 +11,7 @@ services:
       - ngsf_api
     volumes:
       - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - media_volume:/app/data
       - snid_api_runs:/snid_api_runs
       - ngsf_api_runs:/ngsf_api_runs
     environment:
@@ -56,6 +56,7 @@ services:
       DJANGO_URL: http://web:8000
     volumes:
       - snid_api_runs:/snid_api_runs
+      - media_volume:/media
 
   ngsf_api:
     build: ./ngsf_docker/

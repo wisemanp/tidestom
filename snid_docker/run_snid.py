@@ -7,8 +7,12 @@ import pysnid
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
+import logging
 import shutil
 import pandas as pd
+import os
+
+logger = logging.getLogger("startup")
 
 class Params(BaseModel):
     spectrum: str
@@ -29,6 +33,30 @@ class Params(BaseModel):
 
 app = FastAPI()
 
+@app.on_event('startup')
+async def startup_event():
+    try:
+        logger.info("Running SNID startup...")
+
+        subtypes = []
+        for file in os.listdir('templates-2.0'):
+            if file.endswith('lnw'):
+                df = pd.read_table(f"templates-2.0/{file}")
+                names = df.columns[0].split()
+                subtype = names[7]
+                if subtype not in subtypes:
+                    subtypes.append(subtype)
+        if len(subtypes) == 0:
+            raise RuntimeError("No Subtypes found, startup may have failed!")
+        os.makedirs('/media/snid_template_options', exist_ok=True)
+        with open('/media/snid_template_options/subtypes.txt', 'w') as f:
+            f.write("\n".join(subtypes))
+
+        logger.info("Startup successful!")
+    except Exception as e:
+        logger.error(f"Startup failed: {e}")
+        raise
+
 @app.post("/snid_params/")
 def run_snid(params: Params):
     params  = params.dict()
@@ -39,11 +67,11 @@ def run_snid(params: Params):
     if len(params['usesub']) > 0:
         params['usesub'] = ", ".join(params['usesub'])
 
-    if len(params['use']) > 0:
-        params['use'] = ", ".join(params['use'])
+    if len(params['avoid']) > 0:
+        params['avoid'] = ", ".join(params['avoid'])
 
-    if len(params['use']) > 0:
-        params['use'] = ", ".join(params['use'])
+    if len(params['avoidsub']) > 0:
+        params['avoidsub'] = ", ".join(params['avoidsub'])
 
     print(params)
 
