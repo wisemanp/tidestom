@@ -60,11 +60,11 @@
 			<div class='form-group col-md-6 text-center'>
 			<label for="use" class="d-block"> Use these types:</label>
 			<select id='use' name='use' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
+				<option value='Ia'>Ia</option>
+				<option value='Ib'>Ib</option>
+				<option value='IC'>Ic</option>
+				<option value='II'>II</option>
+				<option value='NotSN'>Not SN</option>
 			</select>
 			</div>
 			
@@ -84,11 +84,11 @@
 			<div class='form-group col-md-6 text-center'>
 			<label for="avoid" class="d-block"> Avoid these types:</label>
 			<select id='avoid' name='avoid' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
+				<option value='Ia'>Ia</option>
+				<option value='Ib'>Ib</option>
+				<option value='Ic'>Ic</option>
+				<option value='II'>II</option>
+				<option value='NotSN'>NotSN</option>
 			</select>
 			</div>
 			
@@ -120,6 +120,24 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+	function setupMutualExclusion(selectA, selectB) {
+		$(`#${selectA}`).on('change', function () {
+			const selected = $(this).val() || [];
+			const other = $(`#${selectB}`);
+			selected.forEach(val => {
+				other.multiselect('deselect', val);
+			});
+		});
+
+		$(`#${selectB}`).on('change', function () {
+			const selected = $(this).val() || [];
+			const other = $(`#${selectA}`);
+			selected.forEach(val => {
+				other.multiselect('deselect', val);
+			});
+		});
+	}
+
 
     function populateSelects(fileUrl, selectIds) {
         fetch(fileUrl)
@@ -148,12 +166,10 @@ document.addEventListener("DOMContentLoaded", function() {
             .catch(err => console.error("Error loading " + fileUrl, err));
     }
 	
-    // Populate types (use + avoid)
-    populateSelects("/media/snid_template_options/subtypes.txt", ["use"]);
-    populateSelects("/media/snid_template_options/subtypes.txt", ["avoid"]);
-
     // Populate subtypes (usesub + avoidsub)
     populateSelects("/media/snid_template_options/subtypes.txt", ["usesub"]);
     populateSelects("/media/snid_template_options/subtypes.txt", ["avoidsub"]);
+
+	setupMutualExclusion("usesub", "avoidsub")
 });
 </script>
