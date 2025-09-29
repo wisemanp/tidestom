@@ -62,7 +62,7 @@
 			<select id='use' name='use' multiple='multiple'>
 				<option value='Ia'>Ia</option>
 				<option value='Ib'>Ib</option>
-				<option value='IC'>Ic</option>
+				<option value='Ic'>Ic</option>
 				<option value='II'>II</option>
 				<option value='NotSN'>Not SN</option>
 			</select>
@@ -170,6 +170,7 @@ document.addEventListener("DOMContentLoaded", function() {
     populateSelects("/media/snid_template_options/subtypes.txt", ["usesub"]);
     populateSelects("/media/snid_template_options/subtypes.txt", ["avoidsub"]);
 
-	setupMutualExclusion("usesub", "avoidsub")
+	setupMutualExclusion("usesub", "avoidsub");
+	setupMutualExclusion("use", "avoid");
 });
 </script>
