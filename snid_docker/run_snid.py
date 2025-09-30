@@ -21,14 +21,13 @@ class Params(BaseModel):
     wmax: Optional[float] = 9000 ##Done
     zmin: Optional[float] = 0 ##Done
     zmax: Optional[float] = 1.2 ##Done
-    emclip: Optional[float] = None #TODO:Not yet added to PySNID
+    emclip: Optional[float] = None #Done
     emwid: Optional[float] = 40 #DONE
     agemin: Optional[float] = -90 #Done
     agemax: Optional[float] = 1000 #Done
-    use: object #TODO Need to apply logic to get these working Dummy for now
-    usesub: object #TODO
-    avoid: object #TODO
-    avoidsub: object #TODO
+    use: object #Done
+    avoid: object #Done
+    avoidsub: object #Done
     aband: Optional[bool] = False #Done
 
 
@@ -134,7 +133,8 @@ def run_snid(params: Params):
                               [params['zmin'],params['zmax']], phase_range=
                               [params['agemin'], params['agemax']], emwid=
                               params['emwid'], usetype = use_type, avoidtype=
-                              avoid_type, aband=params['aband'])
+                              avoid_type, emclip=params['emclip'],
+                              aband=params['aband'])
 
     #test = snidres.get_results()
     shutil.move(snidres, '/snid_api_runs/test.h5')
