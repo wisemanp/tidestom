@@ -90,17 +90,19 @@ class SubmitClassificationView(FormView):
     def form_valid(self, form):
         target = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
 
-        # Map form fields to remote schema fields
         subclass_obj = form.cleaned_data.get('tidesclass_subclass')
-        sn_subtype = getattr(subclass_obj, 'sub_class', None) if subclass_obj else None
+        # Support model instance (with .sub_class) or plain string from AJAX form
+        sn_subtype = None
+        if subclass_obj:
+            sn_subtype = getattr(subclass_obj, 'sub_class', None) or str(subclass_obj)
 
         submission = HumanClassification.objects.create(
-            tides=target,                           # FK mapped to db_column='tides_id'
-            person_id=self.request.user.id,         # remote integer column
-            sn_type=form.cleaned_data['tidesclass'],# remote sn_type
-            sn_subtype=sn_subtype,                  # remote sn_subtype (text)
-            comments=form.cleaned_data.get('tidesclass_other') or '',  # map "other" to comments
-            created=now()                           # remote created timestamp
+            tides=target,
+            person_id=self.request.user.id,
+            sn_type=form.cleaned_data['tidesclass'],
+            sn_subtype=sn_subtype,
+            comments=form.cleaned_data.get('tidesclass_other') or '',
+            created=now()
         )
         return redirect('target_detail', pk=self.kwargs['target_id'])
 
@@ -116,7 +118,19 @@ from django.http import JsonResponse
 from custom_code.classification_list import CLASSIFICATIONS
 
 def get_subclasses(request):
-    main_class_name = request.GET.get('main_class')
-    subclasses = CLASSIFICATIONS.get(main_class_name, [])
-    return JsonResponse(subclasses, safe=False)
+    main_class = request.GET.get('main_class') or ''
+    logger.info(f"get_subclasses called with main_class={main_class!r}")
+    subclasses = CLASSIFICATIONS.get(main_class, [])
+
+    # Normalize to expected keys: id and sub_class
+    out = []
+    for s in subclasses:
+        if isinstance(s, dict):
+            label = s.get('sub_class') or s.get('text') or s.get('name') or str(s)
+            ident = s.get('id') or s.get('value') or label
+        else:
+            label = str(s)
+            ident = label
+        out.append({'id': ident, 'sub_class': label})
+    return JsonResponse(out, safe=False)
 

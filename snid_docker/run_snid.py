@@ -5,10 +5,15 @@ import astropy.units as u
 import numpy as np
 import pysnid
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
+import logging
 import shutil
 import pandas as pd
+import os
+
+logger = logging.getLogger("startup")
 
 class Params(BaseModel):
     spectrum: str
@@ -16,38 +21,86 @@ class Params(BaseModel):
     wmax: Optional[float] = 9000 ##Done
     zmin: Optional[float] = 0 ##Done
     zmax: Optional[float] = 1.2 ##Done
-    emclip: Optional[float] = None #TODO:Not yet added to PySNID
+    emclip: Optional[float] = None #Done
     emwid: Optional[float] = 40 #DONE
     agemin: Optional[float] = -90 #Done
     agemax: Optional[float] = 1000 #Done
-    use: object #TODO Need to apply logic to get these working Dummy for now
-    usesub: object #TODO
-    avoid: object #TODO
-    avoidsub: object #TODO
+    use: object #Done
+    avoid: object #Done
+    avoidsub: object #Done
     aband: Optional[bool] = False #Done
 
 
 app = FastAPI()
 
+@app.on_event('startup')
+async def startup_event():
+    global snid_startup_complete
+    try:
+        logger.info("Running SNID startup...")
+
+        subtypes = []
+        for file in os.listdir('templates-2.0'):
+            if file.endswith('lnw'):
+                df = pd.read_table(f"templates-2.0/{file}")
+                names = df.columns[0].split()
+                subtype = names[7]
+                if subtype not in subtypes:
+                    subtypes.append(subtype)
+        if len(subtypes) == 0:
+            snid_startup_complete = False
+            raise RuntimeError("No Subtypes found, startup may have failed!")
+        os.makedirs('/media/snid_template_options', exist_ok=True)
+        with open('/media/snid_template_options/subtypes.txt', 'w') as f:
+            f.write("\n".join(subtypes))
+            snid_startup_complete = True
+
+        logger.info("Startup successful!")
+    except Exception as e:
+        snid_startup_complete = False
+        logger.error(f"Startup failed: {e}")
+        raise
+
+@app.get("/health")
+async def health():
+    file_path = "/media/snid_template_options/subtypes.txt"
+    if not snid_startup_complete:
+        return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "starting",
+                    "file_exists": os.path.exists(file_path)
+                    }
+                )
+    return {
+            "status": "ok",
+            "file_exists": os.path.exists(file_path),
+            }
+
 @app.post("/snid_params/")
 def run_snid(params: Params):
-    params  = params.dict()
+    params = params.dict()
+    use_type = []
+    avoid_type = []
 
     if len(params['use']) > 0:
-        params['use'] = ", ".join(params['use'])
+        use_type += params['use']
 
     if len(params['usesub']) > 0:
-        params['usesub'] = ", ".join(params['usesub'])
+        use_type += params['usesub']
 
-    if len(params['use']) > 0:
-        params['use'] = ", ".join(params['use'])
+    if len(params['avoid']) > 0:
+        avoid_type += params['avoid']
 
-    if len(params['use']) > 0:
-        params['use'] = ", ".join(params['use'])
+    if len(params['avoidsub']) > 0:
+        avoid_type += params['avoidsub']
 
-    print(params)
+    if len(use_type) == 0:
+        use_type = None
 
-    file_spec='/home/sniduser/snid-5.0/examples/sn2003jo.dat'
+    if len(avoid_type) == 0:
+        avoid_type = None
+
     file_spec_binned_path='/home/sniduser/snid-5.0/examples'
 
     file_table = Table.read(params['spectrum'])
@@ -79,7 +132,9 @@ def run_snid(params: Params):
                               [params['wmin'],params['wmax']], redshift_bounds=
                               [params['zmin'],params['zmax']], phase_range=
                               [params['agemin'], params['agemax']], emwid=
-                              params['emwid'], aband=params['aband'])
+                              params['emwid'], usetype = use_type, avoidtype=
+                              avoid_type, emclip=params['emclip'],
+                              aband=params['aband'])
 
     #test = snidres.get_results()
     shutil.move(snidres, '/snid_api_runs/test.h5')
@@ -92,7 +147,8 @@ def run_snid(params: Params):
     df = df.replace([np.inf, -np.inf], np.nan).where(pd.notnull(df), None)
     df = df[['sn', 'typing', 'subtyping', 'lap', 'rlap', 'z', 'zerr', 'age']]
 
-    return {"success": True, "data": {"file_path": "/snid_api_runs/test.h5" ,"table": df.to_dict(orient='records')[:10]}}
+    return {"success": True, "data": {"file_path": "/snid_api_runs/test.h5" ,
+                                      "table": df.to_dict(orient='records')[:10]}}
 
 #Remove age_flag, type, grade
 

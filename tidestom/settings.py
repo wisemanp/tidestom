@@ -105,6 +105,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.media',
             ],
         },
     },
@@ -125,7 +126,7 @@ DATABASES = {
         'PASSWORD': DB_PASS,
         'HOST': DB_HOST,
         'PORT': DB_PORT,
-
+        
     }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
@@ -193,7 +194,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
                     os.path.join(TEST_DIR, 'sims'),]
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
-MEDIA_URL = '/data/'
+MEDIA_URL = '/media/'
 
 LOGGING = {
     'version': 1,

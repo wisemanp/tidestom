@@ -7,11 +7,13 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - snid_api
-      - ngsf_api
+      snid_api:
+        condition: service_healthy
+      ngsf_api:
+        condition: service_started
     volumes:
       - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - media_volume:/app/data
       - snid_api_runs:/snid_api_runs
       - ngsf_api_runs:/ngsf_api_runs
     environment:
@@ -56,6 +58,13 @@ services:
       DJANGO_URL: http://web:8000
     volumes:
       - snid_api_runs:/snid_api_runs
+      - media_volume:/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      retries: 10
+      start_period: 10s
+      timeout: 2s
 
   ngsf_api:
     build: ./ngsf_docker/

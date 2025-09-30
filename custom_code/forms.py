@@ -1,7 +1,9 @@
 from typing import Required
 from django import forms
 from django.db import DatabaseError
+from django.conf import settings
 from .models import TidesClass, TidesClassSubClass, TidesTarget
+import os
 
 class TidesTargetForm(forms.Form):
     tidesclass = forms.ChoiceField(label='TiDES Classification')
@@ -57,20 +59,21 @@ class TidesTargetForm(forms.Form):
         return cleaned
 
 USE_CHOICES=[
-    ('type1', 'type1'),
-    ('type2', 'type2'),
-    ('type3', 'type3'),
-    ('type4', 'type4'),
-    ('type5', 'type5'),
+    ('Ia', 'Ia'),
+    ('Ib', 'Ib'),
+    ('Ic', 'Ic'),
+    ('II', 'II'),
+    ('NotSN', 'NotSN'),
 ]
 
-SUBTYPE_CHOICES = [
-    ('type1', 'type1'),
-    ('type2', 'type2'),
-    ('type3', 'type3'),
-    ('type4', 'type4'),
-    ('type5', 'type5'),
-]
+def load_subtypes():
+    path = os.path.join(settings.MEDIA_ROOT, "snid_template_options", "subtypes.txt")
+    try:
+        with open(path) as f:
+            subtypes = [line.strip() for line in f if line.strip()]
+        return [(s, s) for s in subtypes]
+    except FileNotFoundError:
+        return []
 
 class SnidParamsForm(forms.Form):
     spectrum = forms.CharField(required=True)
@@ -90,13 +93,13 @@ class SnidParamsForm(forms.Form):
         choices=USE_CHOICES, required=False
     )
     usesub = forms.MultipleChoiceField(
-        choices=SUBTYPE_CHOICES, required=False
+        choices=load_subtypes(), required=False
     )
     avoid = forms.MultipleChoiceField(
         choices=USE_CHOICES, required=False
     )
     avoidsub = forms.MultipleChoiceField(
-        choices=SUBTYPE_CHOICES, required=False
+        choices=load_subtypes(), required=False
     )
 
 class NGSFParamsForm(forms.Form):
