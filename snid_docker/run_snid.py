@@ -5,6 +5,7 @@ import astropy.units as u
 import numpy as np
 import pysnid
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 import logging
@@ -35,6 +36,7 @@ app = FastAPI()
 
 @app.on_event('startup')
 async def startup_event():
+    global snid_startup_complete
     try:
         logger.info("Running SNID startup...")
 
@@ -47,20 +49,30 @@ async def startup_event():
                 if subtype not in subtypes:
                     subtypes.append(subtype)
         if len(subtypes) == 0:
+            snid_startup_complete = False
             raise RuntimeError("No Subtypes found, startup may have failed!")
         os.makedirs('/media/snid_template_options', exist_ok=True)
         with open('/media/snid_template_options/subtypes.txt', 'w') as f:
             f.write("\n".join(subtypes))
+            snid_startup_complete = True
 
         logger.info("Startup successful!")
     except Exception as e:
+        snid_startup_complete = False
         logger.error(f"Startup failed: {e}")
         raise
 
 @app.get("/health")
 async def health():
     file_path = "/media/snid_template_options/subtypes.txt"
-    print('hello')
+    if not snid_startup_complete:
+        return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "starting",
+                    "file_exists": os.path.exists(file_path)
+                    }
+                )
     return {
             "status": "ok",
             "file_exists": os.path.exists(file_path),
