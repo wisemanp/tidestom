@@ -57,25 +57,39 @@ async def startup_event():
         logger.error(f"Startup failed: {e}")
         raise
 
+@app.get("/health")
+async def health():
+    file_path = "/media/snid_template_options/subtypes.txt"
+    print('hello')
+    return {
+            "status": "ok",
+            "file_exists": os.path.exists(file_path),
+            }
+
 @app.post("/snid_params/")
 def run_snid(params: Params):
-    params  = params.dict()
+    params = params.dict()
+    use_type = []
+    avoid_type = []
 
     if len(params['use']) > 0:
-        params['use'] = ", ".join(params['use'])
+        use_type += params['use']
 
     if len(params['usesub']) > 0:
-        params['usesub'] = ", ".join(params['usesub'])
+        use_type += params['usesub']
 
     if len(params['avoid']) > 0:
-        params['avoid'] = ", ".join(params['avoid'])
+        avoid_type += params['avoid']
 
     if len(params['avoidsub']) > 0:
-        params['avoidsub'] = ", ".join(params['avoidsub'])
+        avoid_type += params['avoidsub']
 
-    print(params)
+    if len(use_type) == 0:
+        use_type = None
 
-    file_spec='/home/sniduser/snid-5.0/examples/sn2003jo.dat'
+    if len(avoid_type) == 0:
+        avoid_type = None
+
     file_spec_binned_path='/home/sniduser/snid-5.0/examples'
 
     file_table = Table.read(params['spectrum'])
@@ -107,7 +121,8 @@ def run_snid(params: Params):
                               [params['wmin'],params['wmax']], redshift_bounds=
                               [params['zmin'],params['zmax']], phase_range=
                               [params['agemin'], params['agemax']], emwid=
-                              params['emwid'], aband=params['aband'])
+                              params['emwid'], usetype = use_type, avoidtype=
+                              avoid_type, aband=params['aband'])
 
     #test = snidres.get_results()
     shutil.move(snidres, '/snid_api_runs/test.h5')
@@ -120,7 +135,8 @@ def run_snid(params: Params):
     df = df.replace([np.inf, -np.inf], np.nan).where(pd.notnull(df), None)
     df = df[['sn', 'typing', 'subtyping', 'lap', 'rlap', 'z', 'zerr', 'age']]
 
-    return {"success": True, "data": {"file_path": "/snid_api_runs/test.h5" ,"table": df.to_dict(orient='records')[:10]}}
+    return {"success": True, "data": {"file_path": "/snid_api_runs/test.h5" ,
+                                      "table": df.to_dict(orient='records')[:10]}}
 
 #Remove age_flag, type, grade
 
