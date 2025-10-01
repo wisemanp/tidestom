@@ -57,10 +57,10 @@ jobs:
         run: docker compose build
 
       - name: Debug
-        run: docker compose -f docker-compose.yml -f docker-compose-override.yml config | grep -A5 snid_api
+        run: docker compose -f docker-compose-override.yml config | grep -A5 snid_api
       # 6. Start Containers
       - name: Start Services
-        run: docker compose -f docker-compose.yml -f docker-compose-override.yml up web snid_api ngsf_api
+        run: docker compose -f docker-compose-override.yml up web snid_api ngsf_api
 
       # 6. Wait for Postgres
       #- name: Wait for Postgres
