@@ -51,6 +51,7 @@ jobs:
       - name: Prepare CI volumes
         run: |
           mkdir -p ci_media ci_snid_api_runs ci_ngsf_api_runs ci_static
+          chmod -R 777 ci_media ci_snid_api_runs ci_ngsf_api_runs ci_static
 
       # 5. Build Images
       - name: Build Services
