@@ -29,3 +29,29 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+volumes:
+  media_volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./ci_media
+  snid_api_runs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./ci_snid_api_runs
+  ngsf_api_runs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./ci_ngsf_api_runs
+  static_volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./ci_static
