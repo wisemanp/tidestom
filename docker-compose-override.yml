@@ -16,7 +16,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      
+    volumes:
+      - ./ci_static:/app/staticfiles
+      - ./ci_media:/app/data
+      - ./ci_snid_api_runs:/snid_api_runs
+      - ./ci_ngsf_api_runs:/ngsf_api_runs
+
   postgres:
     image: postgres:15
     restart: always
@@ -30,28 +35,11 @@ services:
       timeout: 5s
       retries: 5
 
-volumes:
-  media_volume:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./ci_media
-  snid_api_runs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./ci_snid_api_runs
-  ngsf_api_runs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./ci_ngsf_api_runs
-  static_volume:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./ci_static
+  snid_api:
+    volumes:
+      - ./ci_snid_api_runs:/snid_api_runs
+      - ./ci_media:/media
+
+  ngsf_api:
+    volumes:
+      - ./ci_ngsf_api_runs:/ngsf_api_runs
