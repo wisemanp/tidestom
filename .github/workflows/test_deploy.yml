@@ -46,12 +46,17 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
+            
+      # 4. Build Volumes
+      - name: Prepare CI volumes
+        run: |
+          mkdir -p ci_media ci_snid_api_runs ci_ngsf_api_runs ci_static
 
-      # 4. Build Images
+      # 5. Build Images
       - name: Build Services
         run: docker compose build
 
-      # 5. Start Containers
+      # 6. Start Containers
       - name: Start Services
         run: docker compose -f docker-compose.yml -f docker-compose-override.yml up web snid_api ngsf_api
 
