@@ -37,9 +37,11 @@ services:
 
   snid_api:
     volumes:
-      - ./ci_snid_api_runs:/snid_api_runs
-      - ./ci_media:/media
+      - ./ci_snid_api_runs:/snid_api_runs:rw
+      - ./ci_media:/media:rw
 
   ngsf_api:
     volumes:
-      - ./ci_ngsf_api_runs:/ngsf_api_runs
+      - ./ci_ngsf_api_runs:/ngsf_api_runs:rw
+
+volumes: {}  # <-- explicitly wipe out root-level named volumes
