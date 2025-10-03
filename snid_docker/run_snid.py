@@ -28,6 +28,7 @@ class Params(BaseModel):
     use: object #Done
     avoid: object #Done
     avoidsub: object #Done
+    usesub: object
     aband: Optional[bool] = False #Done
 
 
