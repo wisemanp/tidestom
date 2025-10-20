@@ -13,10 +13,10 @@ services:
       ngsf_api:
         condition: service_healthy
     volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/data
-      - snid_api_runs:/snid_api_runs
-      - ngsf_api_runs:/ngsf_api_runs
+      - static_volume_1:/app/staticfiles
+      - media_volume_1:/app/data
+      - snid_api_runs_1:/snid_api_runs
+      - ngsf_api_runs_1:/ngsf_api_runs
     environment:
       LOCAL_MODE: 'True'
       TIDES_TEST_DIR: 'test_data/'
@@ -42,10 +42,10 @@ services:
     cpus: 1
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_volume:/static
-      - media_volume:/media
-      - snid_api_runs:/snid_api_runs
-      - ngsf_api_runs:/ngsf_api_runs
+      - static_volume_1:/static
+      - media_volume_1:/media
+      - snid_api_runs_1:/snid_api_runs
+      - ngsf_api_runs_1:/ngsf_api_runs
     ports:
       - "8080:80"
     depends_on:
@@ -87,7 +87,7 @@ services:
 #      timeout: 2s
 
 volumes:
-  static_volume:
+  static_volume_1:
   #media_volume:
   #  external: true
   #snid_api_runs:
