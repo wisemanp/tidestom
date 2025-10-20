@@ -86,9 +86,9 @@ services:
 
 volumes:
   static_volume:
-  media_volume:
-    external: true
-  snid_api_runs:
-    external: true
-  ngsf_api_runs:
-    external: true
+  #media_volume:
+  #  external: true
+  #snid_api_runs:
+  #  external: true
+  #ngsf_api_runs:
+  #  external: true
