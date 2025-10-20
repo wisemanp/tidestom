@@ -12,6 +12,11 @@ import logging
 import shutil
 import pandas as pd
 import os
+import asyncio
+import hashlib
+import uuid
+from fastapi import Request
+
 
 logger = logging.getLogger("startup")
 
@@ -28,6 +33,7 @@ class Params(BaseModel):
     use: object #Done
     avoid: object #Done
     avoidsub: object #Done
+    usesub: object
     aband: Optional[bool] = False #Done
 
 
@@ -77,8 +83,40 @@ async def health():
             "file_exists": os.path.exists(file_path),
             }
 
+_running_requests = {}
+_running_lock = asyncio.Lock()
+
+def _hash_params(params: dict):
+    key_str = f"{params['spectrum']}-{params['wmin']}-{params['wmax']}-{params['zmin']}\
+            -{params['zmax']}"
+    return hashlib.md5(key_str.encode()).hexdigest()
+
 @app.post("/snid_params/")
-def run_snid(params: Params):
+async def run_snid(request: Request, params: Params):
+
+    key = _hash_params(params.dict())
+
+    async with _running_lock:
+        if key in _running_requests:
+            return await _running_requests[key]
+
+        task = asyncio.create_task(_run_snid_task(params))
+        _running_requests[key] = task
+
+    try:
+        result = await task
+        return result
+    finally:
+        _running_requests.pop(key, None)
+
+async def _run_snid_task(params: Params):
+    request_id = uuid.uuid4()
+
+    # Log request info
+    print("\n=== SNID Request ===")
+    print(f"Request ID: {request_id}")
+    print(f"Params: {params.dict()}\n")
+
     params = params.dict()
     use_type = []
     avoid_type = []
@@ -138,9 +176,8 @@ def run_snid(params: Params):
 
     #test = snidres.get_results()
     shutil.move(snidres, '/snid_api_runs/test.h5')
-# this will create a file named file_spec_binned_ascii+'_snid.h5'
+    #this will create a file named file_spec_binned_ascii+'_snid.h5'
     test = pysnid.snid.SNIDReader.from_filename('/snid_api_runs/test.h5')
-    print(test.results)
     df = test.results.copy()
 
     # Replace non-finite values with None

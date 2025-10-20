@@ -494,6 +494,7 @@ fetch("{% static 'json/line_data.json' %}")
     </div>
   </div>
 </div>
+
 <script>
 $(document).ready(function() {
     
@@ -697,36 +698,39 @@ $(document).ready(function() {
 });
 </script>
 
+<!-- 
 <script>
-  $(document).on("submit", "#snid-form", function(e) {
-    e.preventDefault();
+$(document).ready(function() {
+    $(document).off("submit.snidForm", "#snid-form").on("submit.snidForm", "#snid-form", function(e) {
+    console.log("Submit handler triggered");
+    console.trace();
+        e.preventDefault();
 
-    $.ajax({
-      url: $(this).attr("action"),
-      type: "POST",
-      data: $(this).serialize(),
-      success: function(response) {
-        if (response.success) {
-          const filePath = response.data.data.file_path;
-          const container = document.getElementById('spectroscopy');
-          const targetId = container.dataset.targetId;
-          console.log(`variable = ${targetId}`);
+        $.ajax({
+          url: $(this).attr("action"),
+          type: "POST",
+          data: $(this).serialize(),
+          success: function(response) {
+            if (response.success) {
+              const filePath = response.data.data.file_path;
+              const container = document.getElementById('spectroscopy');
+              const targetId = container.dataset.targetId;
 
-          // Ask HTMX to reload the spectroscopy block
-          htmx.ajax('GET',
-            `/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
-            { target: '#spectroscopy' }
-          );
-        } else {
-          $("#snid-result").text("Error: " + response.error);
-        }
-      }
+              htmx.ajax('GET',
+                `/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
+                { target: '#spectroscopy' }
+              );
+            } else {
+              $("#snid-result").text("Error: " + response.error);
+            }
+          }
+        });
     });
-  });
+});
 </script>
 
 <script>
-  $(document).on("submit", "#ngsf-form", function(e) {
+  $(document).off("submit", "#ngsf-form").on("submit", "#ngsf-form", function(e) {
 	e.preventDefault();
 
     $.ajax({
@@ -752,6 +756,8 @@ $(document).ready(function() {
     });
   });
 </script>  
+ -->
+
 
 </div>
   </div>
