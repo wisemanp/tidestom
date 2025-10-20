@@ -95,6 +95,6 @@ volumes:
   #ngsf_api_runs:
   #  external: true
   #
-networks:
-  backend:
-    external: true
+#networks:
+#  backend:
+#    external: true
