@@ -34,6 +34,8 @@ services:
       DJANGO_SETTINGS_MODULE: tidestom.settings
       SNID_API_URL: http://snid_api:8000
       NGSF_API_URL: http://ngsf_api:8000
+    networks:
+      - backend
 
   nginx:
     image: nginx:1.25
@@ -92,3 +94,7 @@ volumes:
   #  external: true
   #ngsf_api_runs:
   #  external: true
+  #
+networks:
+  backend:
+    external: true
