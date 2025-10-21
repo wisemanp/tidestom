@@ -52,6 +52,8 @@ services:
       - web
       - snid_api
       - ngsf_api
+    networks:
+      - backend
 
 #  snid_api:
 #    build: ./snid_docker/
