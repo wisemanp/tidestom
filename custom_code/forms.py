@@ -1,7 +1,9 @@
 from typing import Required
 from django import forms
 from django.db import DatabaseError
+from django.conf import settings
 from .models import TidesClass, TidesClassSubClass, TidesTarget
+import os
 
 class TidesTargetForm(forms.Form):
     tidesclass = forms.ChoiceField(label='TiDES Classification')
@@ -55,24 +57,26 @@ class TidesTargetForm(forms.Form):
             self.add_error('tidesclass_subclass', 'Selected sub-class does not belong to the chosen main class.')
 
         return cleaned
-
+#TODO Note that at some point we will need to align these choices with the TidesClass and TidesClassSubClass data model
 USE_CHOICES=[
-    ('type1', 'type1'),
-    ('type2', 'type2'),
-    ('type3', 'type3'),
-    ('type4', 'type4'),
-    ('type5', 'type5'),
+    ('Ia', 'Ia'),
+    ('Ib', 'Ib'),
+    ('Ic', 'Ic'),
+    ('II', 'II'),
+    ('NotSN', 'NotSN'),
 ]
 
-SUBTYPE_CHOICES = [
-    ('type1', 'type1'),
-    ('type2', 'type2'),
-    ('type3', 'type3'),
-    ('type4', 'type4'),
-    ('type5', 'type5'),
-]
+def load_subtypes():
+    path = os.path.join(settings.MEDIA_ROOT, "snid_template_options", "subtypes.txt")
+    try:
+        with open(path) as f:
+            subtypes = [line.strip() for line in f if line.strip()]
+        return [(s, s) for s in subtypes]
+    except FileNotFoundError:
+        return []
 
 class SnidParamsForm(forms.Form):
+    spectrum = forms.CharField(required=True)
     wmin = forms.FloatField(initial=4000, required=True)
     wmax = forms.FloatField(initial=9000, required=True)
     zmin = forms.FloatField(initial=0.1, required=True)
@@ -89,11 +93,28 @@ class SnidParamsForm(forms.Form):
         choices=USE_CHOICES, required=False
     )
     usesub = forms.MultipleChoiceField(
-        choices=SUBTYPE_CHOICES, required=False
+        choices=load_subtypes(), required=False
     )
     avoid = forms.MultipleChoiceField(
         choices=USE_CHOICES, required=False
     )
     avoidsub = forms.MultipleChoiceField(
-        choices=SUBTYPE_CHOICES, required=False
+        choices=load_subtypes(), required=False
     )
+
+class NGSFParamsForm(forms.Form):
+    spectrum = forms.CharField(required=True)
+    z = forms.FloatField(initial=0.0, required=True)
+    z_min = forms.FloatField(initial=0.0, required=True)
+    z_max = forms.FloatField(initial=0.1, required=True)
+    z_int = forms.FloatField(initial=0.01, required=True)
+    resolution = forms.FloatField(initial=10, required=True)
+    lower_lam = forms.FloatField(initial=0.00, required=True)
+    upper_lam = forms.FloatField(initial=0.0, required=True)
+    mask_galaxy = forms.BooleanField(required=False)
+    mask_telluric = forms.BooleanField(required=False)
+    epoch_high = forms.IntegerField(initial=0, required=True)
+    epoch_low = forms.IntegerField(initial=0, required=True)
+    alam_high = forms.FloatField(initial=2, required=True)
+    alam_low = forms.FloatField(initial=-2, required=True)
+    alam_interval = forms.FloatField(initial=0.2, required=True)

@@ -1,4 +1,28 @@
 document.addEventListener("DOMContentLoaded", function() {
+  function renderTable(rows) {
+  console.log(rows)
+  if (!rows.length) return "<p>No data</p>";
+ 
+  let html = "<div class='table-responsive'>"; 
+  html += "<table class='table table-hover table-sm table-bordered'>";
+  const keys = Object.keys(rows[0]);
+  
+  // header
+  html += "<thead><tr>";
+  keys.forEach(k => { html += `<th>${k}</th>`; });
+  html += "</tr></thead><tbody>";
+
+  // rows
+  rows.forEach(row => {
+    html += "<tr>";
+    keys.forEach(k => { html += `<td>${row[k]}</td>`; });
+    html += "</tr>";
+  });
+  
+  html += "</tbody></table>";
+  html += "</div>";
+  return html;
+}
   document.querySelectorAll(".ajax-form").forEach(form => {
     const resultDiv = document.getElementById(form.dataset.resultId);
     const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
@@ -36,7 +60,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const json = await response.json();
 
         if (json.success) {
-          resultDiv.innerHTML = `<pre>${JSON.stringify(json.data, null, 2)}</pre>`;
+          console.log(json.data.data)
+          resultDiv.innerHTML = renderTable(json.data.data.table);
         } else {
           resultDiv.innerHTML = `<p style="color:red;">Error: ${json.error || JSON.stringify(json.errors)}</p>`;
         }
@@ -50,6 +75,7 @@ document.addEventListener("DOMContentLoaded", function() {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
       }
+      return false;
     });
   });
 });

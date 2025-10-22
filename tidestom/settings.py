@@ -18,7 +18,10 @@ import tempfile
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
+DB_HOST = os.environ.get('DB_HOST')
+DB_PORT = os.environ.get('DB_PORT')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -29,7 +32,9 @@ SECRET_KEY = 'u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cyf'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:8080"]
 
 
 # Application definition
@@ -100,6 +105,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.media',
             ],
         },
     },
@@ -115,11 +121,12 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tides_db',  # Main database
-        'USER': 'tides',
-        'PASSWORD':'',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': 'defaultdb',  # Main database
+        'USER': USER,
+        'PASSWORD': DB_PASS,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
+        
     }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
@@ -187,7 +194,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
                     os.path.join(TEST_DIR, 'sims'),]
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
-MEDIA_URL = '/data/'
+MEDIA_URL = '/media/'
 
 LOGGING = {
     'version': 1,

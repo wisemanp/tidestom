@@ -260,14 +260,14 @@ def main(args=None):
                         dest="Alam_low",
                         action="store",
                         default=-2,
-                        type=int,
+                        type=float,
                         help=("Lower value for the extinction law constant.")
                         )
     parser.add_argument("--Alam_interval",
                         dest="Alam_interval",
                         action="store",
                         default=0.2,
-                        type=int,
+                        type=float,
                         help=("Size of interval.")
                         )
 

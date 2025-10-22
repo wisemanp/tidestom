@@ -1,3 +1,4 @@
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js"></script> -->
 <div class="card">
     <div class="card-header">
        Run SNID
@@ -5,6 +6,8 @@
     <div class="card-body">
 			<form id="snid-form" class='ajax-form' data-result-id='snid-result' method="post" action="{% url 'snid-run' %}">
 			{% csrf_token %}
+			<!--Spectrum Inputs-->
+			<input type="hidden" name="spectrum" value="{{ spectrum }}" class=form-control>
 			<!-- Wavelength Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-6">
@@ -57,11 +60,11 @@
 			<div class='form-group col-md-6 text-center'>
 			<label for="use" class="d-block"> Use these types:</label>
 			<select id='use' name='use' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
+				<option value='Ia'>Ia</option>
+				<option value='Ib'>Ib</option>
+				<option value='Ic'>Ic</option>
+				<option value='II'>II</option>
+				<option value='NotSN'>Not SN</option>
 			</select>
 			</div>
 			
@@ -81,11 +84,11 @@
 			<div class='form-group col-md-6 text-center'>
 			<label for="avoid" class="d-block"> Avoid these types:</label>
 			<select id='avoid' name='avoid' multiple='multiple'>
-				<option value='type1'>type1</option>
-				<option value='type2'>type2</option>
-				<option value='type3'>type3</option>
-				<option value='type4'>type4</option>
-				<option value='type5'>type5</option>
+				<option value='Ia'>Ia</option>
+				<option value='Ib'>Ib</option>
+				<option value='Ic'>Ic</option>
+				<option value='II'>II</option>
+				<option value='NotSN'>NotSN</option>
 			</select>
 			</div>
 			
@@ -111,65 +114,63 @@
 			</div>
 			</div>
 		</form>
-		<div id="snid-result"
+		<div id="snid-result" class="mt-3"></div>
 	</div>
-	<div id="snid-result" class="mt-3"></div>
 </div>
 
 <script>
-  $(document).ready(function() {
-    $('#use').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  $('#use').multiselect('selectAll', false);  // false means don’t trigger onChange
-  $('#use').multiselect('updateButtonText');  // refresh the button text
-  });
-</script>
+document.addEventListener("DOMContentLoaded", function() {
+	function setupMutualExclusion(selectA, selectB) {
+		$(`#${selectA}`).on('change', function () {
+			const selected = $(this).val() || [];
+			const other = $(`#${selectB}`);
+			selected.forEach(val => {
+				other.multiselect('deselect', val);
+			});
+		});
+
+		$(`#${selectB}`).on('change', function () {
+			const selected = $(this).val() || [];
+			const other = $(`#${selectA}`);
+			selected.forEach(val => {
+				other.multiselect('deselect', val);
+			});
+		});
+	}
 
 
-<script>
-  $(document).ready(function() {
-    $('#usesub').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  $('#usesub').multiselect('selectAll', false);  // false means don’t trigger onChange
-  $('#usesub').multiselect('updateButtonText');  // refresh the button text
-  });
-</script>
+    function populateSelects(fileUrl, selectIds) {
+        fetch(fileUrl)
+            .then(response => response.text())
+            .then(data => {
+                const options = data.split("\n").map(line => line.trim()).filter(Boolean);
+                selectIds.forEach(id => {
+                    const select = document.getElementById(id);
+                    if (!select) return;
 
-<script>
-  $(document).ready(function() {
-    $('#avoid').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  });
-</script>
+                    // Clear old options
+                    select.innerHTML = "";
 
+                    // Add new options
+                    options.forEach(opt => {
+                        const option = document.createElement("option");
+                        option.value = opt;
+                        option.textContent = opt;
+                        select.appendChild(option);
+                    });
 
-<script>
-  $(document).ready(function() {
-    $('#avoidsub').multiselect({
-      includeSelectAllOption: true,
-      enableFiltering: true,
-      enableCaseInsensitiveFiltering: true,
-      buttonWidth: '100%',
-      nonSelectedText: 'Select options',
-      maxHeight: 200
-    });
-  });
+                    // Refresh Bootstrap Multiselect
+                    $(`#${id}`).multiselect('rebuild');
+                });
+            })
+            .catch(err => console.error("Error loading " + fileUrl, err));
+    }
+	
+    // Populate subtypes (usesub + avoidsub)
+    populateSelects("/media/snid_template_options/subtypes.txt", ["usesub"]);
+    populateSelects("/media/snid_template_options/subtypes.txt", ["avoidsub"]);
+
+	setupMutualExclusion("usesub", "avoidsub");
+	setupMutualExclusion("use", "avoid");
+});
 </script>

@@ -87,7 +87,12 @@ def aladin_finderchart(target):
     return {'target': target}
 
 @register.inclusion_tag('custom_code/partials/run_snid.html')
-def snid_form():
+def snid_form(spectrum=None):
 
-    return None
+    return {'spectrum': spectrum}
+
+@register.inclusion_tag('custom_code/partials/run_ngsf.html')
+def ngsf_form(spectrum=None):
+
+    return {'spectrum': spectrum}
 

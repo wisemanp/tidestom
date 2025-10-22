@@ -11,6 +11,7 @@ RUN apt-get update && \
 	software-properties-common \ 
     gfortran \
     wget \
+    curl \
     libx11-dev \
     libxext-dev \
     libxrender-dev \
@@ -113,7 +114,7 @@ RUN git clone https://github.com/cjduffy/pysnid.git && cd pysnid && pip install 
 RUN pip install numpy pandas tables specutils typing astropy "fastapi[standard]"
 COPY entrypoint.sh /entrypoint.sh 
 RUN chmod +x /entrypoint.sh
-#USER sniduser
+USER root
 ENTRYPOINT ["/entrypoint.sh"]
 USER sniduser
 CMD ["uvicorn", "run_snid:app", "--host", "0.0.0.0", "--port", "8000"]

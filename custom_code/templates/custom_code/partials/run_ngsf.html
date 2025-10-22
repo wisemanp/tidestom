@@ -1,0 +1,98 @@
+<div class="card">
+    <div class="card-header">
+       Run NGSF
+    </div>
+    <div class="card-body">
+			<form id="ngsf-form" class='ajax-form' data-result-id='ngsf-result' method="post" action="{% url 'ngsf-run' %}">
+			{% csrf_token %}
+			<input type='hidden', name="spectrum" value="{{ spectrum }}" class="form-control">	
+			<!-- Z Inputs -->
+			<div class="form-row">
+			<div class="form-group col-md-3">
+			<label for="z">z:</label>
+			<input type="number" name="z" step="0.01" required value="0.00" class="form-control">
+			</div>
+			<div class="form-group col-md-3">
+			<label for="zmax">z Max:</label>
+			<input type="number" name="z_max" step="0.01" required value="0.1" class="form-control">
+			</div>
+			<div class="form-group col-md-3">
+			<label for="zmin">z Min:</label>
+			<input type="number" name="z_min" step="0.01" required value="0" class="form-control">
+			</div>
+			<div class="form-group col-md-3">
+			<label for="zint">z int:</label>
+			<input type="number" name="z_int" step="0.01" required value="0.01" class="form-control">
+			</div>
+			</div>
+			
+			<!-- Wavelength Inputs -->
+			<div class="form-row">
+			<div class="form-group col-md-6">
+			<label for="wmin">Wavelength Min (&angst;):</label>
+			<input type="number" name="lower_lam" step="0.1" required value="0" class="form-control">
+			</div>
+			<div class="form-group col-md-6">
+			<label for="wmax">Wavelength Max (&angst;):</label>
+			<input type="number" name="upper_lam" step="1" required value="0" class="form-control">
+			</div>
+			</div>
+			
+			<!-- Epoch Inputs -->
+			<div class="form-row">
+			<div class="form-group col-md-6">
+			<label for="epochmin">Minimum Epoch:</label>
+			<input type="number" name="epoch_low" step="1" value=0 class="form-control">
+			</div>
+			<div class="form-group col-md-6">
+			<label for="epochmax">Maximum Epoch:</label>
+			<input type="number" name="epoch_high" step="1" value=0 class="form-control">
+			</div>
+			</div>
+			
+			<!-- Emission Clip Inputs -->
+			<div class="form-row">
+			<div class="form-group col-md-4">
+			<label for="alam_low">Lower Extinction Law Contant:</label>
+			<input type="number" name="alam_low" step="0.1" required value=-2.0 class="form-control">
+			</div>
+			<div class="form-group col-md-4">
+			<label for="alam_high">Upper Extinction Law Contant:</label>
+			<input type="number" name="alam_high" step="0.1" required value="2" class="form-control">
+			</div>
+			<div class="form-group col-md-4">
+			<label for="alam_int">Extinction Law Interval:</label>
+			<input type="number" name="alam_interval" step="0.01" required value="0.2" class="form-control">
+			</div>
+			</div>
+			
+<div class="form-row mt-3 text-center">
+  <!-- Input box -->
+  <div class="form-group col-md-4">
+    <label for="resolution">Resolution (&angst;):</label>
+    <input type="number" name="resolution" step="1" required value="10" class="form-control">
+  </div>
+
+  <!-- First checkbox -->
+  <div class="form-group col-md-4 d-flex align-items-center justify-content-center">
+    <label for="telluric" class="mb-0">Mask Telluric Lines:</label>
+    <input class="ml-3" type="checkbox" id="telluric" name="Telluric" checked>
+  </div>
+
+  <!-- Second checkbox -->
+  <div class="form-group col-md-4 d-flex align-items-center justify-content-center">
+    <label for="galaxy" class="mb-0">Mask Galaxy Lines:</label>
+    <input class="ml-3" type="checkbox" id="galaxy" name="Galaxy" checked>
+  </div>
+</div>
+
+
+			<div class="form-group mt-3">
+				<button type="submit" class="btn btn-primary btn-block">Run NGSF</button>
+			</div>
+			</div>
+		</form>
+		<div id="ngsf-result" class="mt-3"></div>
+	</div>
+</div>
+

@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000']
+    ports:
+      - "8000:8000"
+    depends_on:
+      snid_api:
+        condition: service_healthy
+      ngsf_api:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./ci_static:/app/staticfiles
+      - ./ci_media:/app/data
+      - ./ci_snid_api_runs:/snid_api_runs
+      - ./ci_ngsf_api_runs:/ngsf_api_runs
+    environment:
+      DB_USER: tides
+      DB_PASS: tides
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DATABASE_URL: postgres://tides:tides@postgres:5432/tides_db?sslmode=allow
+      PGHOST: postgres
+      PGUSER: tides
+      PGPASSWORD: tides
+      PGPORT: 5432
+      PGSSLMODE: allow
+      DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
+      DJANGO_SETTINGS_MODULE: tidestom.settings
+      SNID_API_URL: http://snid_api:8000
+      NGSF_API_URL: http://ngsf_api:8000
+      LOCAL_MODE: 'True'
+      TIDES_TEST_DIR: 'test_data/'
+
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: tides
+      POSTGRES_PASSWORD: tides
+      POSTGRES_DB: tides_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tides -d tides_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  snid_api:
+    build: ./snid_docker/
+    expose:
+      - "8000"
+    environment:
+      DJANGO_URL: http://web:8000
+    volumes:
+      - ./ci_snid_api_runs:/snid_api_runs:rw
+      - ./ci_media:/media:rw
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      retries: 10
+      start_period: 10s
+      timeout: 2s
+
+  ngsf_api:
+    build: ./ngsf_docker/
+    expose:
+      - "8000"
+    environment:
+      DJANGO_URL: http://web:8000
+    volumes:
+      - ./ci_ngsf_api_runs:/ngsf_api_runs:rw
+
+volumes: {}
