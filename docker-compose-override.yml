@@ -3,7 +3,8 @@ version: "3.9"
 services:
   web:
     build: .
-    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000']
+    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent']
+    cpus: 4
     ports:
       - "8000:8000"
     depends_on:
