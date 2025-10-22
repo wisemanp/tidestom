@@ -12,8 +12,8 @@ services:
     volumes:
       - ./ci_static:/app/staticfiles
       - ./ci_media:/app/data
-      - ./ci_snid_api_runs_1:/snid_api_runs
-      - ./ci_ngsf_api_runs_1:/ngsf_api_runs
+      - ./ci_snid_api_runs:/snid_api_runs
+      - ./ci_ngsf_api_runs:/ngsf_api_runs
     environment:
       DB_USER: tides
       DB_PASS: tides
@@ -52,10 +52,10 @@ services:
     cpus: 1
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/defualt.conf:ro
-      - static_volume_1:/static
-      - media_volume_1:/media
-      - snid_api_runs_1:/snid_api_runs
-      - ngsf_api_runs_1:/ngsf_api_runs
+      - ./ci_static:/static
+      - ./ci_media:/media
+      - ./ci_snid_api_runs:/snid_api_runs
+      - ./ci_ngsf_api_runs:/ngsf_api_runs
     ports:
       - "8080:80"
     depends_on:
