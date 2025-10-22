@@ -36,7 +36,7 @@ services:
       LOCAL_MODE: 'True'
       TIDES_TEST_DIR: 'test_data/'
     networks:
-      - {}
+      - backend
 
   postgres:
     image: postgres:15
@@ -65,7 +65,7 @@ services:
     depends_on:
       - web
     networks:
-      - {}
+      - backend
 
   #snid_api:
   #  build: ./snid_docker/
@@ -93,3 +93,7 @@ services:
   #    - ./ci_ngsf_api_runs:/ngsf_api_runs:rw
 
 volumes: {}
+
+networks:
+  backend:
+    driver: bridge
