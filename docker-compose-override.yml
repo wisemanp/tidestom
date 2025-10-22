@@ -48,7 +48,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      -backend
+      - backend
 
   nginx:
     image: nginx:1.25
