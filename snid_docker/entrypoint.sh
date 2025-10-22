@@ -1,12 +1,28 @@
 #!/bin/bash
 set -e
 
-# Fix ownership of mounted volume
-chown -R sniduser:snidgroup /snid_api_runs
-mkdir -p /media/snid_template_options
-chown -R sniduser:snidgroup /media/snid_template_options
+echo "ENTRYPOINT START: user=$(whoami), args=$*"
 
-# Execute the main container command (uvicorn)
-# exec su -s /bin/bash sniduser -c "$@"
-exec "$@"
+dirs_to_fix=(
+    /snid_api_runs
+    /media/snid_template_options
+)
+
+for dir in "${dirs_to_fix[@]}"; do
+    if [ -d "$dir" ]; then
+        if [ -w "$dir" ]; then
+            echo "$dir is writable, skipping chown"
+        else
+            echo "Attempting chown on $dir"
+            chown -R sniduser:snidgroup "$dir" || echo "Warning: cannot chown $dir, skipping"
+        fi
+    else
+        echo "Directory $dir does not exist, creating"
+        mkdir -p "$dir"
+        chown sniduser:snidgroup "$dir" || echo "Warning: cannot chown $dir, skipping"
+    fi
+done
+
+# Execute the main container command as sniduser
+exec sudo -E -u sniduser "$@"
 

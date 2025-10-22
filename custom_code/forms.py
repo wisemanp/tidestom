@@ -57,7 +57,7 @@ class TidesTargetForm(forms.Form):
             self.add_error('tidesclass_subclass', 'Selected sub-class does not belong to the chosen main class.')
 
         return cleaned
-
+#TODO Note that at some point we will need to align these choices with the TidesClass and TidesClassSubClass data model
 USE_CHOICES=[
     ('Ia', 'Ia'),
     ('Ib', 'Ib'),
