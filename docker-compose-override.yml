@@ -35,6 +35,8 @@ services:
       NGSF_API_URL: http://ngsf_api:8000
       LOCAL_MODE: 'True'
       TIDES_TEST_DIR: 'test_data/'
+    networks:
+      - {}
 
   postgres:
     image: postgres:15
@@ -62,6 +64,8 @@ services:
       - "8080:80"
     depends_on:
       - web
+    networks:
+      - {}
 
   #snid_api:
   #  build: ./snid_docker/
