@@ -83,5 +83,5 @@ jobs:
 
       # 9 . Shut down containers
       - name: Shut down containers
-        run: docker compose down -v
+        run: docker compose -f docker-compose-override.yml down -v
 
