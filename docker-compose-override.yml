@@ -16,8 +16,8 @@ services:
     volumes:
       - ./ci_static:/app/staticfiles
       - ./ci_media:/app/data
-      - ./ci_snid_api_runs:/snid_api_runs
-      - ./ci_ngsf_api_runs:/ngsf_api_runs
+      - ./ci_snid_api_runs_1:/snid_api_runs
+      - ./ci_ngsf_api_runs_1:/ngsf_api_runs
     environment:
       DB_USER: tides
       DB_PASS: tides
@@ -49,29 +49,43 @@ services:
       timeout: 5s
       retries: 5
 
-  snid_api:
-    build: ./snid_docker/
-    expose:
-      - "8000"
-    environment:
-      DJANGO_URL: http://web:8000
+  nginx:
+    image: nginx:1.25
+    cpus: 1
     volumes:
-      - ./ci_snid_api_runs:/snid_api_runs:rw
-      - ./ci_media:/media:rw
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 5s
-      retries: 10
-      start_period: 10s
-      timeout: 2s
+      - ./nginx.conf:/etc/nginx/conf.d/defualt.conf:ro
+      - static_volume_1:/static
+      - media_volume_1:/media
+      - snid_api_runs_1:/snid_api_runs
+      - ngsf_api_runs_1:/ngsf_api_runs
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
 
-  ngsf_api:
-    build: ./ngsf_docker/
-    expose:
-      - "8000"
-    environment:
-      DJANGO_URL: http://web:8000
-    volumes:
-      - ./ci_ngsf_api_runs:/ngsf_api_runs:rw
+  #snid_api:
+  #  build: ./snid_docker/
+  #  expose:
+  #    - "8000"
+  #  environment:
+  #    DJANGO_URL: http://web:8000
+  #  volumes:
+  #    - ./ci_snid_api_runs:/snid_api_runs:rw
+  #    - ./ci_media:/media:rw
+  #  healthcheck:
+  #    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+  #    interval: 5s
+  #    retries: 10
+  #    start_period: 10s
+  #    timeout: 2s
+
+  #ngsf_api:
+  #  build: ./ngsf_docker/
+  #  expose:
+  #    - "8000"
+  #  environment:
+  #    DJANGO_URL: http://web:8000
+  #  volumes:
+  #    - ./ci_ngsf_api_runs:/ngsf_api_runs:rw
 
 volumes: {}
