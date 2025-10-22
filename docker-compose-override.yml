@@ -7,10 +7,6 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      snid_api:
-        condition: service_healthy
-      ngsf_api:
-        condition: service_started
       postgres:
         condition: service_healthy
     volumes:
