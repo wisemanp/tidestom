@@ -3,14 +3,11 @@ version: "3.9"
 services:
   web:
     build: .
-    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000']
+    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent']
+    cpus: 4
     ports:
       - "8000:8000"
     depends_on:
-      snid_api:
-        condition: service_healthy
-      ngsf_api:
-        condition: service_started
       postgres:
         condition: service_healthy
     volumes:
@@ -35,6 +32,8 @@ services:
       NGSF_API_URL: http://ngsf_api:8000
       LOCAL_MODE: 'True'
       TIDES_TEST_DIR: 'test_data/'
+    networks:
+      - backend
 
   postgres:
     image: postgres:15
@@ -48,30 +47,52 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
 
-  snid_api:
-    build: ./snid_docker/
-    expose:
-      - "8000"
-    environment:
-      DJANGO_URL: http://web:8000
+  nginx:
+    image: nginx:1.25
+    cpus: 1
     volumes:
-      - ./ci_snid_api_runs:/snid_api_runs:rw
-      - ./ci_media:/media:rw
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 5s
-      retries: 10
-      start_period: 10s
-      timeout: 2s
+      - ./nginx.conf:/etc/nginx/conf.d/defualt.conf:ro
+      - ./ci_static:/static
+      - ./ci_media:/media
+      - ./ci_snid_api_runs:/snid_api_runs
+      - ./ci_ngsf_api_runs:/ngsf_api_runs
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
+    networks:
+      - backend
 
-  ngsf_api:
-    build: ./ngsf_docker/
-    expose:
-      - "8000"
-    environment:
-      DJANGO_URL: http://web:8000
-    volumes:
-      - ./ci_ngsf_api_runs:/ngsf_api_runs:rw
+  #snid_api:
+  #  build: ./snid_docker/
+  #  expose:
+  #    - "8000"
+  #  environment:
+  #    DJANGO_URL: http://web:8000
+  #  volumes:
+  #    - ./ci_snid_api_runs:/snid_api_runs:rw
+  #    - ./ci_media:/media:rw
+  #  healthcheck:
+  #    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+  #    interval: 5s
+  #    retries: 10
+  #    start_period: 10s
+  #    timeout: 2s
+
+  #ngsf_api:
+  #  build: ./ngsf_docker/
+  #  expose:
+  #    - "8000"
+  #  environment:
+  #    DJANGO_URL: http://web:8000
+  #  volumes:
+  #    - ./ci_ngsf_api_runs:/ngsf_api_runs:rw
 
 volumes: {}
+
+networks:
+  backend:
+    driver: bridge
