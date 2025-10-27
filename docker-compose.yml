@@ -88,7 +88,7 @@ services:
 #      start_period: 10s
 #      timeout: 2s
 
-volumes:
+volumes: {}
   #static_volume_1:
   #media_volume:
   #  external: true
