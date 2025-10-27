@@ -89,7 +89,7 @@ services:
 #      timeout: 2s
 
 volumes:
-  static_volume_1:
+  #static_volume_1:
   #media_volume:
   #  external: true
   #snid_api_runs:
