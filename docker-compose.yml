@@ -49,6 +49,7 @@ services:
       - media_volume_1:/media
       - snid_api_runs_1:/snid_api_runs
       - ngsf_api_runs_1:/ngsf_api_runs
+      - spectra_volume:/spectra
     ports:
       - "8080:80"
     depends_on:
