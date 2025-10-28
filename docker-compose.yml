@@ -13,7 +13,7 @@ services:
       ngsf_api:
         condition: service_healthy
       volume-init:
-        condition: service_completed_sucessfully
+        condition: service_completed_successfully
     volumes:
       - static_volume_1:/app/staticfiles
       - media_volume_1:/app/data
