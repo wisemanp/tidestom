@@ -19,7 +19,7 @@ services:
       - media_volume_1:/app/data
       - snid_api_runs_1:/snid_api_runs
       - ngsf_api_runs_1:/ngsf_api_runs
-      - specta_volume:/app/spectra
+      - spectra_volume:/app/spectra
     environment:
       LOCAL_MODE: 'True'
       TIDES_TEST_DIR: 'spectra/test_data/'
