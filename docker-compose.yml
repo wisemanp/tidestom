@@ -22,7 +22,7 @@ services:
       - spectra_volume:/app/spectra
     environment:
       LOCAL_MODE: 'True'
-      TIDES_TEST_DIR: 'spectra/test_data/'
+      TIDES_TEST_DIR: './spectra/test_data/'
       DB_PASS: ${DB_PASS}
       DATABASE_URL: ${DATABASE_URL}
       PGHOST: ${DB_HOST}
