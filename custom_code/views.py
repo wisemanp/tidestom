@@ -1,9 +1,11 @@
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic.edit import FormView
 from django.conf import settings
+from datetime import datetime
 import requests
 import shutil
 import os
+import json
 import logging
 from pathlib import Path
 from custom_code.models import TidesSpec
@@ -52,6 +54,12 @@ class SnidFormAjaxView(FormView):
             return HttpResponseForbidden("You do not have permission to access this\
                     workspace.")
 
+        target_name = str(spectrum_id)
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
+
+        run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+
         form.cleaned_data['output_dir'] = workspace_path
 
         try:
@@ -62,6 +70,17 @@ class SnidFormAjaxView(FormView):
             )
 
             response.raise_for_status()
+
+            metadata_path = run_dir / "metadata.json"
+            metadata = {
+                    "user": self.resquest.user.username,
+                    "target": target_name,
+                    "timestamp": timestamp,
+                    "params": form.cleaned_data,
+                }
+            with open(metadata_path, "w") as f:
+                json.dump(metadata, f, indent=2)
+
 
         except requests.exceptions.HTTPError as e:
             return JsonResponse({"success": False, "error": f"HTTP error: {e}"},
