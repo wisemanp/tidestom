@@ -9,7 +9,7 @@ def hash_user_dir(user_id: int):
     return hashlib.sha256(f"{user_id}{salt}".encode()).hexdigest()
 
 class UserWorkspace(models.Model):
-    user = models.OneToOneField(get_user_model(), on_delete=models.models.CASCADE)
+    user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
     directory = models.CharField(max_length=64, unique=True)
 
     class Meta:
