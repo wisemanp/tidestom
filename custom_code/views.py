@@ -7,8 +7,10 @@ import shutil
 import os
 import json
 import logging
+from workspaces import utils
 from pathlib import Path
 from custom_code.models import TidesSpec
+import workspaces
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
 
@@ -59,6 +61,7 @@ class SnidFormAjaxView(FormView):
 
         run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
         run_dir.mkdir(parents=True, exist_ok=True)
+        utils.ensure_dir(run_dir)
 
         form.cleaned_data['output_dir'] = str(run_dir)
 
@@ -73,7 +76,7 @@ class SnidFormAjaxView(FormView):
 
             metadata_path = run_dir / "metadata.json"
             metadata = {
-                    "user": self.resquest.user.username,
+                    "user": self.request.user.username,
                     "target": target_name,
                     "timestamp": timestamp,
                     "params": form.cleaned_data,
