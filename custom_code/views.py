@@ -43,7 +43,7 @@ class SnidFormAjaxView(FormView):
 
         workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
                 self.request.user,
-                api_name='snid_api'
+                api_name='snid_api',
                 )
         if not self.request.user.has_perm('workspaces.view_userworkspace',
                                           workspace_obj):
@@ -102,18 +102,42 @@ class NGSFFormAJAXView(FormView):
             if candidate.exists():
                 p = candidate
 
-        shutil.copy2(str(p), '/ngsf_api_runs/target.fits')
-        form.cleaned_data['spectrum'] = '/ngsf_api_runs/target.fits'
+        temp_file_path = 'ngsf_api_runs/target.fits'
+        shutil.copy2(str(p), temp_file_path)
+        form.cleaned_data['spectrum'] = temp_file_path
+
+        workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
+                self.request.user,
+                api_name='ngsf_api',
+                )
+        if not self.request.user.has_perm('workspaces.view_userworkspace',
+                                          workspace_obj):
+            logger.warning(f"Permission denied for user {self.request.user.id} on \
+                    workspace {workspace_obj.id}")
+            return HttpResponseForbidden("You do not have permission to access this\
+                    workspace.")
+
+        form.cleaned_data['output_dir'] = workspace_path
 
         try:
             response = requests.post(
                     "http://ngsf_api:8000/ngsf_params/",
                     json=form.cleaned_data,
                     timeout=60
-                    )
+                )
+
             response.raise_for_status()
-            os.remove('/ngsf_api_runs/target.fits')
-            return JsonResponse({"success": True, "data": response.json()})
+            #os.remove('/ngsf_api_runs/target.fits')
+
+            #return JsonResponse({"success": True, "data": response.json()})
         except Exception as e:
             return JsonResponse({"sucess": False, "errors": str(e)}, status=500)
+        finally:
+            try:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
+
+        return JsonResponse({"success": True, "data": response.json()})
 
