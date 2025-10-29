@@ -401,5 +401,8 @@ try:
 except ImportError:
     pass
 
-USER_OUTPUT_BASE = '/snid_api_runs'
+USER_OUTPUT_BASES = {
+        'snid_api': '/snid_api_runs/workspaces',
+        'ngsf_api': '/ngsf_api_runs/workspaces',
+        }
 USER_HASH_SALT = 'my_special_salt' #Update for deployment

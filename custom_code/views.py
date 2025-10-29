@@ -41,14 +41,18 @@ class SnidFormAjaxView(FormView):
         shutil.copy2(str(p), temp_file_path)
         form.cleaned_data["spectrum"] = temp_file_path
 
-        workspace = UserWorkspace.get_or_create_for_user(self.request.user)
-        if not self.request.user.has_perm('workspaces.view_userworkspace', workspace):
+        workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
+                self.request.user,
+                api_name='snid_api'
+                )
+        if not self.request.user.has_perm('workspaces.view_userworkspace',
+                                          workspace_obj):
             logger.warning(f"Permission denied for user {self.request.user.id} on \
-                    workspace {workspace.id}")
+                    workspace {workspace_obj.id}")
             return HttpResponseForbidden("You do not have permission to access this\
                     workspace.")
 
-        form.cleaned_data['output_dir'] = workspace.path
+        form.cleaned_data['output_dir'] = workspace_path
 
         try:
             response = requests.post(

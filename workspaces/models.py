@@ -14,30 +14,34 @@ def hash_user_dir(user_id: int):
 
 class UserWorkspace(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
+    api_name  = models.CharField(max_length=50)
     directory = models.CharField(max_length=64, unique=True)
 
     class Meta:
         verbose_name = "User Workspace"
         verbose_name_plural = "User Workspaces"
-
-    @property
-    def path(self):
-        return os.path.join(settings.USER_OUTPUT_BASE, self.directory)
+        unique_together = ('user', 'api_name')
 
     @classmethod
-    def get_or_create_for_user(cls, user):
+    def get_or_create_for_user(cls, user, api_name='default'):
+        if api_name not in settings.USER_OUTPUT_BASES:
+            raise ValueError(f"Unknown API name:{api_name}")
+
+        base_path = settings.USER_OUTPUT_BASES[api_name]
         obj, created = cls.objects.get_or_create(
             user=user,
+            api_name=api_name,
             defaults={'directory': hash_user_dir(user.id)}
         )
 
+        full_path = os.path.join(base_path, obj.directory)
         if created:
             try:
-                os.makedirs(obj.path, exist_ok=True)
+                os.makedirs(full_path, exist_ok=True)
 
                 assign_perm('view_userworkspace', user, obj)
                 assign_perm('change_userworkspace', user, obj)
             except Exception as e:
-                logger.error(f"Failed to create workspace directory {obj.path}: {e}")
+                logger.error(f"Failed to create workspace directory {full_path}: {e}")
 
-        return obj
+        return obj, full_path
