@@ -3,6 +3,9 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 import hashlib
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 def hash_user_dir(user_id: int):
     salt = getattr(settings, "USER_HASH_SALT", "fallback_salt")
@@ -13,20 +16,21 @@ class UserWorkspace(models.Model):
     directory = models.CharField(max_length=64, unique=True)
 
     class Meta:
-        permissions = [
-                #("view_userworkspace", "Can view this user's workspace"),
-                #("change_userworkspace", "Can modify this user's workspace"),
-            ]
+        verbose_name = "User Workspace"
+        verbose_name_plural = "User Workspaces"
 
     @property
-    def patch(self):
+    def path(self):
         return os.path.join(settings.USER_OUTPUT_BASE, self.directory)
 
     @classmethod
     def get_or_create_for_user(cls, user):
         obj, created = cls.objects.get_or_create(
-                user=user,
-                defaults={'directory': hash_user_dir(user.id)}
-            )
-        os.makedirs(obj.path, exist_ok=True)
+            user=user,
+            defaults={'directory': hash_user_dir(user.id)}
+        )
+        try:
+            os.makedirs(obj.path, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create workspace directory {obj.path}: {e}")
         return obj
