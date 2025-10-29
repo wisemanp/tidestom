@@ -5,12 +5,26 @@ from guardian.shortcuts import assign_perm
 import hashlib
 import os
 import logging
+import pwd
+import grp
 
 logger = logging.getLogger(__name__)
 
 def hash_user_dir(user_id: int):
     salt = getattr(settings, "USER_HASH_SALT", "fallback_salt")
     return hashlib.sha256(f"{user_id}{salt}".encode()).hexdigest()
+
+def ensure_dir(path: str, owner_user="sniduser", owner_group="snidgroup", mode=0o770):
+    """Create a directory and set ownership and permissions."""
+    os.makedirs(path, exist_ok=True)
+    try:
+        uid = pwd.getpwnam(owner_user).pw_uid
+        gid = grp.getgrnam(owner_group).gr_gid
+        os.chown(path, uid, gid)
+        os.chmod(path, mode)
+    except KeyError:
+        logger.warning(f"User or group not found: {owner_user}:{owner_group}. \
+                Skipping chown.")
 
 class UserWorkspace(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
@@ -35,6 +49,7 @@ class UserWorkspace(models.Model):
         )
 
         full_path = os.path.join(base_path, obj.directory)
+        ensure_dir(full_path)
         if created:
             try:
                 os.makedirs(full_path, exist_ok=True)
