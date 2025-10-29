@@ -60,7 +60,7 @@ class SnidFormAjaxView(FormView):
         run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
         run_dir.mkdir(parents=True, exist_ok=True)
 
-        form.cleaned_data['output_dir'] = workspace_path
+        form.cleaned_data['output_dir'] = run_dir
 
         try:
             response = requests.post(
