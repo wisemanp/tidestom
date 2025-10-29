@@ -14,8 +14,8 @@ class UserWorkspace(models.Model):
 
     class Meta:
         permissions = [
-                ("view_userworkspace", "Can view this user's workspace"),
-                ("chang_userworkspace", "Can modify this user's workspace"),
+                #("view_userworkspace", "Can view this user's workspace"),
+                ("change_userworkspace", "Can modify this user's workspace"),
             ]
 
     @property
