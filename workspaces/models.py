@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from guardian.shortcuts import assign_perm
 import hashlib
 import os
 import logging
@@ -29,8 +30,14 @@ class UserWorkspace(models.Model):
             user=user,
             defaults={'directory': hash_user_dir(user.id)}
         )
-        try:
-            os.makedirs(obj.path, exist_ok=True)
-        except Exception as e:
-            logger.error(f"Failed to create workspace directory {obj.path}: {e}")
+
+        if created:
+            try:
+                os.makedirs(obj.path, exist_ok=True)
+
+                assign_perm('view_userworkspace', user, obj)
+                assign_perm('change_userworkspace', user, obj)
+            except Exception as e:
+                logger.error(f"Failed to create workspace directory {obj.path}: {e}")
+
         return obj
