@@ -6,7 +6,7 @@ import shutil
 import os
 from pathlib import Path
 from custom_code.models import TidesSpec
-from workspaces import UserWorkspace
+from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
 
 class SnidFormAjaxView(FormView):
