@@ -17,7 +17,7 @@ import tempfile
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+TEST_DIR = os.environ.get('TIDES_TEST_DIR', 'spectra/test_data')
 USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
 DB_HOST = os.environ.get('DB_HOST')
@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'custom_code',
     'tidestom',
     'myplots',
+    'workspaces',
 ]
 # 'bootstrap5',
 
@@ -399,3 +400,6 @@ try:
     from local_settings import * # noqa
 except ImportError:
     pass
+
+USER_OUTPUT_BASE = '/snid_api_runs'
+USER_HASH_SALT = 'my_special_salt' #Update for deployment
