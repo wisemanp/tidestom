@@ -1,13 +1,16 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic.edit import FormView
 from django.conf import settings
 import requests
 import shutil
 import os
+import logging
 from pathlib import Path
 from custom_code.models import TidesSpec
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
+
+logger = logging.getLogger(__name__)
 
 class SnidFormAjaxView(FormView):
     form_class = SnidParamsForm
@@ -34,10 +37,17 @@ class SnidFormAjaxView(FormView):
             if candidate.exists():
                 p = candidate
 
-        shutil.copy2(str(p), '/snid_api_runs/target.fits')
-        form.cleaned_data["spectrum"] = '/snid_api_runs/target.fits'
+        temp_file_path = '/snid_api_runs/target.fits'
+        shutil.copy2(str(p), temp_file_path)
+        form.cleaned_data["spectrum"] = temp_file_path
 
         workspace = UserWorkspace.get_or_create_for_user(self.request.user)
+        if not self.request.user.has_perm('workspaces.view_userworkspace', workspace):
+            logger.warning(f"Permission denied for user {self.request.user.id} on \
+                    workspace {workspace.id}")
+            return HttpResponseForbidden("You do not have permission to access this\
+                    workspace.")
+
         form.cleaned_data['output_dir'] = workspace.path
 
         try:
@@ -48,13 +58,20 @@ class SnidFormAjaxView(FormView):
             )
 
             response.raise_for_status()
-            os.remove('/snid_api_runs/target.fits')
-            return JsonResponse({"success": True, "data": response.json()})
 
         except requests.exceptions.HTTPError as e:
-            return JsonResponse({"success": False, "error": f"HTTP error: {e}"}, status=500)
+            return JsonResponse({"success": False, "error": f"HTTP error: {e}"},
+                                status=500)
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)}, status=500)
+        finally:
+            try:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
+
+        return JsonResponse({"success": True, "data": response.json()})
 
 class NGSFFormAJAXView(FormView):
     form_class = NGSFParamsForm
