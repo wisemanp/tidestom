@@ -6,6 +6,7 @@ import shutil
 import os
 from pathlib import Path
 from custom_code.models import TidesSpec
+from workspaces import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
 
 class SnidFormAjaxView(FormView):
@@ -35,6 +36,9 @@ class SnidFormAjaxView(FormView):
 
         shutil.copy2(str(p), '/snid_api_runs/target.fits')
         form.cleaned_data["spectrum"] = '/snid_api_runs/target.fits'
+
+        workspace = UserWorkspace.get_or_create_for_user(self.request.user)
+        form.cleaned_data['output_dir'] = workspace.path
 
         try:
             response = requests.post(
