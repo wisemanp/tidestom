@@ -190,43 +190,41 @@ document.addEventListener("DOMContentLoaded", function() {
 	setupMutualExclusion("use", "avoid");
 
 	const targetId = "{{ target.id|default:'' }}"; // or whatever variable identifies your target
-  const runsTable = document.querySelector("#runs-table tbody");
-  const noRunsMsg = document.getElementById("no-runs");
+const runsTable = document.querySelector("#runs-table tbody");
+const noRunsMsg = document.getElementById("no-runs");
 
-  if (!targetId) {
+if (!targetId) {
     console.warn("No target ID found; skipping previous run fetch.");
-    return;
-  }
+} else {
+    fetch(`/api/previous_snid_runs/?target_id=${targetId}`)
+        .then(response => {
+            if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            const results = data.results || [];
+            if (results.length === 0) {
+                noRunsMsg.style.display = "block";
+                return;
+            }
 
-  try {
-    const response = await fetch(`/api/previous_snid_runs/?target_id=${targetId}`);
-    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-
-    const data = await response.json();
-    const results = data.results || [];
-
-    if (results.length === 0) {
-      noRunsMsg.style.display = "block";
-      return;
-    }
-
-    results.forEach(run => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${run.run}</td>
-        <td>${run.modified}</td>
-        <td>${run.size_kb}</td>
-        <td><a href="${run.path}" target="_blank">Download</a></td>
-      `;
-      runsTable.appendChild(row);
-    });
-  } catch (err) {
-    console.error("Error fetching previous SNID runs:", err);
-    noRunsMsg.textContent = "Failed to load previous runs.";
-    noRunsMsg.style.display = "block";
-  }
-
-
+            results.forEach(run => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${run.run}</td>
+                    <td>${run.modified}</td>
+                    <td>${run.size_kb}</td>
+                    <td><a href="${run.path}" target="_blank">Download</a></td>
+                `;
+                runsTable.appendChild(row);
+            });
+        })
+        .catch(err => {
+            console.error("Error fetching previous SNID runs:", err);
+            noRunsMsg.textContent = "Failed to load previous runs.";
+            noRunsMsg.style.display = "block";
+        });
+}
 
 });
 </script>
