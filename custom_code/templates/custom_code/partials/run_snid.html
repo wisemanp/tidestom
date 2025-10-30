@@ -189,14 +189,14 @@ document.addEventListener("DOMContentLoaded", function() {
 	setupMutualExclusion("usesub", "avoidsub");
 	setupMutualExclusion("use", "avoid");
 
-	const targetId = "{{ target.id|default:'' }}";
-const runsTable = document.querySelector("#runs-table tbody");
-const noRunsMsg = document.getElementById("no-runs");
+	const targetId = "{{ spectrum.id|default:'' }}";
+	const runsTable = document.querySelector("#runs-table tbody");
+	const noRunsMsg = document.getElementById("no-runs");
 
-if (!spectrum) {
+if (!targetId) {
     console.warn("No target ID found; skipping previous run fetch.");
 } else {
-    fetch(`/api/previous_snid_runs/?target_id=${spectrum}`)
+    fetch(`/api/previous_snid_runs/?target_id=${targetId}`)
         .then(response => {
             if (!response.ok) throw new Error(`Request failed: ${response.status}`);
             return response.json();
