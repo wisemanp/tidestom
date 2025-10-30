@@ -60,8 +60,8 @@ class SnidFormAjaxView(FormView):
         timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
 
         run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
-        run_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
-        utils.ensure_dir(run_dir)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        os.chown(run_dir, 1000, 1000)
 
         form.cleaned_data['output_dir'] = str(run_dir)
 
