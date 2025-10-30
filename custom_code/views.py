@@ -1,6 +1,6 @@
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic.edit import FormView
-from django.view import View
+from django.views import View
 from django.conf import settings
 from datetime import datetime
 import requests
