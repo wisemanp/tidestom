@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'debug_toolbar',
     'guardian',
+    'tom_registration',
     'tom_common',
     'django_comments',
     'bootstrap4',
@@ -91,6 +92,7 @@ MIDDLEWARE = [
     'tom_common.middleware.Raise403Middleware',
     'tom_common.middleware.ExternalServiceMiddleware',
     'tom_common.middleware.AuthStrategyMiddleware',
+    'tom_registration.middleware.RedirectAuthenticatedUsersFromRegisterMiddleware',
 ]
 
 ROOT_URLCONF = 'tidestom.urls'
@@ -127,7 +129,7 @@ DATABASES = {
         'PASSWORD': DB_PASS,
         'HOST': DB_HOST,
         'PORT': DB_PORT,
-        
+
     }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
@@ -166,9 +168,24 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
+    'django.contrib.auth.backends.AllowAllUsersModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
+
+TOM_REGISTRATION = {
+    'REGISTRATION_AUTHENTICATION_BACKEND': 'django.contrib.auth.backends.\
+            AllowAllUsersModelBackend',
+    'REGISTRATION_REDIRECT_PATTERN': 'home',
+    'REGISTRATION_STRATEGY': 'open',  # ['open', 'approval_required']
+    'SEND_APPROVAL_EMAILS': True,
+    # Optional email if `REGISTRATION_STRATEGY = 'approval_required'`, default is False
+    'APPROVAL_SUBJECT': f'Your {TOM_NAME} registration has been approved!',
+    # Optional subject line of approval email, (Default Shown)
+    'APPROVAL_MESSAGE': f'Your {TOM_NAME} registration has been approved. \
+            You can log in <a href="mytom.com/login">here</a>.'
+            # Optional html-enabled body for approval email, (Default Shown)
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
