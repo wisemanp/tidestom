@@ -17,7 +17,7 @@ def list_existing_results(workspace_path: str, target_name: str):
             results.append({
                 "run": path.parent.name,
                 "path": str(path),
-                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "modified": datetime.datetime.fromtimestamp(stat.st_mtime).isoformat(),
                 "size_kb": round(path.stat().st_size / 1024, 2),
             })
         except Exception as e:
