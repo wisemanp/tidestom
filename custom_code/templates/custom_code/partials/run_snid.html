@@ -189,7 +189,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	setupMutualExclusion("usesub", "avoidsub");
 	setupMutualExclusion("use", "avoid");
 
-	const targetId = "{{ spectrum.id|default:'' }}";
+	const targetId = "{{ spectrum|default:'' }}";
 	const runsTable = document.querySelector("#runs-table tbody");
 	const noRunsMsg = document.getElementById("no-runs");
 
