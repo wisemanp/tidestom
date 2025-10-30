@@ -6,7 +6,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir tomtoolkit
+RUN pip install --no-cache-dir tomtoolkit==2.26.2
 
 RUN pip install --no-cache-dir -r requirements.txt
 
