@@ -193,10 +193,10 @@ document.addEventListener("DOMContentLoaded", function() {
 const runsTable = document.querySelector("#runs-table tbody");
 const noRunsMsg = document.getElementById("no-runs");
 
-if (!spectrum.id) {
+if (!spectrum) {
     console.warn("No target ID found; skipping previous run fetch.");
 } else {
-    fetch(`/api/previous_snid_runs/?target_id=${spectrum.id}`)
+    fetch(`/api/previous_snid_runs/?target_id=${spectrum}`)
         .then(response => {
             if (!response.ok) throw new Error(`Request failed: ${response.status}`);
             return response.json();
