@@ -115,6 +115,22 @@
 			</div>
 		</form>
 		<div id="snid-result" class="mt-3"></div>
+
+		<div id="previous-snid-runs" class="mt-4">
+		<h3>Previous SNID Runs</h3>
+		<p id="no-runs" style="display:none;">No previous runs found.</p>
+		<table id="runs-table" style="width:100%; border-collapse: collapse;">
+		<thead>
+			<tr>
+			<th>Run</th>
+			<th>Modified</th>
+			<th>Size (KB)</th>
+			<th>File</th>
+			</tr>
+		</thead>
+		<tbody></tbody>
+		</table>
+		</div>
 	</div>
 </div>
 
@@ -172,5 +188,45 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	setupMutualExclusion("usesub", "avoidsub");
 	setupMutualExclusion("use", "avoid");
+
+	const targetId = "{{ target.id|default:'' }}"; // or whatever variable identifies your target
+  const runsTable = document.querySelector("#runs-table tbody");
+  const noRunsMsg = document.getElementById("no-runs");
+
+  if (!targetId) {
+    console.warn("No target ID found; skipping previous run fetch.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/previous_snid_runs/?target_id=${targetId}`);
+    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+
+    const data = await response.json();
+    const results = data.results || [];
+
+    if (results.length === 0) {
+      noRunsMsg.style.display = "block";
+      return;
+    }
+
+    results.forEach(run => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${run.run}</td>
+        <td>${run.modified}</td>
+        <td>${run.size_kb}</td>
+        <td><a href="${run.path}" target="_blank">Download</a></td>
+      `;
+      runsTable.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Error fetching previous SNID runs:", err);
+    noRunsMsg.textContent = "Failed to load previous runs.";
+    noRunsMsg.style.display = "block";
+  }
+
+
+
 });
 </script>

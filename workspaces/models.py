@@ -35,7 +35,6 @@ class UserWorkspace(models.Model):
         )
 
         full_path = os.path.join(base_path, obj.directory)
-        ensure_dir(full_path)
         if created:
             try:
                 os.makedirs(full_path, exist_ok=True)

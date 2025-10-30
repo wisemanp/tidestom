@@ -1,5 +1,6 @@
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic.edit import FormView
+from django.view import View
 from django.conf import settings
 from datetime import datetime
 import requests
@@ -10,7 +11,6 @@ import logging
 from workspaces import utils
 from pathlib import Path
 from custom_code.models import TidesSpec
-import workspaces
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
 
@@ -98,6 +98,27 @@ class SnidFormAjaxView(FormView):
                 logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
 
         return JsonResponse({"success": True, "data": response.json()})
+
+class PreviousSNIDRunsView(View):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Not Authenticated"}, status=403)
+
+        target_id = request.GET.get("target_id")
+        if not target_id:
+            return JsonResponse({"error": "target_id missing"}, status=400)
+
+        try:
+            workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
+                    request.user, api_name='snid_api'
+                    )
+
+            results = utils.list_existing_results(workspace_path, target_id)
+            return JsonResponse({"results": results, "count": len(results)}, safe=False)
+        except Exception as e:
+            logger.exception(f"Failed to list previous SNID Runs for target \
+                    {target_id}: {e}")
+            JsonResponse({"error": str(e)}, status=500)
 
 class NGSFFormAJAXView(FormView):
     form_class = NGSFParamsForm

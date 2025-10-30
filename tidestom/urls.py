@@ -19,7 +19,7 @@ from django.views.generic import TemplateView
 from .views import (
     LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
-from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView
+from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView, PreviousSNIDRunsView
 from myplots.views import target_spectroscopy_partial
 urlpatterns = [
     path(
@@ -58,5 +58,9 @@ urlpatterns = [
     path(
         "target_spectroscopy/<int:target_id>/", target_spectroscopy_partial,
         name="target_spectroscopy"
+        ),
+    path(
+        "api/previous_snid_runs", PreviousSNIDRunsView.as_view(),
+        name="previous_snid_runs"
         ),
 ]
