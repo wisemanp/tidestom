@@ -60,7 +60,7 @@ urlpatterns = [
         name="target_spectroscopy"
         ),
     path(
-        "api/previous_snid_runs", PreviousSNIDRunsView.as_view(),
+        "api/previous_snid_runs/", PreviousSNIDRunsView.as_view(),
         name="previous_snid_runs"
         ),
 ]
