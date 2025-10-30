@@ -168,13 +168,13 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.AllowAllUsersModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
 TOM_REGISTRATION = {
     'REGISTRATION_AUTHENTICATION_BACKEND': 'django.contrib.auth.backends.\
-            AllowAllUsersModelBackend',
+            ModelBackend',
     'REGISTRATION_REDIRECT_PATTERN': 'home',
     'REGISTRATION_STRATEGY': 'open',  # ['open', 'approval_required']
     'SEND_APPROVAL_EMAILS': True,
