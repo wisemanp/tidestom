@@ -93,14 +93,14 @@ services:
 
     #healthcheck:
     #  test: ["CMD-SHELL",
-    #          "wget -q0- --timeout=2 --tries=1 http:something/health >/dev/null 2>&1 && \
-    #           wget -q0- --timeout=2 --tries=1 http:something/health >/dev/null 2>1"]
+    #          "wget -qO- --timeout=2 --tries=1 http:something/health >/dev/null 2>&1 && \
+    #           wget -qO- --timeout=2 --tries=1 http:something/health >/dev/null 2>&1"]
     #  interval: 30s
     #  timeout: 5s
     #  retries: 4
     #  start_period: 10s
-    networks:
-      - backend
+    #networks:
+    #  - backend
 
 #  nginx:
 #    image: nginx:1.25
