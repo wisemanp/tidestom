@@ -13,7 +13,7 @@ services:
         #done &&
         echo 'Checking other directories' &&
         #mkdir -pv /ngsf_api_runs/workspaces &&
-        mkdir -pv /spectra_volume/test_data/sims &&
+        #mkdir -pv /spectra_volume/test_data/sims &&
         mkdir -pv /static/plots &&
         echo 'Copying test data if available' &&
         cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true &&
