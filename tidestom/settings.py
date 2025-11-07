@@ -32,10 +32,16 @@ SECRET_KEY = 'u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cyf'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", '192.168.10.120', 'tides.lsst.ac.uk']
+USE_X_FORWARD_HOST = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8080"]
-
+CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8080",
+        'http://tides.lsst.ac.uk',
+        '192.168.10.120',
+        ]
+#Activate on HTTPS
+#SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
