@@ -60,8 +60,26 @@ services:
 
   web:
     build: .
-    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent','--log-level', 'debug', '--capture-output', '--enable-stdio-inheritance']
-    cpus: 2
+    command: >
+      bash -c "
+        echo 'Waiting for API config file...' &&
+        while [ ! -f /mnt/api_results/snid_api_runs/snid_template_options/subtypes.txt ]; do
+          sleep 5;
+        done &&
+        echo 'Copying config.json into static...' &&
+        mkdir -p /app/static/config &&
+        cp /mnt/api_results/snid_api_runs/snid_template_options/subtypes.txt /app/static/config/ &&
+        echo 'Running collectstatic...' &&
+        python manage.py collectstatic --noinput &&
+        echo 'Starting Gunicorn...' &&
+        exec gunicorn tidestom.wsgi:application \
+          --bind 0.0.0.0:8000 \
+          --workers 4 \
+          --worker-class gevent \
+          --log-level debug \
+          --capture-output \
+          --enable-stdio-inheritance
+      "
     ports:
       - "8000:8000"
     depends_on:

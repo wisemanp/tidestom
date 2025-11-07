@@ -185,8 +185,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 	
     // Populate subtypes (usesub + avoidsub)
-    populateSelects("/snid_api_runs/snid_template_options/subtypes.txt", ["usesub"]);
-    populateSelects("/snid_api_runs/snid_template_options/subtypes.txt", ["avoidsub"]);
+    populateSelects("/static/config/subtypes.txt", ["usesub"]);
+    populateSelects("/static/config/subtypes.txt", ["avoidsub"]);
 
 	setupMutualExclusion("usesub", "avoidsub");
 	setupMutualExclusion("use", "avoid");
