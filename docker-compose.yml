@@ -40,8 +40,8 @@ services:
       "
 
     environment:
-      - API_1_HEALTH='http:192.168.10.117:8000/health'
-      - API_2_HEALTH='http:192.168.10.117:8001/health'
+      - API_1_HEALTH='http://192.168.10.117:8000/health'
+      - API_2_HEALTH='http://192.168.10.117:8001/health'
     volumes:
       - /mnt/api_results/snid_api_runs:/snid_api_runs
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
