@@ -39,9 +39,9 @@ services:
         echo 'All dependencies healthy — init complete.'
       "
 
-    #environment:
-    #  - SNID_API_HEALTH='http:something/health'
-    #  - NGSF_API_HEALTH='http:something/health'
+    environment:
+      - API_1_HEALTH='http:192.168.10.117:8000/health'
+      - API_2_HEALTH='http:192.168.10.117:8001/health'
     volumes:
       - /mnt/api_results/snid_api_runs:/snid_api_runs
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
@@ -88,17 +88,17 @@ services:
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
-      SNID_API_URL: http://snid_api:8000
-      NGSF_API_URL: http://ngsf_api:8000
+      SNID_API_URL: http://192.168.10.117:8000
+      NGSF_API_URL: http://192.168.10.117:8001
 
-    #healthcheck:
-    #  test: ["CMD-SHELL",
-    #          "wget -qO- --timeout=2 --tries=1 http:something/health >/dev/null 2>&1 && \
-    #           wget -qO- --timeout=2 --tries=1 http:something/health >/dev/null 2>&1"]
-    #  interval: 30s
-    #  timeout: 5s
-    #  retries: 4
-    #  start_period: 10s
+    healthcheck:
+      test: ["CMD-SHELL",
+      "wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8000/health >/dev/null 2>&1 && \
+       wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8001/health >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
     #networks:
     #  - backend
 
