@@ -18,7 +18,7 @@ services:
         echo 'Copying test data if available' &&
         cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true &&
         cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true &&
-        echo 'Directories Ready' &&
+        echo 'Directories Ready' #&&
 
         #sleep 10 &&
 
