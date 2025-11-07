@@ -80,6 +80,7 @@ services:
           --capture-output \
           --enable-stdio-inheritance
       "
+    cpus: 2
     ports:
       - "8000:8000"
     depends_on:
