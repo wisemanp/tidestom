@@ -43,14 +43,14 @@ services:
     #  - SNID_API_HEALTH='http:something/health'
     #  - NGSF_API_HEALTH='http:something/health'
     volumes:
-      - snid_api_runs_1:/snid_api_runs
-      - ngsf_api_runs_1:/ngsf_api_runs
+      #- snid_api_runs_1:/snid_api_runs
+      #- ngsf_api_runs_1:/ngsf_api_runs
       - media_volume_1:/media
-      - spectra_volume:/spectra_volume
-      - deliveries_volume:/deliveries
+      #- spectra_volume:/spectra_volume
+      #- deliveries_volume:/deliveries
       - static_volume_1:/static
-      - ../test_data/sims:/test_data_src:ro #only for testing
-      - ../test_data/plots:/test_plots_src:ro #only for testing
+      #- ../test_data/sims:/test_data_src:ro #only for testing
+      #- ../test_data/plots:/test_plots_src:ro #only for testing
     healthcheck:
       test: ["CMD-SHELL", "[ -d /static/plots ] && [ -d /spectra_volume/test_data ]"]
       interval: 10s
