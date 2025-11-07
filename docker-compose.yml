@@ -40,8 +40,8 @@ services:
       "
 
     environment:
-      - API_1_HEALTH='http://192.168.10.117:8000/health'
-      - API_2_HEALTH='http://192.168.10.117:8001/health'
+      - API_1_HEALTH='http:192.168.10.117:8000/health'
+      - API_2_HEALTH='http:192.168.10.117:8001/health'
     volumes:
       - /mnt/api_results/snid_api_runs:/snid_api_runs
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
@@ -60,26 +60,7 @@ services:
 
   web:
     build: .
-    command: >
-      bash -c "
-        echo 'Waiting for API config file...' &&
-        while [ ! -f /snid_api_runs/snid_template_options/subtypes.txt ]; do
-          sleep 1;
-        done &&
-        echo 'Copying subtype options into static...' &&
-        mkdir -p /app/static/config &&
-        cp /snid_api_runs/snid_template_options/subtypes.txt /app/static/config/ &&
-        echo 'Running collectstatic...' &&
-        python manage.py collectstatic --noinput &&
-        echo 'Starting Gunicorn...' &&
-        exec gunicorn tidestom.wsgi:application \
-          --bind 0.0.0.0:8000 \
-          --workers 4 \
-          --worker-class gevent \
-          --log-level debug \
-          --capture-output \
-          --enable-stdio-inheritance
-      "
+    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent','--log-level', 'debug', '--capture-output', '--enable-stdio-inheritance']
     cpus: 2
     ports:
       - "8000:8000"
@@ -112,8 +93,8 @@ services:
 
     healthcheck:
       test: ["CMD-SHELL",
-      "wget -qO- --timeout=2 --tries=1 http://192.168.10.117:8000/health >/dev/null 2>&1 && \
-       wget -qO- --timeout=2 --tries=1 http://192.168.10.117:8001/health >/dev/null 2>&1"]
+      "wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8000/health >/dev/null 2>&1 && \
+       wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8001/health >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 4
