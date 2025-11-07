@@ -6,11 +6,11 @@ services:
     command: >
       sh -c "
         echo 'Checking and creating API workspace directories' &&
-        #for dir in /snid_api_runs/workspaces; do
-        #  mkdir -pv $dir &&
-        #  chown -R 1000:1000 $dir &&
-        #  chmod -R 770 $dir
-        #done &&
+        for dir in /snid_api_runs/workspaces; do
+          mkdir -pv $dir &&
+          chown -R 1000:1000 $dir &&
+          chmod -R 770 $dir
+        done &&
         echo 'Checking other directories' &&
         #mkdir -pv /ngsf_api_runs/workspaces &&
         #mkdir -pv /spectra_volume/test_data/sims &&
@@ -18,33 +18,33 @@ services:
         echo 'Copying test data if available' &&
         cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true &&
         cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true &&
-        echo 'Directories Ready' #&&
+        echo 'Directories Ready' &&
 
-        #sleep 10 &&
+        sleep 10 &&
 
-        #echo 'Waiting for dependent APIs to become healthy...' &&
-        #for url in $API_1_HEALTH $API_2_HEALTH; do
-        #  attempt=1
-        #  until wget -qO- --timeout=2 --tries=1 $url >/dev/null 2>&1; do
-        #    if [ $attempt -ge 10 ]; then
-        #      echo 'ERROR; $url did not become healthy.' >&2
-        #      exit 1
-        #    fi
-        #    echo 'Attempt' $attempt 'failed for' $url '-retrying in 5s'
-        #    attempt=$((attempt+1))
-        #    sleep 5
-        #  done
-        #  echo '$url is healthy.'
-        #done &&
-        #echo 'All dependencies healthy — init complete.'
+        echo 'Waiting for dependent APIs to become healthy...' &&
+        for url in $API_1_HEALTH $API_2_HEALTH; do
+          attempt=1
+          until wget -qO- --timeout=2 --tries=1 $url >/dev/null 2>&1; do
+            if [ $attempt -ge 10 ]; then
+              echo 'ERROR; $url did not become healthy.' >&2
+              exit 1
+            fi
+            echo 'Attempt' $attempt 'failed for' $url '-retrying in 5s'
+            attempt=$((attempt+1))
+            sleep 5
+          done
+          echo '$url is healthy.'
+        done &&
+        echo 'All dependencies healthy — init complete.'
       "
 
     #environment:
     #  - SNID_API_HEALTH='http:something/health'
     #  - NGSF_API_HEALTH='http:something/health'
     volumes:
-      #- snid_api_runs_1:/snid_api_runs
-      #- ngsf_api_runs_1:/ngsf_api_runs
+      - /mnt/api_results/snid_api_runs:/snid_api_runs
+      - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
       - media_volume_1:/media
       #- spectra_volume:/spectra_volume
       #- deliveries_volume:/deliveries
@@ -70,8 +70,8 @@ services:
     volumes:
       - static_volume_1:/app/staticfiles
       - media_volume_1:/app/data
-      #- snid_api_runs_1:/snid_api_runs
-      #- ngsf_api_runs_1:/ngsf_api_runs
+      - /mnt/api_results/snid_api_runs:/snid_api_runs
+      - /mnt/api_results/ngsf_api_runs_1:/ngsf_api_runs
       #- spectra_volume:/app/spectra
     environment:
       LOCAL_MODE: 'True'
