@@ -14,7 +14,7 @@ COPY . .
 
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 #CMD ["gunicorn", "--bind", "0.0.0.0:8000", "tidestom.wsgi:application"]
 
