@@ -60,8 +60,8 @@ services:
 
   web:
     build: .
-    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '2', '--worker-class', 'gevent','--log-level', 'debug', '--capture-output', '--enable-stdio-inheritance']
-    cpus: 4
+    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent','--log-level', 'debug', '--capture-output', '--enable-stdio-inheritance']
+    cpus: 2
     ports:
       - "8000:8000"
     depends_on:
