@@ -33,6 +33,7 @@ SECRET_KEY = 'u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cyf'
 DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", '192.41.122.49', 'tides.lsst.ac.uk']
+FORCE_SCRIPT_NAME = '/marshal'
 USE_X_FORWARD_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
