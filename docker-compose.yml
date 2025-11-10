@@ -71,7 +71,7 @@ services:
       - static_volume_1:/app/staticfiles
       - media_volume_1:/app/data
       - /mnt/api_results/snid_api_runs:/snid_api_runs
-      - /mnt/api_results/ngsf_api_runs_1:/ngsf_api_runs
+      - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
       - /mnt/data/spectra:/app/spectra:ro
     environment:
       LOCAL_MODE: 'True'
