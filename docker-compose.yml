@@ -93,8 +93,8 @@ services:
 
     healthcheck:
       test: ["CMD-SHELL",
-      "wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8000/health >/dev/null 2>&1 && \
-       wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8001/health >/dev/null 2>&1"]
+      "wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8000/marshal/health >/dev/null 2>&1 && \
+       wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8001/marshal/health >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 4
