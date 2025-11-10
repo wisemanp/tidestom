@@ -43,8 +43,6 @@ CSRF_TRUSTED_ORIGINS = [
 #Activate on HTTPS
 #SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-FORCE_SCRIPT_NAME = '/marshal'
-
 # Application definition
 
 TOM_NAME = 'tidestom'
