@@ -56,7 +56,7 @@ urlpatterns = [
         "ngsf/run/", NGSFFormAJAXView.as_view(), name="ngsf-run"
     ),
     path(
-        "target_spectroscopy/<int:target_id>/", target_spectroscopy_partial,
+        "/marshal/target_spectroscopy/<int:target_id>/", target_spectroscopy_partial,
         name="target_spectroscopy"
         ),
     path(
