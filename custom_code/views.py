@@ -44,7 +44,6 @@ class SnidFormAjaxView(FormView):
         temp_file_path = '/snid_api_runs/target.fits'
         shutil.copy2(str(p), temp_file_path)
         form.cleaned_data["spectrum"] = temp_file_path
-        break
 
         workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
                 self.request.user,
