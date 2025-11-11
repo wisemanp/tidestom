@@ -315,11 +315,7 @@ def plot_lightcurves(photometry: pd.DataFrame) -> go.Figure:
             trace.visible = False
         else:
             trace.visible = True
-            
-    # discovery date
-    #fig.add_vline(obj.discovery_time_mjd, line_width=2, line_dash="solid", line_color="black", 
-    #                  annotation_text="disc.", annotation_position="bottom left")
-        
+               
     # Define buttons for toggling between magnitude and flux
     buttons = create_toggling_buttons(fig)
     

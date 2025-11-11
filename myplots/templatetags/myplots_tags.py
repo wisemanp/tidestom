@@ -29,64 +29,39 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
     spectrum, spec = spectra[0], specs[0]
     
-    """
-    # Pick the latest spectrum for this target
-    spec = (
-        TidesSpec.objects
-        .filter(tides=target)
-        .order_by('-obs_date', '-qmost_id')
-        .first()
-    )
-    if not spec:
-        return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
-    
-    # Resolve file path (use stored path; fallback to symlink convention if missing)
-    p = Path(spec.filepath)
-    if not p.exists():
-        candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
-        if candidate.exists():
-            p = candidate
-
-    try:
-
-        if str(p).endswith('fits'):
-            data = fits.getdata(str(p))
-            wave = data['WAVE'][0] * u.Angstrom
-            flux = data['FLUX'][0] * u.Unit('erg cm-2 s-1 AA-1')
-        elif str(p).endswith('txt'):
-            data = np.loadtxt(str(p))
-            wave = data[:,0] * u.Angstrom
-            flux = data[:,1] * u.Unit('erg cm-2 s-1 AA-1')
-        else:
-            raise ValueError(f'Unsupported spectrum file format: {p}')
-        spectrum = Spectrum1D(flux=flux, spectral_axis=wave)
-
-        plot_data = [
-            go.Scatter(
-                x=spectrum.spectral_axis.value,
-                y=spectrum.flux.value,
-                name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
-                      else datetime.now().strftime('%Y%m%d-%H:%M:%S'))
-            )
-        ]
-    except Exception as e:
-        return {'target': target, 'plot': f'<p>Failed to load spectrum: {e}</p>'}
-    """
     plot_data = [
         go.Scatter(
             x=spectrum.spectral_axis.value,
             y=spectrum.flux.value,
             name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
-                    else datetime.now().strftime('%Y%m%d-%H:%M:%S'))
+                    else datetime.now().strftime('%Y%m%d-%H:%M:%S')),
+            marker=dict(color='black'),
+            opacity=0.7,
         )
     ]
 
     fig = go.Figure(data=plot_data)
+    
+    ### tellurics ###
+    # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
+    # Wallace et al. 1996 “An Atlas of the Spectrum of the Solar Photosphere from 296 to 1300 nm”
+    telluric_bands = {
+        #'O2 B-band': (6867, 6884),
+        #'O2 gamma-band': (6280, 6310),
+        'O2 A-band': (7590, 7700),
+        'H2O band1': (7150, 7350),
+        'H2O band2': (8100, 8400),
+        #'H2O band3': (8900, 9800)
+    }
+    # add shaded regions for each telluric band
+    for label, (start, end) in telluric_bands.items():
+        fig.add_vrect(
+            x0=start, x1=end,
+            fillcolor="grey", opacity=0.2,
+            layer="below", line_width=0,
+        )
 
-    # add templates - best matches
-    # SNID - mock templates for now
-    #data_mean = np.mean(spectrum.flux.value)
-
+    ### templates ###
     if snid_path is not None:
         try:
             pysnid_file = snid_path
@@ -100,7 +75,6 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             print(exc)
             pass
 
-    # NGSF - mock templates for now
     if ngsf_path is not None:
         try:
             ngsf_file = ngsf_path
@@ -111,9 +85,9 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                              n=3
                              )
         except Exception as exc:
-            #TODO add better handling
             print(exc)
             pass
+        
     fig.update_layout(autosize=True,
                       xaxis_title='Observed Wavelength (Å)',
                       yaxis_title='Flux (erg/s/cm²/Å)',
@@ -121,8 +95,9 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                       yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       legend_title="Best Templates",
                       showlegend=True,
+                      font_family="P052",
+                      font_size=16,
                       )
-
 
     return {
         'target': target,
@@ -169,7 +144,7 @@ def target_photometry(context, target, dataproduct=None):
                                 annotation_text="s", annotation_position="top left")
     except Exception as exc:
         print(exc)
-    
+        
     return {
         'target': target,
         'plot': offline.plot(fig, output_type='div', show_link=False)
