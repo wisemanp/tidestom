@@ -4,9 +4,10 @@ from tom_targets.models import Target
 
 import warnings
 import pandas as pd
-from myplots.templatetags.photometry_settings import fetch_ztf_lasair, is_site_up
+from myplots.templatetags.utils import is_site_up
+from myplots.templatetags.photometry_settings import fetch_target_lasair
 from tidestom.settings import BROKERS
-lasair_token = BROKERS['LASAIR']['api_key']
+lasair_token = BROKERS['LASAIR']['ztf_api_key']
 
 class TestPhotometry(TestCase):
     def setUp(self):
@@ -21,5 +22,5 @@ class TestPhotometry(TestCase):
         elif lasair_token is None or lasair_token == "":
             warnings.warn("Warning: Lasair API key not set!", UserWarning)
         else:
-            photometry = fetch_ztf_lasair(self.target.ra, self.target.dec)
+            photometry = fetch_target_lasair(self.target.ra, self.target.dec, "ztf")
             assert isinstance(photometry, pd.DataFrame), f"Photometry object is not a DataFrame! Check {fetch_ztf_lasair}."
