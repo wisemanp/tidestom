@@ -1,5 +1,4 @@
 from django.test import TestCase
-#from tom_targets.tests.factories import SiderealTargetFactory
 from tom_targets.models import Target
 
 import warnings
@@ -23,4 +22,4 @@ class TestPhotometry(TestCase):
             warnings.warn("Warning: Lasair API key not set!", UserWarning)
         else:
             photometry = fetch_target_lasair(self.target.ra, self.target.dec, "ztf")
-            assert isinstance(photometry, pd.DataFrame), f"Photometry object is not a DataFrame! Check {fetch_ztf_lasair}."
+            assert isinstance(photometry, pd.DataFrame), f"Photometry object is not a DataFrame! Check {fetch_target_lasair}."
