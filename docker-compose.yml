@@ -69,10 +69,10 @@ services:
         condition: service_completed_successfully
     volumes:
       - static_volume_1:/app/staticfiles
-      - media_volume_1:/app/data
+      - media_volume_1:/app/media
       - /mnt/api_results/snid_api_runs:/snid_api_runs
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
-      - /mnt/data/spectra:/app/spectra:ro
+      - /mnt/data/spectra:/data/spectra:ro
     environment:
       LOCAL_MODE: 'True'
       TIDES_TEST_DIR: '/app/spectra/test_data/'
