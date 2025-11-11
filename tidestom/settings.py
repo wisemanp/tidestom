@@ -46,6 +46,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Application definition
 
+SNID_API_URL = os.environ.get("SNID_API_URL", "http://snid_api:8000")
+NGSF_API_URL = os.environ.get("NGSF_API_URL", "http://ngsf_api:8001")
+
 TOM_NAME = 'tidestom'
 
 INSTALLED_APPS = [
