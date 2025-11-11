@@ -20,10 +20,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIR = os.environ.get('TIDES_TEST_DIR')
 USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
-DB_PASS = "tides"
-USER = "tides"
+USER = os.environ.get('DB_USER')
 DB_HOST = os.environ.get('DB_HOST')
-DB_PORT = "5432"  #os.environ.get('DB_PORT')
+DB_PORT = os.environ.get('DB_PORT')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -123,11 +122,11 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tides_db', # 'defaultdb',  # Main database
-        'USER': 'tides', #USER,
-        'PASSWORD': 'tides', # DB_PASS,
+        'NAME': 'defaultdb',  # Main database
+        'USER': USER,
+        'PASSWORD': DB_PASS,
         'HOST': DB_HOST,
-        'PORT': "5432" # DB_PORT,
+        'PORT': DB_PORT,
         
     }
 }
