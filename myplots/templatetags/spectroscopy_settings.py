@@ -1,4 +1,3 @@
-import re
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -8,12 +7,73 @@ from extinction import apply
 from astropy.time import Time
 import plotly.graph_objs as go
 
-import pysnid
-from pysnid.snid import SNIDReader
+from astropy.io import fits
+from astropy import units as u
+from specutils import Spectrum1D
+from django.conf import settings
+from custom_code.models import TidesSpec
+
 import NGSF
-#from NGSF.SF_functions import Alam
+from pysnid.snid import SNIDReader
 ngsf_path = Path(NGSF.__path__[0])
 max_df = pd.read_csv(ngsf_path / 'mjd_of_maximum_brightness.csv')
+
+def load_spectra(target, last: bool = False) -> tuple[list, list]:
+    """Loads the spectra of a TiDES target.
+    
+    Parameters
+    ----------
+    target: TiDES target object.
+    last: Whether to query only the last spectrum.
+    
+    Returns
+    -------
+    spectra: Target's spectra.
+    specs: Queries of spectra.
+    """
+    # Pick the latest spectrum for this target
+    if not last:
+        specs = (
+            TidesSpec.objects
+            .filter(tides=target)
+            .order_by('obs_date', 'qmost_id')
+        )
+        if not specs:
+            return None
+    else:
+        # single query
+        spec = (
+            TidesSpec.objects
+            .filter(tides=target)
+            .order_by('-obs_date', '-qmost_id')
+            .first()
+        )
+        if not spec:
+            return None
+        specs = [spec]
+    
+    spectra = []
+    # Resolve file path (use stored path; fallback to symlink convention if missing)
+    for spec in specs:
+        p = Path(spec.filepath)
+        if not p.exists():
+            candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
+            if candidate.exists():
+                p = candidate
+
+        if str(p).endswith('fits'):
+            data = fits.getdata(str(p))
+            wave = data['WAVE'][0] * u.Angstrom
+            flux = data['FLUX'][0] * u.Unit('erg cm-2 s-1 AA-1')
+        elif str(p).endswith('txt'):
+            data = np.loadtxt(str(p))
+            wave = data[:,0] * u.Angstrom
+            flux = data[:,1] * u.Unit('erg cm-2 s-1 AA-1')
+        else:
+            raise ValueError(f'Unsupported spectrum file format: {p}')
+        spectrum = Spectrum1D(flux=flux, spectral_axis=wave)
+        spectra.append(spectrum)
+    return  spectra, specs 
 
 def match_grid(x_pred: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Interpolates values to match a desired grip.
