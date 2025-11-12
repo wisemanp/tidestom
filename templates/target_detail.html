@@ -311,7 +311,7 @@ fetch("{% static 'json/line_data.json' %}")
 						<br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
 					{% endif %}
 				{% else %}
-					<br><strong>No Auto Classification</strong>
+					<br>No Auto Classification
 				{% endif %}
 			</p>
 
@@ -328,7 +328,7 @@ fetch("{% static 'json/line_data.json' %}")
 			</p>
 
 			<p>
-				<u><strong>All Human Classifications:</strong></u>&emsp;
+				<u><strong>All Human Classifications:</strong></u>
 				{% if human_classifications %}
 					{% for submission in human_classifications %}
 						<strong>{{ submission.user.username }}</strong> submitted
@@ -338,7 +338,7 @@ fetch("{% static 'json/line_data.json' %}")
 						on {{ submission.timestamp|date:"Y-m-d H:i" }}<br>
 					{% endfor %}
 				{% else %}
-					<i>No human classifications submitted yet.</i>
+					<br><i>No human classifications submitted yet.</i>
 				{% endif %}
 			</p>
 
