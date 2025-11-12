@@ -41,8 +41,12 @@ def tides_target_data(target):
         extras[name] = val
 
     # add Lasair links
-    ztfname = find_target_name(target.ra, target.dec, "ztf")
-    lsstname = find_target_name(target.ra, target.dec, "lsst")
+    try:
+        ztfname = find_target_name(target.ra, target.dec, "ztf")
+        lsstname = find_target_name(target.ra, target.dec, "lsst")
+    except Exception as exc:
+        print(exc)
+        return {'target': target, 'extras': extras}
     if ztfname is not None:
         ztflink = "https://lasair-ztf.lsst.ac.uk/objects/" + ztfname
     else:
