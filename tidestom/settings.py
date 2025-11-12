@@ -39,7 +39,7 @@ USE_X_FORWARD_HOST = True
 CSRF_TRUSTED_ORIGINS = [
         "http://localhost:8080",
         'http://tides.lsst.ac.uk',
-        '192.41.122.49',
+        'http://192.41.122.49',
         ]
 #Activate on HTTPS
 #SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
