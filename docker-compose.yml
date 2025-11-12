@@ -3,14 +3,14 @@ version: "3.9"
 services:
   web:
     build: .
-    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000']
+    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:9000']
     ports:
-      - "8000:8000"
-    depends_on:
-      snid_api:
-        condition: service_healthy
-      ngsf_api:
-        condition: service_started
+      - "9000:9000"
+    #depends_on:
+      #snid_api:
+      #  condition: service_healthy
+      #ngsf_api:
+      #  condition: service_started
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/data
@@ -31,8 +31,8 @@ services:
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
-      SNID_API_URL: http://snid_api:8000
-      NGSF_API_URL: http://ngsf_api:8000
+      SNID_API_URL: http://snid_api:9000
+      NGSF_API_URL: http://ngsf_api:9000
 
   nginx:
     image: nginx:1.25
@@ -53,14 +53,14 @@ services:
     build: ./snid_docker/
     #container_name: snid_api
     expose:
-      - "8000"
+      - "9000"
     environment:
-      DJANGO_URL: http://web:8000
+      DJANGO_URL: http://web:9000
     volumes:
       - snid_api_runs:/snid_api_runs
       - media_volume:/media
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
       interval: 5s
       retries: 10
       start_period: 10s
@@ -69,9 +69,9 @@ services:
   ngsf_api:
     build: ./ngsf_docker/
     expose:
-      - "8000"
+      - "9000"
     environment:
-      DJANGO_URL: http://web:8000
+      DJANGO_URL: http://web:9000
     volumes:
       - ngsf_api_runs:/ngsf_api_runs
 
