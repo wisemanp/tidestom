@@ -37,6 +37,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                     else datetime.now().strftime('%Y%m%d-%H:%M:%S')),
             marker=dict(color='darkslategray'),
             opacity=0.5,
+            #visible='legendonly',
         )
     ]
 
