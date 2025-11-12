@@ -91,7 +91,10 @@ fetch("{% static 'json/line_data.json' %}")
                 line: { color, width: 2},
                 layer: "below"
             })));
-        Plotly.relayout(getFigDiv(), { shapes: newShapes });
+        // Combine vrects (tellurics) with the new line shapes
+        const vrects = getFigDiv().layout.shapes?.filter(s => s.type === 'rect') || [];
+        const allShapes = vrects.concat(newShapes);
+        Plotly.relayout(getFigDiv(), { shapes: allShapes });
     }
 
     function updateRedshiftVelocity() {
