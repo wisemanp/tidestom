@@ -35,8 +35,8 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             y=spectrum.flux.value,
             name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
                     else datetime.now().strftime('%Y%m%d-%H:%M:%S')),
-            marker=dict(color='black'),
-            opacity=0.7,
+            marker=dict(color='darkslategray'),
+            opacity=0.5,
         )
     ]
 
@@ -61,6 +61,9 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             opacity=0.2,
             layer="below", 
             line_width=0,
+            annotation_text="⊕",
+            annotation_position="top",
+            annotation_font=dict(size=12, color="black")
         )    
 
     ### templates ###
