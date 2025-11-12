@@ -202,6 +202,7 @@ fetch("{% static 'json/line_data.json' %}")
         name: `Binned (${dlam} Å)`,
         x: res.x, y: res.y,
         mode: "lines",
+        marker: { color: 'black'},
         line: { width: 2 },
         showlegend: false,
         hovertemplate: "λ=%{x:.1f} Å<br>F (binned) = %{y}<extra></extra>"
