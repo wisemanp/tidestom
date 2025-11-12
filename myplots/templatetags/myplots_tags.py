@@ -57,9 +57,11 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     for label, (start, end) in telluric_bands.items():
         fig.add_vrect(
             x0=start, x1=end,
-            fillcolor="grey", opacity=0.2,
-            layer="below", line_width=0,
-        )
+            fillcolor="grey", 
+            opacity=0.2,
+            layer="below", 
+            line_width=0,
+        )    
 
     ### templates ###
     if snid_path is not None:
@@ -101,7 +103,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
 
     return {
         'target': target,
-        'plot': offline.plot(fig, output_type='div', show_link=False)
+        'plot': offline.plot(fig, output_type='div', show_link=False),
     }
 
 
@@ -126,7 +128,10 @@ def target_photometry(context, target, dataproduct=None):
     photometry_list = []
     for survey in ["ztf", "lsst"]:
         #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
-        phot = fetch_target_lasair(target.ra, target.dec, survey)
+        try:
+            phot = fetch_target_lasair(target.ra, target.dec, survey)
+        except Exception as exc:
+            return {'target': target, 'plot': exc}
         photometry_list.append(phot)
     photometry = pd.concat(photometry_list)
     if photometry is None:
