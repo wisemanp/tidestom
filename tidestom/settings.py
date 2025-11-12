@@ -135,7 +135,7 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'defaultdb',  # Main database
+        'NAME': DB_NAME,  # Main database
         'USER': USER,
         'PASSWORD': DB_PASS,
         'HOST': DB_HOST,
