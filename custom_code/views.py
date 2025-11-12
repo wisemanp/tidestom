@@ -38,13 +38,17 @@ class SnidFormAjaxView(FormView):
 
         try:
             response = requests.post(
-                    "http://snid_api:8000/snid_params/",
-                    json=form.cleaned_data,
-                    timeout=10
-                    )
+                "http://snid_api:8000/snid_params/",
+                json=form.cleaned_data,
+                timeout=10
+            )
+
             response.raise_for_status()
             os.remove('/snid_api_runs/target.fits')
-            return JsonResponse({"success": True, "data":response.json()})
+            return JsonResponse({"success": True, "data": response.json()})
+
+        except requests.exceptions.HTTPError as e:
+            return JsonResponse({"success": False, "error": f"HTTP error: {e}"}, status=500)
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)}, status=500)
 
