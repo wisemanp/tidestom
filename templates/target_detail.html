@@ -419,6 +419,12 @@ fetch("{% static 'json/line_data.json' %}")
         </div>
         <!-- Bin/Overplot controls -->
 
+      <!-- Download spectrum (ASCII) -->
+      <a href="{% url 'download_spectrum' target.id %}"
+         class="btn btn-sm btn-outline-secondary spectroscopy-only mb-3">
+        Download spectrum (ASCII)
+      </a>
+
       </div>
       <!-- Checkboxes -->
       <div class="checkbox-container spectroscopy-only">
