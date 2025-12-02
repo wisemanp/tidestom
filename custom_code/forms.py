@@ -67,7 +67,7 @@ USE_CHOICES=[
 ]
 
 def load_subtypes():
-    path = os.path.join(settings.MEDIA_ROOT, "snid_template_options", "subtypes.txt")
+    path = os.path.join('/snid_api_runs', "snid_template_options", "subtypes.txt")
     try:
         with open(path) as f:
             subtypes = [line.strip() for line in f if line.strip()]

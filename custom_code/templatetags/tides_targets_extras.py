@@ -2,6 +2,7 @@ from django import template
 from django.conf import settings
 from django.db.models import Count
 from custom_code.models import PipelineClassificationGlobal, HumanClassification
+from myplots.templatetags.utils import find_target_name
 
 register = template.Library()
 
@@ -39,7 +40,25 @@ def tides_target_data(target):
             val = getattr(target, name, '')
         extras[name] = val
 
-    return {'target': target, 'extras': extras}
+    # add Lasair links
+    try:
+        ztfname = find_target_name(target.ra, target.dec, "ztf")
+        lsstname = find_target_name(target.ra, target.dec, "lsst")
+    except Exception as exc:
+        print(exc)
+        return {'target': target, 'extras': extras}
+    if ztfname is not None:
+        ztflink = "https://lasair-ztf.lsst.ac.uk/objects/" + ztfname
+    else:
+        ztflink = ''
+    if lsstname is not None:
+        lsstlink = "https://lasair-lsst.lsst.ac.uk/objects/" + lsstname
+    else:
+        lsstlink = ''
+    return {'target': target, 'extras': extras, 
+            'ztfname': ztfname, 'lsstname': lsstname,
+            'ztflink': ztflink, 'lsstlink': lsstlink,
+            }
 
 @register.inclusion_tag('custom_code/partials/target_classifications.html')
 def target_classifications(target):

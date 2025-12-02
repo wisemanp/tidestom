@@ -17,11 +17,13 @@ import tempfile
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+TEST_DIR = os.environ.get('TIDES_TEST_DIR', 'spectra/test_data')
 USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
+USER = os.environ.get('DB_USER')
 DB_HOST = os.environ.get('DB_HOST')
 DB_PORT = os.environ.get('DB_PORT')
+DB_NAME = os.environ.get('DB_NAME')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -32,12 +34,22 @@ SECRET_KEY = 'u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cyf'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", '192.41.122.49', 'tides.lsst.ac.uk']
+FORCE_SCRIPT_NAME = '/marshal'
+USE_X_FORWARD_HOST = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8080"]
-
+CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8080",
+        'http://tides.lsst.ac.uk',
+        'http://192.41.122.49',
+        ]
+#Activate on HTTPS
+#SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
+
+SNID_API_URL = os.environ.get("SNID_API_URL", "http://snid_api:8000")
+NGSF_API_URL = os.environ.get("NGSF_API_URL", "http://ngsf_api:8001")
 
 TOM_NAME = 'tidestom'
 
@@ -53,6 +65,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'debug_toolbar',
     'guardian',
+    'tom_registration',
     'tom_common',
     'django_comments',
     'bootstrap4',
@@ -72,6 +85,7 @@ INSTALLED_APPS = [
     'custom_code',
     'tidestom',
     'myplots',
+    'workspaces',
 ]
 # 'bootstrap5',
 
@@ -90,6 +104,7 @@ MIDDLEWARE = [
     'tom_common.middleware.Raise403Middleware',
     'tom_common.middleware.ExternalServiceMiddleware',
     'tom_common.middleware.AuthStrategyMiddleware',
+    'tom_registration.middleware.RedirectAuthenticatedUsersFromRegisterMiddleware',
 ]
 
 ROOT_URLCONF = 'tidestom.urls'
@@ -121,12 +136,12 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'defaultdb',  # Main database
+        'NAME': 'tidestom',  # Main database
         'USER': USER,
         'PASSWORD': DB_PASS,
         'HOST': DB_HOST,
         'PORT': DB_PORT,
-        
+
     }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
@@ -168,6 +183,21 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
+
+TOM_REGISTRATION = {
+    'REGISTRATION_AUTHENTICATION_BACKEND': 'django.contrib.auth.backends.\
+            ModelBackend',
+    'REGISTRATION_REDIRECT_PATTERN': 'home',
+    'REGISTRATION_STRATEGY': 'open',  # ['open', 'approval_required']
+    'SEND_APPROVAL_EMAILS': True,
+    # Optional email if `REGISTRATION_STRATEGY = 'approval_required'`, default is False
+    'APPROVAL_SUBJECT': f'Your {TOM_NAME} registration has been approved!',
+    # Optional subject line of approval email, (Default Shown)
+    'APPROVAL_MESSAGE': f'Your {TOM_NAME} registration has been approved. \
+            You can log in <a href="mytom.com/login">here</a>.'
+            # Optional html-enabled body for approval email, (Default Shown)
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
@@ -312,7 +342,8 @@ BROKERS = {
         'bot_name': '',
     },
     'LASAIR': {
-        'api_key': os.environ.get('LASAIR_API_KEY'),
+        'ztf_api_key': os.environ.get('LASAIR_ZTF_KEY'),
+        'lsst_api_key': os.environ.get('LASAIR_LSST_KEY'),
     }
 }
 
@@ -399,3 +430,9 @@ try:
     from local_settings import * # noqa
 except ImportError:
     pass
+
+USER_OUTPUT_BASES = {
+        'snid_api': '/snid_api_runs/workspaces',
+        'ngsf_api': '/ngsf_api_runs/workspaces',
+        }
+USER_HASH_SALT = 'my_special_salt' #Update for deployment

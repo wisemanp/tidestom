@@ -1,147 +1,87 @@
 import warnings
-import requests
 import numpy as np
 import pandas as pd
 from astropy.time import Time
 import plotly.graph_objects as go
 
+from .utils import find_target_name, is_site_up
 from lasair import lasair_client
 from tidestom.settings import BROKERS
-lasair_token = BROKERS['LASAIR']['api_key']
-lasair_api_url = "https://lasair-ztf.lsst.ac.uk/api"
+lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
+lasair_ztf_url = "https://lasair-ztf.lsst.ac.uk"
+lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
+lasair_lsst_url = "https://lasair-lsst.lsst.ac.uk"
 
 ##########
 # Lasair #
 ##########
-def is_site_up(url: str) -> bool:
-    """Checks if a website is running.
-
-    Parameters
-    ----------
-    url: website to check.
-    
-    Returns:
-    --------
-    bool: whether is up (True) or down (False)
+def fetch_target_lasair(ra: float, dec: float, survey: str = None) -> pd.DataFrame:
     """
-    try:
-        response = requests.get(url, timeout=5)
-        content = response.text.lower()
-
-        # Look for maintenance / offline messages
-        downtime_keywords = ["offline", "down", "maintenance", "not available"]
-
-        if response.status_code == 200:
-            if any(word in content for word in downtime_keywords):
-                print(f"{url} is DOWN ❌ (Maintenance page detected)")
-                return False
-            else:
-                print(f"{url} is UP ✅ (Status: {response.status_code})")
-                return True
-        else:
-            print(f"{url} is reachable but returned status {response.status_code} ⚠️")
-            return False
-
-    except requests.ConnectionError:
-        print(f"{url} is DOWN ❌ (Connection error)")
-        return False
-    except requests.Timeout:
-        print(f"{url} is DOWN ❌ (Timeout)")
-        return False
-    except requests.RequestException as e:
-        print(f"{url} is DOWN ❌ (Error: {e})")
-        return False
-    
-def find_ztfname_lasair(ra: float, dec: float) -> str | None:
-    """Finds the nearest ZTF target from the given coordinates.
-
-    The objects are queried from Lasair.
-
-    Parameters
-    ----------
-    ra: right ascension in degrees.
-    dec: declination in degrees.
-
-    Returns
-    -------
-    ztfname: ZTF internal name or 'None' if not found.
-    """
-    # query objects
-    if not is_site_up("https://lasair-ztf.lsst.ac.uk/"):
-        return None
-    lasair = lasair_client(lasair_token, endpoint = lasair_api_url)
-    objects_list = lasair.cone(ra, dec)
-    if len(objects_list) == 0:
-        return None
-    # get the object with the minimum separation
-    separations = [obj_dict['separation'] for obj_dict in objects_list]
-    id_target = np.argmin(separations)
-    ztfname = objects_list[id_target]['object']
-    return ztfname
-    
-def fetch_ztf_lasair(ra: float, dec: float, name: str=None) -> pd.DataFrame:
-    """
-    Fetches the ZTF light curve of a target from the Lasair broker.
+    Fetches the light curve of a target from the Lasair broker.
     
     Parameters
     ----------
-    ra: right ascension in degrees.
-    dec: declination in degrees.
+    ra: Right ascension in degrees.
+    dec: Declination in degrees.
+    survey: Either "ztf" or "lsst".
     
     Returns
     -------
-    ztf_df: ZTF light curve.
+    phot_df: Light curve photometry.
     """
-    # get name of target
-    if name is None:
-        ztfname = find_ztfname_lasair(ra, dec)
-    elif name.startswith("ZTF"):
-        ztfname = find_ztfname_lasair(ra, dec)
+    assert survey in ["ztf", "lsst"], "Not a valid survey - either ztf or lsst"
+    if survey == "ztf":
+        url, token = lasair_ztf_url, lasair_ztf_token
+        filter_dict = {1: 'ztf_g', 2: 'ztf_r', 3: 'ztf_i'}
     else:
-        ztfname = name
-    if ztfname is None:
+        url, token = lasair_lsst_url, lasair_lsst_token
+        filter_dict = {1: 'lsst_u', 2: 'lsst_g', 3: 'lsst_r',
+                       4: 'lsst_i', 5: 'lsst_z', 6: 'lsst_y',
+                       }
+    # get name of target
+    target_name = find_target_name(ra, dec, survey)
+    if target_name is None:
         return None
         
     # query photometry from Lasair
-    if not is_site_up("https://lasair-ztf.lsst.ac.uk/"):
+    if not is_site_up(url):
         return None
-    lasair = lasair_client(lasair_token, endpoint = lasair_api_url)
-    target_info = lasair.lightcurves([ztfname])
+    lasair = lasair_client(token, endpoint = url + "/api")
+    target_info = lasair.lightcurves([target_name])
     phot_list = target_info[0]['candidates']
     det_list = []  # detections
-    nondet_list = []  #non-detections
+    nondet_list = []  # non-detections
     # convert to dataframe
     for phot_dict in phot_list:
         # convert values into list to convert to dataframe
         phot_dict = {key:[value] for key, value in phot_dict.items()}
-        phot_df = pd.DataFrame(phot_dict)
+        df = pd.DataFrame(phot_dict)
         if 'magpsf' in phot_dict.keys():
-            det_list.append(phot_df)
+            det_list.append(df)
         else:
-            nondet_list.append(phot_df)
+            nondet_list.append(df)
     with warnings.catch_warnings():
         # ignore annoying pandas future warning
         warnings.simplefilter("ignore")
         det_df = pd.concat(det_list)
         nondet_df = pd.concat(nondet_list)
-    ztf_df = pd.concat([det_df, nondet_df])  # for non detection use diffmaglim
-    jds = Time(ztf_df['jd'].values, format='jd')
-    ztf_df['mjd'] = jds.mjd
+    phot_df = pd.concat([det_df, nondet_df])  # for non detection use diffmaglim
+    jds = Time(phot_df['jd'].values, format='jd')
+    phot_df['mjd'] = jds.mjd
     
     # rename columns
-    ztf_df.rename(columns={'fid':'filter', 
+    phot_df.rename(columns={'fid':'filter', 
                            'magpsf':'mag', 
                            'sigmapsf':'mag_err',
                            'diffmaglim':'upper_mag'
                           }, 
                   inplace=True)
     # Replace photometric filter numbers with human-readable names
-    filter_dict = {1: 'ztf_g', 2: 'ztf_r', 3: 'ztf_i'}
-    ztf_df['filter'] = [filter_dict[fid] for fid in ztf_df['filter']]
+    phot_df['filter'] = [filter_dict[fid] for fid in phot_df['filter']]
     # Sort the table on filter and time:
-    ztf_df.sort_values(['filter', 'mjd'], inplace=True)
-    ztf_df = ztf_df[['filter', 'mjd', 'mag', 'mag_err', 'upper_mag']]
-    return ztf_df
+    phot_df.sort_values(['filter', 'mjd'], inplace=True)
+    phot_df = phot_df[['filter', 'mjd', 'mag', 'mag_err', 'upper_mag']]
+    return phot_df
 
 ############
 # Plotting #
@@ -298,6 +238,8 @@ def plot_lightcurves(photometry: pd.DataFrame) -> go.Figure:
     fig: plot figure.
     """
     colour_dict = {"ztf_g":"green", "ztf_r":"red", "ztf_i":"gold",
+                   "lsst_u":"purple", "lsst_g":"green", "lsst_r":"red", 
+                   "lsst_i":"gold", "lsst_z":"black", "lsst_y":"brown",
                    "gaia_G":"purple",
                    "atlas_c":"cyan", "atlas_o":"orange",
                    "neowise_W1":"navy", "neowise_W2":"darkred", 
@@ -373,11 +315,7 @@ def plot_lightcurves(photometry: pd.DataFrame) -> go.Figure:
             trace.visible = False
         else:
             trace.visible = True
-            
-    # discovery date
-    #fig.add_vline(obj.discovery_time_mjd, line_width=2, line_dash="solid", line_color="black", 
-    #                  annotation_text="disc.", annotation_position="bottom left")
-        
+               
     # Define buttons for toggling between magnitude and flux
     buttons = create_toggling_buttons(fig)
     
