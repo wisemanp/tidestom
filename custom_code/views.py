@@ -1,12 +1,20 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic.edit import FormView
+from django.views import View
 from django.conf import settings
+from datetime import datetime
 import requests
 import shutil
 import os
+import json
+import logging
+from workspaces import utils
 from pathlib import Path
 from custom_code.models import TidesSpec
+from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
+
+logger = logging.getLogger(__name__)
 
 class SnidFormAjaxView(FormView):
     form_class = SnidParamsForm
@@ -33,8 +41,29 @@ class SnidFormAjaxView(FormView):
             if candidate.exists():
                 p = candidate
 
-        shutil.copy2(str(p), '/snid_api_runs/target.fits')
-        form.cleaned_data["spectrum"] = '/snid_api_runs/target.fits'
+        temp_file_path = '/snid_api_runs/target.fits'
+        shutil.copy2(str(p), temp_file_path)
+        form.cleaned_data["spectrum"] = temp_file_path
+
+        workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
+                self.request.user,
+                api_name='snid_api',
+                )
+        if not self.request.user.has_perm('workspaces.view_userworkspace',
+                                          workspace_obj):
+            logger.warning(f"Permission denied for user {self.request.user.id} on \
+                    workspace {workspace_obj.id}")
+            return HttpResponseForbidden("You do not have permission to access this\
+                    workspace.")
+
+        target_name = str(spectrum_id)
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
+
+        run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        os.chown(run_dir, 1000, 1000)
+
+        form.cleaned_data['output_dir'] = str(run_dir)
 
         try:
             response = requests.post(
@@ -44,13 +73,52 @@ class SnidFormAjaxView(FormView):
             )
 
             response.raise_for_status()
-            os.remove('/snid_api_runs/target.fits')
-            return JsonResponse({"success": True, "data": response.json()})
+
+            metadata_path = run_dir / "metadata.json"
+            metadata = {
+                    "user": self.request.user.username,
+                    "target": target_name,
+                    "timestamp": timestamp,
+                    "params": form.cleaned_data,
+                }
+            with open(metadata_path, "w") as f:
+                json.dump(metadata, f, indent=2)
+
 
         except requests.exceptions.HTTPError as e:
-            return JsonResponse({"success": False, "error": f"HTTP error: {e}"}, status=500)
+            return JsonResponse({"success": False, "error": f"HTTP error: {e}"},
+                                status=500)
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)}, status=500)
+        finally:
+            try:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
+
+        return JsonResponse({"success": True, "data": response.json()})
+
+class PreviousSNIDRunsView(View):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Not Authenticated"}, status=403)
+
+        target_id = request.GET.get("target_id")
+        if not target_id:
+            return JsonResponse({"error": "target_id missing"}, status=400)
+
+        try:
+            workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
+                    request.user, api_name='snid_api'
+                    )
+
+            results = utils.list_existing_results(workspace_path, target_id)
+            return JsonResponse({"results": results, "count": len(results)}, safe=False)
+        except Exception as e:
+            logger.exception(f"Failed to list previous SNID Runs for target \
+                    {target_id}: {e}")
+            JsonResponse({"error": str(e)}, status=500)
 
 class NGSFFormAJAXView(FormView):
     form_class = NGSFParamsForm
@@ -77,18 +145,42 @@ class NGSFFormAJAXView(FormView):
             if candidate.exists():
                 p = candidate
 
-        shutil.copy2(str(p), '/ngsf_api_runs/target.fits')
-        form.cleaned_data['spectrum'] = '/ngsf_api_runs/target.fits'
+        temp_file_path = 'ngsf_api_runs/target.fits'
+        shutil.copy2(str(p), temp_file_path)
+        form.cleaned_data['spectrum'] = temp_file_path
+
+        workspace_obj, workspace_path = UserWorkspace.get_or_create_for_user(
+                self.request.user,
+                api_name='ngsf_api',
+                )
+        if not self.request.user.has_perm('workspaces.view_userworkspace',
+                                          workspace_obj):
+            logger.warning(f"Permission denied for user {self.request.user.id} on \
+                    workspace {workspace_obj.id}")
+            return HttpResponseForbidden("You do not have permission to access this\
+                    workspace.")
+
+        form.cleaned_data['output_dir'] = workspace_path
 
         try:
             response = requests.post(
                     "http://ngsf_api:8000/ngsf_params/",
                     json=form.cleaned_data,
                     timeout=60
-                    )
+                )
+
             response.raise_for_status()
-            os.remove('/ngsf_api_runs/target.fits')
-            return JsonResponse({"success": True, "data": response.json()})
+            #os.remove('/ngsf_api_runs/target.fits')
+
+            #return JsonResponse({"success": True, "data": response.json()})
         except Exception as e:
             return JsonResponse({"sucess": False, "errors": str(e)}, status=500)
+        finally:
+            try:
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
+
+        return JsonResponse({"success": True, "data": response.json()})
 
