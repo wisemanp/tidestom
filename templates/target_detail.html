@@ -91,7 +91,10 @@ fetch("{% static 'json/line_data.json' %}")
                 line: { color, width: 2},
                 layer: "below"
             })));
-        Plotly.relayout(getFigDiv(), { shapes: newShapes });
+        // Combine vrects (tellurics) with the new line shapes
+        const vrects = getFigDiv().layout.shapes?.filter(s => s.type === 'rect') || [];
+        const allShapes = vrects.concat(newShapes);
+        Plotly.relayout(getFigDiv(), { shapes: allShapes });
     }
 
     function updateRedshiftVelocity() {
@@ -199,6 +202,7 @@ fetch("{% static 'json/line_data.json' %}")
         name: `Binned (${dlam} Å)`,
         x: res.x, y: res.y,
         mode: "lines",
+        marker: { color: 'black'},
         line: { width: 2 },
         showlegend: false,
         hovertemplate: "λ=%{x:.1f} Å<br>F (binned) = %{y}<extra></extra>"
@@ -293,8 +297,8 @@ fetch("{% static 'json/line_data.json' %}")
 			{% target_unknown_statuses object %}
 			{% target_buttons object %}
 			{% tides_target_data object %}
-
-			<h3>Classifications</h3>
+      
+      <h3>Classifications</h3>
 
 			<p>
 				<u><strong>Auto Classification</strong></u>&emsp;
@@ -307,7 +311,7 @@ fetch("{% static 'json/line_data.json' %}")
 						<br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
 					{% endif %}
 				{% else %}
-					<br><strong>No Auto Classification</strong>
+					<br>No Auto Classification
 				{% endif %}
 			</p>
 
@@ -324,7 +328,7 @@ fetch("{% static 'json/line_data.json' %}")
 			</p>
 
 			<p>
-				<u><strong>All Human Classifications:</strong></u>&emsp;
+				<u><strong>All Human Classifications:</strong></u>
 				{% if human_classifications %}
 					{% for submission in human_classifications %}
 						<strong>{{ submission.user.username }}</strong> submitted
@@ -334,13 +338,13 @@ fetch("{% static 'json/line_data.json' %}")
 						on {{ submission.timestamp|date:"Y-m-d H:i" }}<br>
 					{% endfor %}
 				{% else %}
-					<i>No human classifications submitted yet.</i>
+					<br><i>No human classifications submitted yet.</i>
 				{% endif %}
 			</p>
 
 			{% classification_form target.id %}
-			{% recent_photometry object limit=3 %}
-			{# {% recent_photometry object num_points=3 %} #}
+			<!--{% recent_photometry object limit=3 %}
+			{# {% recent_photometry object num_points=3 %} #}-->
 
 		</div>
 	</div>
@@ -360,12 +364,12 @@ fetch("{% static 'json/line_data.json' %}")
       <li class="nav-item">
         <a class="nav-link" id="observations-tab" href="#observations" role="tab" data-toggle="tab">Observations</a>
       </li>
-      <li class="nav-item">
+      <!--<li class="nav-item">
         <a class="nav-link" id="manage-data-tab" href="#manage-data" role="tab" data-toggle="tab">Manage Data</a>
       </li>
       <li class="nav-item">
         <a class="nav-link" id="manage-groups-tab" href="#manage-groups" role="tab" data-toggle="tab">Manage Groups</a>
-      </li>
+      </li>-->
     </ul>
     <div class="tab-content">
       <div class="tab-pane" id="observe">
@@ -412,7 +416,7 @@ fetch("{% static 'json/line_data.json' %}")
 	  <div>
         <!-- Bin/Overplot controls -->
         <div class="d-flex align-items-center gap-2 mb-4 spectroscopy-only">
-          <input class="form-check-input" type="checkbox" id="toggle-binned">
+          <input class="form-check-input" type="checkbox" id="toggle-binned" checked>
           <label class="form-check-label me-3" for="toggle-binned">Binned (Å): </label>
             <label for="bin-size"></label><input id="bin-size" class="form-control form-control-sm me-2" style="width:4rem"
                                                  type="number" min="5" step="10" value="15">
@@ -440,7 +444,7 @@ fetch("{% static 'json/line_data.json' %}")
 
     </div>
       
-      {% comments_enabled as comments_are_enabled %}
+      <!--{% comments_enabled as comments_are_enabled %}
       <hr/>
       <h5>Comments</h5>
         {% if comments_are_enabled %}
@@ -449,7 +453,7 @@ fetch("{% static 'json/line_data.json' %}")
           {% if user.is_authenticated %}
             {% render_comment_form for object %}
           {% endif %}
-        {% endif %}
+        {% endif %}-->
     </div>
   </div>
   <div class="col-md-1">
