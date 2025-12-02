@@ -1,22 +1,16 @@
 import warnings
-import numpy as np
+import pandas as pd
 from plotly import offline
 import plotly.graph_objs as go
 from datetime import datetime
 from astropy.time import Time
 from django import template
-from django.conf import settings
 
-from pathlib import Path
-from astropy.io import fits
-from astropy import units as u
-from specutils import Spectrum1D
-
-from custom_code.models import TidesSpec
+from .spectroscopy_settings import add_snid_templates, add_ngsf_templates, load_spectra
+from .photometry_settings import plot_lightcurves, fetch_target_lasair
 from tidestom.settings import BROKERS
-lasair_token = BROKERS['LASAIR']['api_key']
-from .spectroscopy_settings import add_snid_templates, add_ngsf_templates
-from .photometry_settings import plot_lightcurves, fetch_ztf_lasair
+lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
+lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
 
 register = template.Library()
 
@@ -26,59 +20,56 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     Render a spectroscopic plot for a Target.
     Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
     """
-    # Pick the latest spectrum for this target
-    spec = (
-        TidesSpec.objects
-        .filter(tides=target)
-        .order_by('-obs_date', '-qmost_id')
-        .first()
-    )
-    if not spec:
-        return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
-    #else:
-    #	return {'target': target, 'plot': f'<p> spectrum available for this target:{target}.</p>'}
-
-    # Resolve file path (use stored path; fallback to symlink convention if missing)
-    p = Path(spec.filepath)
-    if not p.exists():
-        candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
-        if candidate.exists():
-            p = candidate
-
     try:
-
-        if str(p).endswith('fits'):
-            data = fits.getdata(str(p))
-            wave = data['WAVE'][0] * u.Angstrom
-            flux = data['FLUX'][0] * u.Unit('erg cm-2 s-1 AA-1')
-        elif str(p).endswith('txt'):
-            data = np.loadtxt(str(p))
-            wave = data[:,0] * u.Angstrom
-            flux = data[:,1] * u.Unit('erg cm-2 s-1 AA-1')
-        else:
-            raise ValueError(f'Unsupported spectrum file format: {p}')
-        spectrum = Spectrum1D(flux=flux, spectral_axis=wave)
-
-        plot_data = [
-            go.Scatter(
-                x=spectrum.spectral_axis.value,
-                y=spectrum.flux.value,
-                name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
-                      else datetime.now().strftime('%Y%m%d-%H:%M:%S'))
-            )
-        ]
-    except Exception as e:
-        return {'target': target, 'plot': f'<p>Failed to load spectrum: {e}</p>'}
+        # last spectrum only
+        spectra, specs = load_spectra(target, last=True)
+    except Exception as exc:
+        return {'target': target, 'plot': f'<p>Failed to load spectrum: {exc}</p>'}
+    if not specs:
+        return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
+    spectrum, spec = spectra[0], specs[0]
+    
+    plot_data = [
+        go.Scatter(
+            x=spectrum.spectral_axis.value,
+            y=spectrum.flux.value,
+            name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
+                    else datetime.now().strftime('%Y%m%d-%H:%M:%S')),
+            marker=dict(color='darkslategray'),
+            opacity=0.5,
+            #visible='legendonly',
+        )
+    ]
 
     fig = go.Figure(data=plot_data)
+    
+    ### tellurics ###
+    # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
+    # Wallace et al. 1996 “An Atlas of the Spectrum of the Solar Photosphere from 296 to 1300 nm”
+    telluric_bands = {
+        #'O2 B-band': (6867, 6884),
+        #'O2 gamma-band': (6280, 6310),
+        'O2 A-band': (7590, 7700),
+        'H2O band1': (7150, 7350),
+        'H2O band2': (8100, 8400),
+        #'H2O band3': (8900, 9800)
+    }
+    # add shaded regions for each telluric band
+    for label, (start, end) in telluric_bands.items():
+        fig.add_vrect(
+            x0=start, x1=end,
+            fillcolor="grey", 
+            opacity=0.2,
+            layer="below", 
+            line_width=0,
+            annotation_text="⊕",
+            annotation_position="top",
+            annotation_font=dict(size=12, color="black")
+        )    
 
-    # add templates - best matches
-    # SNID - mock templates for now
-    data_mean = np.mean(spectrum.flux.value)
-
+    ### templates ###
     if snid_path is not None:
         try:
-            #pysnid_file = '/home/tomas/Softwares/tests/pysnid/l1_obs_joined_87178841_snid.h5'
             pysnid_file = snid_path
             fig = add_snid_templates(pysnid_file,
                              spectrum.spectral_axis.value,
@@ -86,24 +77,23 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                              fig,
                              n=3
                              )
-        except:
+        except Exception as exc:
+            print(exc)
             pass
 
-
-    # NGSF - mock templates for now
     if ngsf_path is not None:
         try:
-            #ngsf_file = '/home/tomas/Softwares/tests/ngsf/l1_obs_joined_87178841.csv'
             ngsf_file = ngsf_path
             fig = add_ngsf_templates(ngsf_file,
-                             deserialized.wavelength.value,
-                             deserialized.flux.value,
+                             spectrum.spectral_axis.value,
+                             spectrum.flux.value,
                              fig,
                              n=3
                              )
-        except:
-            #TODO add better handling
+        except Exception as exc:
+            print(exc)
             pass
+        
     fig.update_layout(autosize=True,
                       xaxis_title='Observed Wavelength (Å)',
                       yaxis_title='Flux (erg/s/cm²/Å)',
@@ -111,12 +101,13 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                       yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       legend_title="Best Templates",
                       showlegend=True,
+                      font_family="P052",
+                      font_size=16,
                       )
-
 
     return {
         'target': target,
-        'plot': offline.plot(fig, output_type='div', show_link=False)
+        'plot': offline.plot(fig, output_type='div', show_link=False),
     }
 
 
@@ -131,12 +122,22 @@ def target_photometry(context, target, dataproduct=None):
     that photometry.
     """
     # check if the Lasair's API key is set
-    if lasair_token is None or lasair_token == "":
-        warnings.warn("Warning: Lasair API key not set!", UserWarning)
+    if lasair_ztf_token is None or lasair_ztf_token == "":
+        warnings.warn("Warning: Lasair API key for ZTF not set!", UserWarning)
+        return {'target': target}
+    if lasair_lsst_token is None or lasair_lsst_token == "":
+        warnings.warn("Warning: Lasair API key for LSST not set!", UserWarning)
         return {'target': target}
 
-    photometry = fetch_ztf_lasair(49.1384664, 44.9725084)  # ZTF25aacedrs for testing
-    #photometry = fetch_ztf_lasair(target.ra, target.dec)
+    photometry_list = []
+    for survey in ["ztf", "lsst"]:
+        #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
+        try:
+            phot = fetch_target_lasair(target.ra, target.dec, survey)
+        except Exception as exc:
+            return {'target': target, 'plot': exc}
+        photometry_list.append(phot)
+    photometry = pd.concat(photometry_list)
     if photometry is None:
         return {'target': target}
 
@@ -145,17 +146,14 @@ def target_photometry(context, target, dataproduct=None):
 
     # add epochs with spectra
     try:
-        spectroscopy_data_type = settings.DATA_PRODUCT_TYPES['spectroscopy'][0]
-    except (AttributeError, KeyError):
-        spectroscopy_data_type = 'spectroscopy'
-    spectral_dataproducts = DataProduct.objects.filter(target=target,
-                                                       data_product_type=spectroscopy_data_type)
-    datums = ReducedDatum.objects.filter(data_product__in=spectral_dataproducts)
-    for datum in datums:
-        mjd = Time(datum.timestamp, scale="utc").mjd
-        fig.add_vline(mjd, line_width=2, line_dash="dot", line_color="black",
-                            annotation_text="s", annotation_position="top left")
-
+        _, specs = load_spectra(target)
+        for spec in specs:
+            mjd = Time(spec.obs_date, scale="utc").mjd
+            fig.add_vline(mjd, line_width=2, line_dash="dot", line_color="black",
+                                annotation_text="s", annotation_position="top left")
+    except Exception as exc:
+        print(exc)
+        
     return {
         'target': target,
         'plot': offline.plot(fig, output_type='div', show_link=False)

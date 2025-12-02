@@ -20,6 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIR = os.environ.get('TIDES_TEST_DIR', 'spectra/test_data')
 USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
+USER = os.environ.get('DB_USER')
 DB_HOST = os.environ.get('DB_HOST')
 DB_PORT = os.environ.get('DB_PORT')
 
@@ -330,7 +331,8 @@ BROKERS = {
         'bot_name': '',
     },
     'LASAIR': {
-        'api_key': os.environ.get('LASAIR_API_KEY'),
+        'ztf_api_key': os.environ.get('LASAIR_ZTF_KEY'),
+        'lsst_api_key': os.environ.get('LASAIR_LSST_KEY'),
     }
 }
 
