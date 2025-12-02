@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-if [[ -v LOCAL_MODE ]]; then
+if [[ ! -v LOCAL_MODE ]]; then
 	echo "Waiting for API config file..."
 	while [ ! -f /snid_api_runs/snid_template_options/subtypes.txt ]; do
 		sleep 1
