@@ -23,6 +23,7 @@ DB_PASS = os.environ.get('DB_PASS')
 USER = os.environ.get('DB_USER')
 DB_HOST = os.environ.get('DB_HOST')
 DB_PORT = os.environ.get('DB_PORT')
+DB_NAME = os.environ.get('DB_NAME')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -33,12 +34,22 @@ SECRET_KEY = 'u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cyf'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", '192.41.122.49', 'tides.lsst.ac.uk']
+FORCE_SCRIPT_NAME = '/marshal'
+USE_X_FORWARD_HOST = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8080"]
-
+CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8080",
+        'http://tides.lsst.ac.uk',
+        'http://192.41.122.49',
+        ]
+#Activate on HTTPS
+#SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
+
+SNID_API_URL = os.environ.get("SNID_API_URL", "http://snid_api:8000")
+NGSF_API_URL = os.environ.get("NGSF_API_URL", "http://ngsf_api:8001")
 
 TOM_NAME = 'tidestom'
 
@@ -125,7 +136,7 @@ WSGI_APPLICATION = 'tidestom.wsgi.application'
 DATABASES = {
     'default':{
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'defaultdb',  # Main database
+        'NAME': 'tidestom',  # Main database
         'USER': USER,
         'PASSWORD': DB_PASS,
         'HOST': DB_HOST,

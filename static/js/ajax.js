@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const targetId = container.dataset.targetId;
 
             htmx.ajax('GET',
-              `/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
+              `/marshal/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
               { target: '#spectroscopy' }
             );
           }

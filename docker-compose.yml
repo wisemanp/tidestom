@@ -1,101 +1,128 @@
 version: "3.9"
 
 services:
+  init-gatekeeper:
+    image: busybox:latest
+    command: >
+      sh -c "
+        echo 'Checking and creating API workspace directories' &&
+        for dir in /snid_api_runs/workspaces; do
+          mkdir -pv $dir &&
+          chown -R 1000:1000 $dir &&
+          chmod -R 770 $dir
+        done &&
+        echo 'Checking other directories' &&
+        #mkdir -pv /ngsf_api_runs/workspaces &&
+        #mkdir -pv /spectra_volume/test_data/sims &&
+        mkdir -pv /static/plots &&
+        echo 'Copying test data if available' &&
+        cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true &&
+        cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true &&
+        echo 'Directories Ready' &&
+
+        sleep 10 &&
+
+        echo 'Waiting for dependent APIs to become healthy...' &&
+        for url in $API_1_HEALTH $API_2_HEALTH; do
+          attempt=1
+          until wget -qO- --timeout=2 --tries=1 $url >/dev/null 2>&1; do
+            if [ $attempt -ge 10 ]; then
+              echo 'ERROR; $url did not become healthy.' >&2
+              exit 1
+            fi
+            echo 'Attempt' $attempt 'failed for' $url '-retrying in 5s'
+            attempt=$((attempt+1))
+            sleep 5
+          done
+          echo '$url is healthy.'
+        done &&
+        echo 'All dependencies healthy — init complete.'
+      "
+
+    environment:
+      - API_1_HEALTH='http:192.168.10.117:8000/health'
+      - API_2_HEALTH='http:192.168.10.117:8001/health'
+    volumes:
+      - /mnt/api_results/snid_api_runs:/snid_api_runs
+      - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
+      - media_volume_1:/media
+      #- spectra_volume:/spectra_volume
+      #- deliveries_volume:/deliveries
+      - static_volume_1:/static
+      #- ../test_data/sims:/test_data_src:ro #only for testing
+      #- ../test_data/plots:/test_plots_src:ro #only for testing
+    healthcheck:
+      test: ["CMD-SHELL", "[ -d /static/plots ] && [ -d /spectra_volume/test_data ]"]
+      interval: 10s
+      retries: 3
+      start_period: 5s
+    restart: "no"
+
   web:
     build: .
-    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent','--log-level', 'debug', '--capture-output', '--enable-stdio-inheritance']
-    cpus: 4
+    #command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent','--log-level', 'debug', '--capture-output', '--enable-stdio-inheritance']
+    cpus: 2
     ports:
       - "8000:8000"
     depends_on:
-      snid_api:
-        condition: service_healthy
-      ngsf_api:
-        condition: service_healthy
-      volume-init:
+      init-gatekeeper:
         condition: service_completed_successfully
     volumes:
       - static_volume_1:/app/staticfiles
-      - media_volume_1:/app/data
-      - snid_api_runs_1:/snid_api_runs
-      - ngsf_api_runs_1:/ngsf_api_runs
-      - spectra_volume:/app/spectra
+      - media_volume_1:/app/media
+      - /mnt/api_results/snid_api_runs:/snid_api_runs
+      - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
+      - /mnt/data/spectra:/data/spectra:ro
     environment:
-      LOCAL_MODE: 'True'
       TIDES_TEST_DIR: '/app/spectra/test_data/'
       DB_PASS: ${DB_PASS}
-      DATABASE_URL: ${DATABASE_URL}
+      #DATABASE_URL: ${DATABASE_URL}
       PGHOST: ${DB_HOST}
       PGUSER: ${DB_USER}
       PGPASSWORD: ${DB_PASS}
       PGPORT: ${DB_PORT}
-      PGDATABSE: defaultdb
-      PGSSLMODE: require
+      PGDATABSE: ${DB_NAME}
+      #PGSSLMODE: require
 
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
-      SNID_API_URL: http://snid_api:8000
-      NGSF_API_URL: http://ngsf_api:8000
-    networks:
-      - backend
+      SNID_API_URL: http://192.168.10.117:8000
+      NGSF_API_URL: http://192.168.10.117:8001
 
-  nginx:
-    image: nginx:1.25
-    cpus: 1
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_volume_1:/static
-      - media_volume_1:/media
-      - snid_api_runs_1:/snid_api_runs
-      - ngsf_api_runs_1:/ngsf_api_runs
-      - spectra_volume:/spectra
-    ports:
-      - "8080:80"
-    depends_on:
-      - web
-      - snid_api
-      - ngsf_api
-    networks:
-      - backend
+    healthcheck:
+      test: ["CMD-SHELL",
+      "wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8000/health >/dev/null 2>&1 && \
+       wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8001/health >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
+    #networks:
+    #  - backend
 
-#  snid_api:
-#    build: ./snid_docker/
-#    cpus: 4
-#    expose:
-#      - "8000"
-#    environment:
-#      DJANGO_URL: http://web:8000
+#  nginx:
+#    image: nginx:1.25
+#    cpus: 1
 #    volumes:
-#      - snid_api_runs:/snid_api_runs
-#      - media_volume:/media
-#    healthcheck:
-#      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-#      interval: 5s
-#      retries: 10
-#      start_period: 10s
-#      timeout: 2s
+#      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+#      - static_volume_1:/static
+#      - media_volume_1:/media
+#      - snid_api_runs_1:/snid_api_runs
+#      - ngsf_api_runs_1:/ngsf_api_runs
+#      - spectra_volume:/spectra
+#    ports:
+#      - "8080:80"
+#    depends_on:
+#      - web
+#      - snid_api
+#      - ngsf_api
+#    networks:
+#      - backend
 
-#  ngsf_api:
-#    build: ./ngsf_docker/
-#    cpus: 4
-#    expose:
-#      - "8000"
-#    environment:
-#      DJANGO_URL: http://web:8000
-#    volumes:
-#      - ngsf_api_runs:/ngsf_api_runs
-#    healthcheck:
-#      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-#      interval: 5s
-#      retries: 10
-#      start_period: 10s
-#      timeout: 2s
-
-volumes: {}
-  #static_volume_1:
-  #media_volume:
-  #  external: true
+volumes:
+  static_volume_1:
+  media_volume_1:
   #snid_api_runs:
   #  external: true
   #ngsf_api_runs:

@@ -67,7 +67,7 @@ class SnidFormAjaxView(FormView):
 
         try:
             response = requests.post(
-                "http://snid_api:8000/snid_params/",
+                f"{settings.SNID_API_URL}/snid_params/",
                 json=form.cleaned_data,
                 timeout=10
             )
