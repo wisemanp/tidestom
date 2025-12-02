@@ -12,14 +12,17 @@ services:
         condition: service_healthy
       ngsf_api:
         condition: service_healthy
+      volume-init:
+        condition: service_completed_successfully
     volumes:
       - static_volume_1:/app/staticfiles
       - media_volume_1:/app/data
       - snid_api_runs_1:/snid_api_runs
       - ngsf_api_runs_1:/ngsf_api_runs
+      - spectra_volume:/app/spectra
     environment:
       LOCAL_MODE: 'True'
-      TIDES_TEST_DIR: 'test_data/'
+      TIDES_TEST_DIR: '/app/spectra/test_data/'
       DB_PASS: ${DB_PASS}
       DATABASE_URL: ${DATABASE_URL}
       PGHOST: ${DB_HOST}
@@ -46,6 +49,7 @@ services:
       - media_volume_1:/media
       - snid_api_runs_1:/snid_api_runs
       - ngsf_api_runs_1:/ngsf_api_runs
+      - spectra_volume:/spectra
     ports:
       - "8080:80"
     depends_on:
@@ -88,8 +92,8 @@ services:
 #      start_period: 10s
 #      timeout: 2s
 
-volumes:
-  static_volume_1:
+volumes: {}
+  #static_volume_1:
   #media_volume:
   #  external: true
   #snid_api_runs:

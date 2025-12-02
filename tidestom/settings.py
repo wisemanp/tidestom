@@ -17,7 +17,7 @@ import tempfile
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEST_DIR = os.environ.get('TIDES_TEST_DIR')
+TEST_DIR = os.environ.get('TIDES_TEST_DIR', 'spectra/test_data')
 USER = os.environ.get('DB_USER')
 DB_PASS = os.environ.get('DB_PASS')
 USER = os.environ.get('DB_USER')
@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'debug_toolbar',
     'guardian',
+    'tom_registration',
     'tom_common',
     'django_comments',
     'bootstrap4',
@@ -73,6 +74,7 @@ INSTALLED_APPS = [
     'custom_code',
     'tidestom',
     'myplots',
+    'workspaces',
 ]
 # 'bootstrap5',
 
@@ -91,6 +93,7 @@ MIDDLEWARE = [
     'tom_common.middleware.Raise403Middleware',
     'tom_common.middleware.ExternalServiceMiddleware',
     'tom_common.middleware.AuthStrategyMiddleware',
+    'tom_registration.middleware.RedirectAuthenticatedUsersFromRegisterMiddleware',
 ]
 
 ROOT_URLCONF = 'tidestom.urls'
@@ -127,7 +130,7 @@ DATABASES = {
         'PASSWORD': DB_PASS,
         'HOST': DB_HOST,
         'PORT': DB_PORT,
-        
+
     }
 }
 #DATABASE_ROUTERS = ['custom_code.db_router.TidesDatabaseRouter']
@@ -169,6 +172,21 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
+
+TOM_REGISTRATION = {
+    'REGISTRATION_AUTHENTICATION_BACKEND': 'django.contrib.auth.backends.\
+            ModelBackend',
+    'REGISTRATION_REDIRECT_PATTERN': 'home',
+    'REGISTRATION_STRATEGY': 'open',  # ['open', 'approval_required']
+    'SEND_APPROVAL_EMAILS': True,
+    # Optional email if `REGISTRATION_STRATEGY = 'approval_required'`, default is False
+    'APPROVAL_SUBJECT': f'Your {TOM_NAME} registration has been approved!',
+    # Optional subject line of approval email, (Default Shown)
+    'APPROVAL_MESSAGE': f'Your {TOM_NAME} registration has been approved. \
+            You can log in <a href="mytom.com/login">here</a>.'
+            # Optional html-enabled body for approval email, (Default Shown)
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
@@ -401,3 +419,9 @@ try:
     from local_settings import * # noqa
 except ImportError:
     pass
+
+USER_OUTPUT_BASES = {
+        'snid_api': '/snid_api_runs/workspaces',
+        'ngsf_api': '/ngsf_api_runs/workspaces',
+        }
+USER_HASH_SALT = 'my_special_salt' #Update for deployment
