@@ -74,7 +74,6 @@ services:
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
       - /mnt/data/spectra:/data/spectra:ro
     environment:
-      LOCAL_MODE: 'True'
       TIDES_TEST_DIR: '/app/spectra/test_data/'
       DB_PASS: ${DB_PASS}
       #DATABASE_URL: ${DATABASE_URL}
