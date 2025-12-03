@@ -173,7 +173,7 @@ class NGSFFormAJAXView(FormView):
             response = requests.post(
                     f"{settings.NGSF_API_URL}/ngsf_params/",
                     json=form.cleaned_data,
-                    timeout=60
+                    timeout=100
                 )
 
             response.raise_for_status()
