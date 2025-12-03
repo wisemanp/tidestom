@@ -161,7 +161,7 @@ class NGSFFormAJAXView(FormView):
                     workspace.")
 
         target_name = str(spectrum_id)
-        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-$SZ")
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
 
         run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
         run_dir.mkdir(parents=True, exist_ok=True)
