@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   function renderTable(rows) {
     if (!rows.length) return "<p>No data</p>";
+	console.log("I did this at least")
 
     let html = "<div class='table-responsive'>";
     html += "<table class='table table-hover table-sm table-bordered'>";
