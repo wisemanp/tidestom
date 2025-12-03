@@ -1,17 +1,12 @@
 from django.shortcuts import render, get_object_or_404
-from custom_code.models import TidesTarget
+from custom_code.models import TidesTarget, TidesSpec
 
-## georgios ##
-from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from django.conf import settings
 
 from pathlib import Path
 import numpy as np
 from astropy.io import fits
-
-from custom_code.models import TidesTarget, TidesSpec
-## georgios ##
 
 # Create your views here.
 
@@ -24,7 +19,6 @@ def target_spectroscopy_partial(request, target_id):
         "snid_path": snid_path,
         })
 
-## georgios ##
 def download_spectrum_ascii(request, target_id):
     """
     Download the latest spectrum for this target as a simple ASCII file:
@@ -77,11 +71,10 @@ def download_spectrum_ascii(request, target_id):
         lines.append(f"{float(w):.6f} {float(f):.6e}")
     content = "\n".join(lines)
 
-    # Nice filename: TARGETNAME_spectrum.txt
+    # Filename: TARGETNAME_spectrum.txt
     safe_name = str(target).replace(" ", "_")
     filename = f"{safe_name}_spectrum.ascii"
 
     resp = HttpResponse(content, content_type="text/plain; charset=utf-8")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
-## georgios ##
