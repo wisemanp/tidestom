@@ -14,13 +14,13 @@ def hash_user_dir(user_id: int):
 
 class UserWorkspace(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
-    api_name  = models.CharField(max_length=50)
+    #api_name  = models.CharField(max_length=50)
     directory = models.CharField(max_length=64, unique=True)
 
     class Meta:
         verbose_name = "User Workspace"
         verbose_name_plural = "User Workspaces"
-        unique_together = ('user', 'api_name')
+        #unique_together = ('user', 'api_name')
 
     @classmethod
     def get_or_create_for_user(cls, user, api_name='default'):
@@ -30,7 +30,7 @@ class UserWorkspace(models.Model):
         base_path = settings.USER_OUTPUT_BASES[api_name]
         obj, created = cls.objects.get_or_create(
             user=user,
-            api_name=api_name,
+            #api_name=api_name,
             defaults={'directory': hash_user_dir(user.id)}
         )
 
