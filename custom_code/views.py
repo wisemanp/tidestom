@@ -177,6 +177,7 @@ class NGSFFormAJAXView(FormView):
                 )
 
             response.raise_for_status()
+            print(response.json())
             #os.remove('/ngsf_api_runs/target.fits')
 
             #return JsonResponse({"success": True, "data": response.json()})
