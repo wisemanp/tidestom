@@ -164,7 +164,7 @@ class NGSFFormAJAXView(FormView):
 
         try:
             response = requests.post(
-                    "http://ngsf_api:8000/ngsf_params/",
+                    f"{settings.NGSF_API_URL}/ngsf_params/",
                     json=form.cleaned_data,
                     timeout=60
                 )
