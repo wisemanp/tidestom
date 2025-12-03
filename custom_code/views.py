@@ -145,7 +145,7 @@ class NGSFFormAJAXView(FormView):
             if candidate.exists():
                 p = candidate
 
-        temp_file_path = 'ngsf_api_runs/target.fits'
+        temp_file_path = '/ngsf_api_runs/target.fits'
         shutil.copy2(str(p), temp_file_path)
         form.cleaned_data['spectrum'] = temp_file_path
 
