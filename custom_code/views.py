@@ -160,7 +160,14 @@ class NGSFFormAJAXView(FormView):
             return HttpResponseForbidden("You do not have permission to access this\
                     workspace.")
 
-        form.cleaned_data['output_dir'] = workspace_path
+        target_name = str(spectrum_id)
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-$SZ")
+
+        run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
+        run_dir.mkdir(partents=True, exist_ok=True)
+        os.chown(run_dir, 1000, 1000)
+
+        form.cleaned_data['output_dir'] = str(run_dir)
 
         try:
             response = requests.post(
