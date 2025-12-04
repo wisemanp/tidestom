@@ -424,46 +424,49 @@ fetch("{% static 'json/line_data.json' %}")
         <!-- Bin/Overplot controls -->
 
       </div>
-      <!-- Checkboxes -->
-      <div class="checkbox-container spectroscopy-only">
+<!-- Checkboxes -->
+<div class="checkbox-container spectroscopy-only">
 
-          <div class="checkbox-group">
-              <h5>Common Lines</h5>
-              <div class="checkbox-grid" id="common-lines"></div>
-          </div>
+    <div class="checkbox-group">
+        <h5>Common Lines</h5>
+        <div class="checkbox-grid" id="common-lines"></div>
+    </div>
 
-          <div class="checkbox-group">
-              <h5>Absorption Lines</h5>
-              <div class="checkbox-grid" id="absorption-lines"></div>
-          </div>
+    <div class="checkbox-group">
+        <h5>Absorption Lines</h5>
+        <div class="checkbox-grid" id="absorption-lines"></div>
+    </div>
 
-          <div class="checkbox-group">
-              <h5>Transient Specific Lines</h5>
-              <div class="checkbox-grid" id="transient-specific-lines"></div>
-          </div>
-<div class="spectroscopy-only" style="width:300px;">
-  Fitting Programs:
-  <!-- Inner Tabs Navigation -->
-  <ul class="nav nav-tabs" id="fittingTabs" role="tablist">
-    <li class="nav-item">
-      <a class="nav-link active" id="snid-tab" data-toggle="tab" href="#snid-pane" role="tab" aria-controls="snid-pane" aria-selected="true">SNID</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" id="ngsf-tab" data-toggle="tab" href="#ngsf-pane" role="tab" aria-controls="ngsf-pane" aria-selected="false">NGSF</a>
-    </li>
-  </ul>
-  <!-- Inner Tabs Content -->
-  <div class="tab-content mt-3" id="fittingTabsContent">
-    <div class="tab-pane fade show active" id="snid-pane" role="tabpanel" aria-labelledby="snid-tab">
-      {% snid_form spectrum=object.id %}
+    <div class="checkbox-group">
+        <h5>Transient Specific Lines</h5>
+        <div class="checkbox-grid" id="transient-specific-lines"></div>
     </div>
-    <div class="tab-pane fade" id="ngsf-pane" role="tabpanel" aria-labelledby="ngsf-tab">
-      {% ngsf_form spectrum=object.id %}
+
+    <!-- Fitting Programs Block -->
+    <div class="spectroscopy-only" style="width:300px; margin-top:1rem;">
+        Fitting Programs:
+        <!-- Inner Tabs Navigation -->
+        <ul class="nav nav-tabs" id="fittingTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="snid-tab" data-toggle="tab" href="#snid-pane" role="tab" aria-controls="snid-pane" aria-selected="true">SNID</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="ngsf-tab" data-toggle="tab" href="#ngsf-pane" role="tab" aria-controls="ngsf-pane" aria-selected="false">NGSF</a>
+            </li>
+        </ul>
+        <!-- Inner Tabs Content -->
+        <div class="tab-content mt-3" id="fittingTabsContent">
+            <div class="tab-pane fade show active" id="snid-pane" role="tabpanel" aria-labelledby="snid-tab">
+                {% snid_form spectrum=object.id %}
+            </div>
+            <div class="tab-pane fade" id="ngsf-pane" role="tabpanel" aria-labelledby="ngsf-tab">
+                {% ngsf_form spectrum=object.id %}
+            </div>
+        </div>
     </div>
-  </div>
-</div>
-</div>
-    </div>
+
+</div> <!-- end checkbox-container -->
+
       
       
       <!--{% comments_enabled as comments_are_enabled %}
