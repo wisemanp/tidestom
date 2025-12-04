@@ -412,7 +412,7 @@ fetch("{% static 'json/line_data.json' %}")
         </div>
       <div class="tab-pane active" id="spectroscopy" data-target-id="{{ target.id }}">
         {% target_spectroscopy target %}
-      </div>
+      
 	  <div>
         <!-- Bin/Overplot controls -->
         <div class="d-flex align-items-center gap-2 mb-4 spectroscopy-only">
@@ -459,7 +459,7 @@ fetch("{% static 'json/line_data.json' %}")
       
       
       </div>
-      
+      </div>
       <!--{% comments_enabled as comments_are_enabled %}
       <hr/>
       <h5>Comments</h5>
