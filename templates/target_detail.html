@@ -443,9 +443,23 @@ fetch("{% static 'json/line_data.json' %}")
           </div>
 
     </div>
+    
       <div class="spectroscopy-only" style="width:300px;">
   	  Fitting Programs:
+	  <!-- Inner Tabs Navigation -->
+	  <ul class="nav nav-tabs" id="fittingTabs" role="tablist">
+		<li class="nav-item">
+		  <a class="nav-link active" id="snid-tab" data-toggle="tab" href="#snid-pane" role="tab" aria-controls="snid-pane" aria-selected="true">SNID</a>
+		</li>
+		<li class="nav-item">
+		  <a class="nav-link" id="ngsf-tab" data-toggle="tab" href="#ngsf-pane" role="tab" aria-controls="ngsf-pane" aria-selected="false">NGSF</a>
+		</li>
+	  </ul>
+      
+      
+      
       </div>
+      
       <!--{% comments_enabled as comments_are_enabled %}
       <hr/>
       <h5>Comments</h5>
