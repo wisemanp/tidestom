@@ -83,7 +83,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
 
     if ngsf_path is not None:
         try:
-            ngsf_file = "/ngsf_api_runs/workspaces/2787710e6570803c552dab15d0da8a467a20bb13b3c9a0c5815be290fc0ca02f/30958643/run_2025-12-04T16-47-56Z/spectrum.csv"
+            ngsf_file = ngsf_path
             fig = add_ngsf_templates(ngsf_file,
                              spectrum.spectral_axis.value,
                              spectrum.flux.value,
@@ -91,8 +91,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                              n=3
                              )
         except Exception as exc:
-            print(exc)
-            pass
+            return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
 
     fig.update_layout(autosize=True,
                       xaxis_title='Observed Wavelength (Å)',
