@@ -424,7 +424,6 @@ fetch("{% static 'json/line_data.json' %}")
         <!-- Bin/Overplot controls -->
 
       </div>
-      </div>
       <!-- Checkboxes -->
       <div class="checkbox-container spectroscopy-only">
 
@@ -444,7 +443,8 @@ fetch("{% static 'json/line_data.json' %}")
           </div>
 
     </div>
-    <div class="spectroscopy-only">
+      
+      <div class="spectroscopy-only" style="width:300px;">
   Fitting Programs:
   <!-- Inner Tabs Navigation -->
   <ul class="nav nav-tabs" id="fittingTabs" role="tablist">
@@ -465,7 +465,7 @@ fetch("{% static 'json/line_data.json' %}")
     </div>
   </div>
 </div>
-
+</div>
 <script>
 $(document).ready(function() {
     
