@@ -170,7 +170,6 @@ class NGSFFormAJAXView(FormView):
         form.cleaned_data['output_dir'] = str(run_dir)
 
         try:
-            print('POSTING')
             response = requests.post(
                     f"{settings.NGSF_API_URL}/ngsf_params/",
                     json=form.cleaned_data,
@@ -178,7 +177,6 @@ class NGSFFormAJAXView(FormView):
                 )
 
             response.raise_for_status()
-            print(response.json())
             #os.remove('/ngsf_api_runs/target.fits')
 
             #return JsonResponse({"success": True, "data": response.json()})
