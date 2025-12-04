@@ -282,7 +282,8 @@ fetch("{% static 'json/line_data.json' %}")
 </script>
 
 <div class="row">
-
+<div class="container-fluid">
+  <div class="row flex-nowrap">
   <div class="col-md-3">
 		<div id="target-info">
 
@@ -444,7 +445,7 @@ fetch("{% static 'json/line_data.json' %}")
 
     </div>
     
-      <div class="spectroscopy-only" style="width:300px;">
+      <div class="spectroscopy-only">
   	  Fitting Programs:
 	  <!-- Inner Tabs Navigation -->
 	  <ul class="nav nav-tabs" id="fittingTabs" role="tablist">
@@ -503,5 +504,6 @@ fetch("{% static 'json/line_data.json' %}")
     
 </div>
 </div>
-
+</div>
+</div>
 {% endblock %}
