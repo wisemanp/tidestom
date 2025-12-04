@@ -1,8 +1,8 @@
-<div class="card">
+<div class="card", style="min-width:0;">
     <div class="card-header">
        Run NGSF
     </div>
-    <div class="card-body">
+    <div class="card-body", style="min-width:0;">
 			<form id="ngsf-form" class='ajax-form' data-result-id='ngsf-result' method="post" action="{% url 'ngsf-run' %}">
 			{% csrf_token %}
 			<input type='hidden', name="spectrum" value="{{ spectrum }}" class="form-control">	
