@@ -443,8 +443,7 @@ fetch("{% static 'json/line_data.json' %}")
           </div>
 
     </div>
-    
-    <div class="spectroscopy-only">
+    <div class="spectroscopy-only" style="width:300px;">
   Fitting Programs:
   <!-- Inner Tabs Navigation -->
   <ul class="nav nav-tabs" id="fittingTabs" role="tablist">
@@ -464,8 +463,7 @@ fetch("{% static 'json/line_data.json' %}")
       {% ngsf_form spectrum=object.id %}
     </div>
   </div>
-  </div>
-
+</div>
       
       <!--{% comments_enabled as comments_are_enabled %}
       <hr/>
@@ -498,7 +496,6 @@ fetch("{% static 'json/line_data.json' %}")
         </label>
       <input type="range" id="velocitySlider" min="-25000" max="25000" step="100" value="0" style="width: 300px">
         <label for="velocityInput"></label><input type="number" id="velocityInput" min="-25000" max="25000" step="100" value="0" style="width: 80px; text-align: center;">
-    </div>
     </div>
     
 
