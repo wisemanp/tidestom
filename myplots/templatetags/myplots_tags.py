@@ -42,7 +42,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     ]
 
     fig = go.Figure(data=plot_data)
-    
+
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
     # Wallace et al. 1996 “An Atlas of the Spectrum of the Solar Photosphere from 296 to 1300 nm”
@@ -58,14 +58,14 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     for label, (start, end) in telluric_bands.items():
         fig.add_vrect(
             x0=start, x1=end,
-            fillcolor="grey", 
+            fillcolor="grey",
             opacity=0.2,
-            layer="below", 
+            layer="below",
             line_width=0,
             annotation_text="⊕",
             annotation_position="top",
             annotation_font=dict(size=12, color="black")
-        )    
+        )
 
     ### templates ###
     if snid_path is not None:
@@ -93,7 +93,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
         except Exception as exc:
             print(exc)
             pass
-        
+
     fig.update_layout(autosize=True,
                       xaxis_title='Observed Wavelength (Å)',
                       yaxis_title='Flux (erg/s/cm²/Å)',
