@@ -307,6 +307,9 @@ fetch("{% static 'json/line_data.json' %}")
 					{% if object.auto_tidesclass_subclass %}
 						<br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
 					{% endif %}
+          {% if object.auto_tidesclass_prob %}
+						<br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
+					{% endif %}
 					{% if object.auto_tidesclass_prob %}
 						<br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
 					{% endif %}

@@ -103,6 +103,39 @@ class TidesTarget(TomTarget):
             default=None,
         )
         return best.sn_type if best else None
+    @property
+    def auto_tidesclass_z(self):
+        g = self.pipeline_classifications_global.order_by('-probability').only('sn_type').first()
+        if g:
+            return g.sn_type
+        best = max(
+            [
+                self.pipeline_classifications_superfit.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_snid.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_dash.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_ed.order_by('-probability').only('sn_type', 'probability').first(),
+            ],
+            key=lambda r: (r.probability if r else -1.0),
+            default=None,
+        )
+        return best.z if best else None
+    
+    @property
+    def auto_tidesclass_zerr(self):
+        g = self.pipeline_classifications_global.order_by('-probability').only('sn_type').first()
+        if g:
+            return g.sn_type
+        best = max(
+            [
+                self.pipeline_classifications_superfit.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_snid.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_dash.order_by('-probability').only('sn_type', 'probability').first(),
+                self.pipeline_classifications_ed.order_by('-probability').only('sn_type', 'probability').first(),
+            ],
+            key=lambda r: (r.probability if r else -1.0),
+            default=None,
+        )
+        return best.zerr if best else None
 
     @property
     def auto_tidesclass_prob(self):
