@@ -161,7 +161,9 @@ class PipelineClassificationGlobal(models.Model):
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
-
+    phase = models.FloatField(null=True, blank=True)
+    z = models.FloatField(null=True, blank=True)
+    zerr = models.FloatField(null=True, blank=True)
     class Meta:
         managed = False
         db_table = 'pipeline_classification_global'
@@ -193,7 +195,9 @@ class PipelineClassificationSnid(models.Model):
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
-
+    phase = models.FloatField(null=True, blank=True)
+    z = models.FloatField(null=True, blank=True)
+    zerr = models.FloatField(null=True, blank=True)
     class Meta:
         managed = False
         db_table = 'pipeline_classification_snid'
