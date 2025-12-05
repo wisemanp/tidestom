@@ -468,8 +468,9 @@ fetch("{% static 'json/line_data.json' %}")
       <label for="redshiftSlider" style="display:block; width:250px;">
           Redshift (z):
       </label>
-      <input type="range" id="redshiftSlider" min="0" max="2" step="0.0001" value="0" style="width: 300px">
-        <label for="redshiftInput"></label><input type="number" id="redshiftInput" min="0" max="2" step="0.0001" value="0" style="width: 80px; text-align: center;">
+    <input type="range" id="redshiftSlider" min="0" max="2" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 300px">
+      <label for="redshiftInput"></label><input type="number" id="redshiftInput" min="0" max="2" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 80px; text-align: center;">
+  
     </div>
       <!-- Velocity Slider -->
     <div class="spectroscopy-only">
