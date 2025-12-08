@@ -29,6 +29,7 @@
         .then(response => response.text())
         .then(data => {
           tidesclassSubclassField.innerHTML = '<option value="">---------</option>'; // Add blank option
+		  const options = data.split("\n").map(line => line.trim()).filter(Boolean);
           data.forEach(subclass => {
             var option = document.createElement('option');
             option.value = subclass.id;
