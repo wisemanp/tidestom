@@ -334,17 +334,20 @@ fetch("{% static 'json/line_data.json' %}")
 			<p>
 				<u><strong>All Human Classifications:</strong></u>
 				{% if human_classifications %}
-					{% for submission in human_classifications %}
-						<strong>{{ submission.user.username }}</strong> submitted
-						<strong>{{ submission.tidesclass }}</strong>
-						{% if submission.tidesclass_other %}(Other: {{ submission.tidesclass_other }}){% endif %}
-						{% if submission.tidesclass_subclass %}(Subclass: {{ submission.tidesclass_subclass }}){% endif %}
-						on {{ submission.timestamp|date:"Y-m-d H:i" }}<br>
-					{% endfor %}
-				{% else %}
-					<br><i>No human classifications submitted yet.</i>
-				{% endif %}
-			</p>
+                    {% for submission in human_classifications %}
+                        <strong>{{ submission.user.username }}</strong> submitted
+                        <strong>{{ submission.sn_type }}</strong>
+                        {% if submission.sn_subtype %}(Subclass: {{ submission.sn_subtype }}){% endif %}
+                        {% if submission.sn_z %}(z: {{ submission.sn_z|floatformat:4 }}){% endif %}
+                        {% if submission.host_z %}(host z: {{ submission.host_z|floatformat:4 }}){% endif %}
+                        {% if submission.phase %}(phase: {{ submission.phase|floatformat:1 }} d){% endif %}
+                        {% if submission.comments %}(Comments: {{ submission.comments }}){% endif %}
+                        on {{ submission.created|date:"Y-m-d H:i" }}<br>
+                    {% endfor %}
+                {% else %}
+                    <br><i>No human classifications submitted yet.</i>
+                {% endif %}
+            </p>
 
 			{% classification_form target.id %}
 			<!--{% recent_photometry object limit=3 %}
