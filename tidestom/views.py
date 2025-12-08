@@ -95,7 +95,25 @@ class SubmitClassificationView(FormView):
     form_class = TidesTargetForm
     template_name = 'target_detail.html'
 
-    
+    def get_form(self):
+        form = super().get_form()
+        # Use the posted main class (same source as your JS)
+        main_class = self.request.POST.get('tidesclass') or self.request.GET.get('tidesclass') or ''
+        subclasses = CLASSIFICATIONS.get(main_class, [])
+        # Normalize to (value, label) tuples to match JS
+        choices = [('', '---------')]
+        for s in subclasses:
+            if isinstance(s, dict):
+                label = s.get('sub_class') or s.get('text') or s.get('name') or str(s)
+                ident = s.get('id') or s.get('value') or label
+            else:
+                label = str(s)
+                ident = label
+            choices.append((str(ident), label))
+        # Apply to the field so validation matches the JS-populated options
+        if 'tidesclass_subclass' in form.fields:
+            form.fields['tidesclass_subclass'].choices = choices
+        return form
 
     def dispatch(self, request, *args, **kwargs):
         logger.info(f"[dispatch] method={request.method} path={request.path} kwargs={kwargs}")
