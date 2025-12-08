@@ -91,7 +91,6 @@ class SubmitClassificationView(FormView):
         target = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
 
         subclass_obj = form.cleaned_data.get('tidesclass_subclass')
-        # Support model instance (with .sub_class) or plain string from AJAX form
         sn_subtype = None
         if subclass_obj:
             sn_subtype = getattr(subclass_obj, 'sub_class', None) or str(subclass_obj)
@@ -101,6 +100,9 @@ class SubmitClassificationView(FormView):
             user=self.request.user.id,
             sn_type=form.cleaned_data['tidesclass'],
             sn_subtype=sn_subtype,
+            sn_z=form.cleaned_data.get('sn_z'),          
+            host_z=form.cleaned_data.get('host_z'),
+            phase=form.cleaned_data.get('phase'),     
             comments=form.cleaned_data.get('tidesclass_other') or '',
             created=now()
         )

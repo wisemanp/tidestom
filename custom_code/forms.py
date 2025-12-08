@@ -16,6 +16,9 @@ class TidesTargetForm(forms.Form):
         queryset=TidesClassSubClass.objects.none(),
         required=False
     )
+    sn_z = forms.FloatField(required=False, min_value=0.0, label="Redshift (SN)")
+    host_z = forms.FloatField(required=False, min_value=0.0, label="Redshift (Host)")
+    phase = forms.FloatField(required=False, label="Phase (days)")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

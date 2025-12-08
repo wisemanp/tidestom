@@ -171,6 +171,8 @@ class HumanClassification(models.Model):
     obs_id = models.IntegerField(null=True, blank=True)
     sn_type = models.CharField(max_length=50)
     sn_z = models.FloatField(null=True, blank=True)
+    phase = models.FloatField(null=True, blank=True)  
+    host_z = models.FloatField(null=True, blank=True)  
     sn_subtype = models.CharField(max_length=50, null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
     created = models.DateTimeField()
