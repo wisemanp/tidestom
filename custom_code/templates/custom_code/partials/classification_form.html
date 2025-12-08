@@ -24,15 +24,23 @@
     }
 
     function loadSubClassOptions() {
-      var mainClass = tidesclassField.value;
-      fetch(`/api/get_subclasses/?main_class=${mainClass}`)
-        .then(response => response.json())
+      var mainClass = tidesclassField.value || '';
+      if (!mainClass) {
+        tidesclassSubclassField.innerHTML = '<option value="">---------</option>';
+        return;
+      }
+      var url = `/api/get_subclasses/?main_class=${encodeURIComponent(mainClass)}`;
+      fetch(url)
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
         .then(data => {
           tidesclassSubclassField.innerHTML = '<option value="">---------</option>'; // Add blank option
           data.forEach(subclass => {
             var option = document.createElement('option');
-            option.value = subclass.id;
-            option.text = subclass.sub_class;
+            option.value = subclass.id ?? subclass.sub_class ?? '';
+            option.text = subclass.sub_class ?? subclass.text ?? String(subclass);
             tidesclassSubclassField.add(option);
           });
           console.log("Sub-class options loaded:", data);
