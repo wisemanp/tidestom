@@ -20,6 +20,8 @@ from django.http import JsonResponse
 from custom_code.classification_list import CLASSIFICATIONS
 from django.db import models  # FIX: needed for models.Count
 from django.core.exceptions import FieldError
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
 
@@ -88,9 +90,22 @@ class MyTargetDetailView(DetailView):
         return context
 
 
+@method_decorator(csrf_exempt, name='dispatch')  # temporarily to rule out CSRF
 class SubmitClassificationView(FormView):
     form_class = TidesTargetForm
     template_name = 'target_detail.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        logger.info(f"[dispatch] method={request.method} path={request.path} kwargs={kwargs}")
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        logger.info(f"[post] POST keys={list(request.POST.keys())}")
+        return super().post(request, *args, **kwargs)
+
+    def form_invalid(self, form):
+        logger.warning(f"[form_invalid] errors={form.errors}")
+        return super().form_invalid(form)
 
     def get_success_url(self):
         return reverse('target_detail', kwargs={'pk': self.kwargs['target_id']})
