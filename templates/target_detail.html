@@ -281,6 +281,7 @@ fetch("{% static 'json/line_data.json' %}")
 });
 </script>
 
+{% if authenticated %}
 <div class="row">
 
   <div class="col-md-3">
@@ -765,5 +766,7 @@ $(document).ready(function() {
 
 </div>
   </div>
+  {% else %}
+		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
 </div>
 {% endblock %}
