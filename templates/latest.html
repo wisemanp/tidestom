@@ -6,7 +6,7 @@
   <div class="col-md-10">
     <h2>Latest Targets</h2>
 	
-	{% if authenticated %}
+	{% if user.is.authenticated %}
     <form method="get" action="{% url 'latest' %}" class="mb-4">
       <label for="days_range">Show targets observed in the last:</label>
       <input type="number" name="days_range" id="days_range" value="{{ default_days_range }}" min="1" class="form-control d-inline-block w-auto">

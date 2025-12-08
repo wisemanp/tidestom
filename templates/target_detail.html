@@ -281,7 +281,7 @@ fetch("{% static 'json/line_data.json' %}")
 });
 </script>
 
-{% if authenticated %}
+{% if user.is.authenticated %}
 <div class="row">
 
   <div class="col-md-3">
