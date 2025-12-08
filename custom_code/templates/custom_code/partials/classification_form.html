@@ -26,7 +26,7 @@
     function loadSubClassOptions() {
       var mainClass = tidesclassField.value;
       fetch(`/static/config/subtypes.txt`)
-        .then(response => response.json())
+        .then(response => response.text())
         .then(data => {
           tidesclassSubclassField.innerHTML = '<option value="">---------</option>'; // Add blank option
           data.forEach(subclass => {
