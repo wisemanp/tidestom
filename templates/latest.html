@@ -42,7 +42,7 @@
     </div>
 	{% else %}
 		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}>"login to view or create targets.
-	{% endid %}
+	{% endif %}
   </div>
 </div>
 {% endblock %}
