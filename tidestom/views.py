@@ -101,7 +101,7 @@ class SubmitClassificationView(FormView):
             sn_subtype = getattr(subclass_obj, 'sub_class', None) or str(subclass_obj)
 
         HumanClassification.objects.create(
-            tides_id=target,
+            tides_id=target.tides_id,
             user=self.request.user.id,
             sn_type=form.cleaned_data['tidesclass'],
             sn_subtype=sn_subtype,
