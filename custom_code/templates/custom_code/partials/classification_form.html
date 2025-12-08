@@ -23,26 +23,22 @@
       }
     }
 
-function loadSubClassOptions() {
-  fetch(`/static/config/subtypes.txt`)
-    .then(response => response.text())
-    .then(text => {
-      const options = text
-        .split("\n")
-        .map(line => line.trim())
-        .filter(Boolean);
-
-      tidesclassSubclassField.innerHTML = '<option value="">---------</option>';
-
-      options.forEach(subclass => {
-        const option = document.createElement('option');
-        option.value = subclass;
-        option.text = subclass;
-        tidesclassSubclassField.add(option);
-      });
-    })
-    .catch(error => console.error("Error loading sub-class options:", error));
-}
+    function loadSubClassOptions() {
+      var mainClass = tidesclassField.value;
+      fetch(`/api/get_subclasses/?main_class=${mainClass}`)
+        .then(response => response.json())
+        .then(data => {
+          tidesclassSubclassField.innerHTML = '<option value="">---------</option>'; // Add blank option
+          data.forEach(subclass => {
+            var option = document.createElement('option');
+            option.value = subclass.id;
+            option.text = subclass.sub_class;
+            tidesclassSubclassField.add(option);
+          });
+          console.log("Sub-class options loaded:", data);
+        })
+        .catch(error => console.error("Error loading sub-class options:", error));
+    }
 
     tidesclassField.addEventListener('change', function() {
       toggleTidesclassOtherField();
