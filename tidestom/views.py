@@ -20,6 +20,7 @@ from django.db import transaction
 from django.views.generic.list import ListView
 from django.utils.timezone import now
 import logging
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,10 @@ class MyTargetDetailView(DetailView):
 
 class SubmitClassificationView(FormView):
     form_class = TidesTargetForm
+    template_name = 'target_detail.html'  # satisfies TemplateResponseMixin
+
+    def get_success_url(self):
+        return reverse('target_detail', kwargs={'pk': self.kwargs['target_id']})
 
     def form_valid(self, form):
         target = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
@@ -95,24 +100,22 @@ class SubmitClassificationView(FormView):
         if subclass_obj:
             sn_subtype = getattr(subclass_obj, 'sub_class', None) or str(subclass_obj)
 
-        submission = HumanClassification.objects.create(
+        HumanClassification.objects.create(
             tides=target,
             user=self.request.user.id,
             sn_type=form.cleaned_data['tidesclass'],
             sn_subtype=sn_subtype,
-            sn_z=form.cleaned_data.get('sn_z'),          
-            host_z=form.cleaned_data.get('host_z'),
-            phase=form.cleaned_data.get('phase'),     
+            sn_z=form.cleaned_data.get('sn_z'),     # redshift (SN)
+            host_z=form.cleaned_data.get('host_z'), # redshift (Host)
+            phase=form.cleaned_data.get('phase'),   # phase (days)
             comments=form.cleaned_data.get('tidesclass_other') or '',
             created=now()
         )
-        return redirect('target_detail', pk=self.kwargs['target_id'])
+        return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['object'] = get_object_or_404(
-            TidesTarget, id=self.kwargs['target_id']
-        )
+        context['object'] = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
         context['form'] = self.get_form()
         return context
     

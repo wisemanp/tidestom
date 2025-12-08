@@ -9,13 +9,13 @@
 
   <div class="mb-2">
     <label for="id_redshift_sn">Redshift (SN)</label>
-    <input type="number" step="0.0001" min="-0.0001" id="id_redshift_sn" name="z_sn"
+    <input type="number" step="0.0001" min="-0.0001" id="id_redshift_sn" name="sn_z"
            value="{{ target.auto_tidesclass_z|default_if_none:0 }}">
   </div>
 
   <div class="mb-2">
     <label for="id_redshift_host">Redshift (Host)</label>
-    <input type="number" step="0.0001" min="-0.0001" id="id_redshift_host" name="z_host"
+    <input type="number" step="0.0001" min="-0.0001" id="id_redshift_host" name="host_z"
            value="{{ target.auto_tidesclass_z|default_if_none:0 }}">
   </div>
 
