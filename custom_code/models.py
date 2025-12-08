@@ -159,7 +159,7 @@ class TidesTarget(TomTarget):
 # Human classifications (remote)
 # ----------------------------
 class HumanClassification(models.Model):
-    tides = models.ForeignKey(
+    tides_id = models.ForeignKey(
         TidesTarget,
         on_delete=models.CASCADE,
         related_name='human_classifications',

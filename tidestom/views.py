@@ -101,7 +101,7 @@ class SubmitClassificationView(FormView):
             sn_subtype = getattr(subclass_obj, 'sub_class', None) or str(subclass_obj)
 
         HumanClassification.objects.create(
-            tides=target,
+            tides_id=target,
             user=self.request.user.id,
             sn_type=form.cleaned_data['tidesclass'],
             sn_subtype=sn_subtype,
@@ -116,6 +116,7 @@ class SubmitClassificationView(FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['object'] = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
+        context['target'] = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
         context['form'] = self.get_form()
         return context
     
