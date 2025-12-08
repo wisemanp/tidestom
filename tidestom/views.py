@@ -98,7 +98,7 @@ class SubmitClassificationView(FormView):
 
         submission = HumanClassification.objects.create(
             tides=target,
-            person_id=self.request.user.id,
+            user=self.request.user.id,
             sn_type=form.cleaned_data['tidesclass'],
             sn_subtype=sn_subtype,
             comments=form.cleaned_data.get('tidesclass_other') or '',
