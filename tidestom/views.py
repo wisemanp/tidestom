@@ -7,7 +7,7 @@ from tom_targets.models import Target
 from tom_dataproducts.models import DataProduct
 from datetime import timedelta
 from collections import Counter
-from custom_code.models import TidesTarget, HumanClassification, PipelineClassificationGlobal, TidesSpec
+from custom_code.models import TidesTarget, HumanClassification, PipelineClassificationGlobal, TidesSpec, TidesClass, TidesClassSubClass
 from custom_code.forms import TidesTargetForm
 import psycopg2
 from django.conf import settings
@@ -97,22 +97,25 @@ class SubmitClassificationView(FormView):
 
     def get_form(self):
         form = super().get_form()
-        # Use the posted main class (same source as your JS)
-        main_class = self.request.POST.get('tidesclass') or self.request.GET.get('tidesclass') or ''
-        subclasses = CLASSIFICATIONS.get(main_class, [])
-        # Normalize to (value, label) tuples to match JS
-        choices = [('', '---------')]
-        for s in subclasses:
-            if isinstance(s, dict):
-                label = s.get('sub_class') or s.get('text') or s.get('name') or str(s)
-                ident = s.get('id') or s.get('value') or label
+        # Determine selected main class (string name)
+        main_class_name = self.request.POST.get('tidesclass') or self.request.GET.get('tidesclass') or form.initial.get('tidesclass')
+        posted_subclass = self.request.POST.get('tidesclass_subclass')
+        logger.info(f"[get_form] main_class_name={main_class_name!r} posted_subclass={posted_subclass!r}")
+
+        # For ModelChoiceField, set queryset that matches the selected main class
+        try:
+            if main_class_name:
+                main_class = TidesClass.objects.get(name=main_class_name)
+                form.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.filter(main_class=main_class)
             else:
-                label = str(s)
-                ident = label
-            choices.append((str(ident), label))
-        # Apply to the field so validation matches the JS-populated options
-        if 'tidesclass_subclass' in form.fields:
-            form.fields['tidesclass_subclass'].choices = choices
+                form.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.none()
+        except TidesClass.DoesNotExist:
+            logger.warning(f"[get_form] TidesClass with name={main_class_name!r} does not exist; empty queryset.")
+            form.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.none()
+        except Exception as e:
+            logger.exception(f"[get_form] Failed to set queryset for tidesclass_subclass: {e}")
+            form.fields['tidesclass_subclass'].queryset = TidesClassSubClass.objects.none()
+
         return form
 
     def dispatch(self, request, *args, **kwargs):
@@ -133,6 +136,7 @@ class SubmitClassificationView(FormView):
     def form_valid(self, form):
         target = get_object_or_404(TidesTarget, pk=self.kwargs['target_id'])
         subclass_obj = form.cleaned_data.get('tidesclass_subclass')
+        logger.info(f"[form_valid] cleaned tidesclass={form.cleaned_data.get('tidesclass')!r} subclass={subclass_obj!r}")
         # Support model instance (with .sub_class) or plain string from AJAX form
         sn_subtype = None
         if subclass_obj:
@@ -194,17 +198,19 @@ class SubmitClassificationView(FormView):
         return context
 
 def get_subclasses(request):
-    main_class = request.GET.get('main_class') or ''
-    logger.info(f"get_subclasses called with main_class={main_class!r}")
-    subclasses = CLASSIFICATIONS.get(main_class, [])
+    main_class_name = request.GET.get('main_class') or ''
+    logger.info(f"get_subclasses called with main_class={main_class_name!r}")
     out = []
-    for s in subclasses:
-        if isinstance(s, dict):
-            label = s.get('sub_class') or s.get('text') or s.get('name') or str(s)
-            ident = s.get('id') or s.get('value') or label
-        else:
-            label = str(s)
-            ident = label
-        out.append({'id': ident, 'sub_class': label})
+    if not main_class_name:
+        return JsonResponse(out, safe=False)
+    try:
+        main_class = TidesClass.objects.get(name=main_class_name)
+        qs = TidesClassSubClass.objects.filter(main_class=main_class).order_by('sub_class')
+        # Return pk and label so the browser posts the pk expected by ModelChoiceField
+        out = [{'id': str(s.pk), 'sub_class': s.sub_class} for s in qs]
+    except TidesClass.DoesNotExist:
+        logger.warning(f"[get_subclasses] No TidesClass with name={main_class_name!r}")
+    except Exception as e:
+        logger.exception(f"[get_subclasses] Error fetching subclasses: {e}")
     return JsonResponse(out, safe=False)
 
