@@ -87,27 +87,25 @@ class MyTargetDetailView(DetailView):
 
 class SubmitClassificationView(FormView):
     form_class = TidesTargetForm
-    template_name = 'target_detail.html'  # satisfies TemplateResponseMixin
+    template_name = 'target_detail.html'
 
     def get_success_url(self):
         return reverse('target_detail', kwargs={'pk': self.kwargs['target_id']})
 
     def form_valid(self, form):
-        target = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
+        target = get_object_or_404(TidesTarget, pk=self.kwargs['target_id'])
 
-        subclass_obj = form.cleaned_data.get('tidesclass_subclass')
-        sn_subtype = None
-        if subclass_obj:
-            sn_subtype = getattr(subclass_obj, 'sub_class', None) or str(subclass_obj)
+        raw_sub = form.cleaned_data.get('tidesclass_subclass')
+        sn_subtype = None if raw_sub in (None, '') else str(raw_sub)
 
         HumanClassification.objects.create(
-            tides_id=target.tides_id,
-            user=self.request.user.id,
+            tides_id=target,                     # FK field name is tides_id
+            user=self.request.user,              # FK to auth user (instance)
             sn_type=form.cleaned_data['tidesclass'],
             sn_subtype=sn_subtype,
-            sn_z=form.cleaned_data.get('sn_z'),     # redshift (SN)
-            host_z=form.cleaned_data.get('host_z'), # redshift (Host)
-            phase=form.cleaned_data.get('phase'),   # phase (days)
+            sn_z=form.cleaned_data.get('sn_z'),
+            host_z=form.cleaned_data.get('host_z'),
+            phase=form.cleaned_data.get('phase'),
             comments=form.cleaned_data.get('tidesclass_other') or '',
             created=now()
         )
@@ -115,9 +113,9 @@ class SubmitClassificationView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['object'] = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
-        context['target'] = get_object_or_404(TidesTarget, id=self.kwargs['target_id'])
-        context['form'] = self.get_form()
+        target = get_object_or_404(TidesTarget, pk=self.kwargs['target_id'])
+        context['target'] = target
+        context['object'] = target
         return context
     
 from django.http import JsonResponse
