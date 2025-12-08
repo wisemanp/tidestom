@@ -1,7 +1,7 @@
 from django import template
 from django.conf import settings
 from django.db.models import Count
-from custom_code.models import PipelineClassificationGlobal, HumanClassification
+from custom_code.models import PipelineClassificationGlobal, HumanClassification, PipelineClassificationSnid
 from myplots.templatetags.utils import find_target_name
 
 register = template.Library()
@@ -66,7 +66,7 @@ def target_classifications(target):
     Displays the classifications of a target.
     """
     tides_pk = target.pk  # parent_link => pk == tides_cand.tides_id
-
+    
     auto_classifications = PipelineClassificationGlobal.objects.filter(
         tides_id=tides_pk
     ).order_by('-probability')
