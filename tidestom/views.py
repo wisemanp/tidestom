@@ -2,12 +2,7 @@ from django.views.generic.detail import DetailView
 from django_filters.views import FilterView
 from django.utils import timezone
 from django.views.generic.edit import FormView
-# from django.db import models
-# from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect
-# from django.shortcuts import render
-# from django.urls import reverse_lazy
-#from guardian.mixins import PermissionListMixin
 from tom_targets.models import Target
 from tom_dataproducts.models import DataProduct
 from datetime import timedelta
@@ -21,6 +16,10 @@ from django.views.generic.list import ListView
 from django.utils.timezone import now
 import logging
 from django.urls import reverse
+from django.http import JsonResponse
+from custom_code.classification_list import CLASSIFICATIONS
+from django.db import models  # FIX: needed for models.Count
+from django.core.exceptions import FieldError
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +58,12 @@ class MyTargetDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         target = self.get_object()
-        # Use remote-backed HumanClassification (FK: tides or tides_id)
-        submissions = HumanClassification.objects.filter(tides_id=target.pk)
+
+        # Detect FK field name on HumanClassification: 'tides_id' (your FK) or legacy 'tides'
+        hc_fields = {f.name for f in HumanClassification._meta.get_fields()}
+        fk_name = 'tides_id' if 'tides_id' in hc_fields else 'tides'
+
+        submissions = HumanClassification.objects.filter(**{fk_name: target})
 
         context['form'] = TidesTargetForm()
 
@@ -95,20 +98,55 @@ class SubmitClassificationView(FormView):
     def form_valid(self, form):
         target = get_object_or_404(TidesTarget, pk=self.kwargs['target_id'])
 
+        # Log raw POST payload
+        try:
+            logger.info(f"SubmitClassificationView POST data: {dict(self.request.POST)}")
+        except Exception as e:
+            logger.warning(f"Failed to log POST data: {e}")
+
+        # Log cleaned_data
+        logger.info(f"SubmitClassificationView cleaned_data: {form.cleaned_data}")
+
+        # Normalize subclass value
         raw_sub = form.cleaned_data.get('tidesclass_subclass')
         sn_subtype = None if raw_sub in (None, '') else str(raw_sub)
 
-        HumanClassification.objects.create(
-            tides_id=target,                     # FK field name is tides_id
-            user=self.request.user,              # FK to auth user (instance)
-            sn_type=form.cleaned_data['tidesclass'],
-            sn_subtype=sn_subtype,
-            sn_z=form.cleaned_data.get('sn_z'),
-            host_z=form.cleaned_data.get('host_z'),
-            phase=form.cleaned_data.get('phase'),
-            comments=form.cleaned_data.get('tidesclass_other') or '',
-            created=now()
-        )
+        # Detect FK field names dynamically
+        hc_fields = {f.name for f in HumanClassification._meta.get_fields()}
+        fk_name = 'tides_id' if 'tides_id' in hc_fields else 'tides'
+        user_field = 'user' if 'user' in hc_fields else ('person' if 'person' in hc_fields else None)
+
+        create_kwargs = {
+            fk_name: target,
+            'sn_type': form.cleaned_data['tidesclass'],
+            'sn_subtype': sn_subtype,
+            'sn_z': form.cleaned_data.get('sn_z'),
+            'host_z': form.cleaned_data.get('host_z'),
+            'phase': form.cleaned_data.get('phase'),
+            'comments': form.cleaned_data.get('tidesclass_other') or '',
+            'created': now(),
+        }
+        if user_field:
+            create_kwargs[user_field] = self.request.user
+
+        # Log what we will insert
+        safe_kwargs = {**create_kwargs}
+        safe_kwargs[fk_name] = getattr(target, 'pk', target)  # avoid logging full model
+        if user_field in safe_kwargs:
+            safe_kwargs[user_field] = getattr(self.request.user, 'pk', self.request.user)
+        logger.info(f"HumanClassification.create kwargs: {safe_kwargs}")
+
+        # Perform insert with detailed error logging
+        try:
+            before_count = HumanClassification.objects.filter(**{fk_name: target}).count()
+            obj = HumanClassification.objects.create(**create_kwargs)
+            after_count = HumanClassification.objects.filter(**{fk_name: target}).count()
+            logger.info(f"HumanClassification saved id={obj.pk} for target={target.pk} (count {before_count} -> {after_count})")
+        except Exception as e:
+            logger.exception(f"Failed to save HumanClassification for target={target.pk}: {e}")
+            # Optionally, re-raise or add a message; for now redirect to detail with failure logged.
+            return redirect(self.get_success_url())
+
         return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
@@ -116,17 +154,13 @@ class SubmitClassificationView(FormView):
         target = get_object_or_404(TidesTarget, pk=self.kwargs['target_id'])
         context['target'] = target
         context['object'] = target
+        context['form'] = self.get_form()
         return context
-    
-from django.http import JsonResponse
-from custom_code.classification_list import CLASSIFICATIONS
 
 def get_subclasses(request):
     main_class = request.GET.get('main_class') or ''
     logger.info(f"get_subclasses called with main_class={main_class!r}")
     subclasses = CLASSIFICATIONS.get(main_class, [])
-
-    # Normalize to expected keys: id and sub_class
     out = []
     for s in subclasses:
         if isinstance(s, dict):
