@@ -95,6 +95,8 @@ class SubmitClassificationView(FormView):
     form_class = TidesTargetForm
     template_name = 'target_detail.html'
 
+    
+
     def dispatch(self, request, *args, **kwargs):
         logger.info(f"[dispatch] method={request.method} path={request.path} kwargs={kwargs}")
         return super().dispatch(request, *args, **kwargs)
@@ -112,7 +114,11 @@ class SubmitClassificationView(FormView):
 
     def form_valid(self, form):
         target = get_object_or_404(TidesTarget, pk=self.kwargs['target_id'])
-
+        subclass_obj = form.cleaned_data.get('tidesclass_subclass')
+        # Support model instance (with .sub_class) or plain string from AJAX form
+        sn_subtype = None
+        if subclass_obj:
+            sn_subtype = getattr(subclass_obj, 'sub_class', None) or str(subclass_obj)
         # Log raw POST payload
         try:
             logger.info(f"SubmitClassificationView POST data: {dict(self.request.POST)}")
@@ -122,9 +128,6 @@ class SubmitClassificationView(FormView):
         # Log cleaned_data
         logger.info(f"SubmitClassificationView cleaned_data: {form.cleaned_data}")
 
-        # Normalize subclass value
-        raw_sub = form.cleaned_data.get('tidesclass_subclass')
-        sn_subtype = None if raw_sub in (None, '') else str(raw_sub)
 
         # Detect FK field names dynamically
         hc_fields = {f.name for f in HumanClassification._meta.get_fields()}
