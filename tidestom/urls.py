@@ -20,7 +20,8 @@ from .views import (
     LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
 from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView, PreviousSNIDRunsView
-from myplots.views import target_spectroscopy_partial
+from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
+
 urlpatterns = [
     path(
         'about/', TemplateView.as_view(template_name='about.html'),
@@ -60,7 +61,11 @@ urlpatterns = [
         name="target_spectroscopy"
         ),
     path(
+        "download_spectrum/<int:target_id>/", download_spectrum_ascii,
+        name="download_spectrum",
+    ),
+    path(
         "api/previous_snid_runs/", PreviousSNIDRunsView.as_view(),
         name="previous_snid_runs"
-        ),
+    ),
 ]
