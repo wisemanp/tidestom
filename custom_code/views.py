@@ -145,7 +145,7 @@ class NGSFFormAJAXView(FormView):
             if candidate.exists():
                 p = candidate
 
-        temp_file_path = 'ngsf_api_runs/target.fits'
+        temp_file_path = '/ngsf_api_runs/target.fits'
         shutil.copy2(str(p), temp_file_path)
         form.cleaned_data['spectrum'] = temp_file_path
 
@@ -160,13 +160,20 @@ class NGSFFormAJAXView(FormView):
             return HttpResponseForbidden("You do not have permission to access this\
                     workspace.")
 
-        form.cleaned_data['output_dir'] = workspace_path
+        target_name = str(spectrum_id)
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
+
+        run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        os.chown(run_dir, 1000, 1000)
+
+        form.cleaned_data['output_dir'] = str(run_dir)
 
         try:
             response = requests.post(
-                    "http://ngsf_api:8000/ngsf_params/",
+                    f"{settings.NGSF_API_URL}/ngsf_params/",
                     json=form.cleaned_data,
-                    timeout=60
+                    timeout=100
                 )
 
             response.raise_for_status()
@@ -183,4 +190,3 @@ class NGSFFormAJAXView(FormView):
                 logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
 
         return JsonResponse({"success": True, "data": response.json()})
-

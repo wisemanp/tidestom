@@ -5,7 +5,8 @@
 <div class="row">
   <div class="col-md-10">
     <h2>Latest Targets</h2>
-
+	
+	{% if request.user.is_authenticated %}
     <form method="get" action="{% url 'latest' %}" class="mb-4">
       <label for="days_range">Show targets observed in the last:</label>
       <input type="number" name="days_range" id="days_range" value="{{ default_days_range }}" min="1" class="form-control d-inline-block w-auto">
@@ -22,8 +23,13 @@
                   <a href="{% url 'target_detail' spec.target.id %}">
                     {{ spec.target.id }}
                   </a>
-                  <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
+                     {% if spec.target.additional_info and spec.target.additional_info.THUMBNAIL %}
+                     <img src="{{ spec.target.additional_info.THUMBNAIL }}"
                        alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
+                     {% else %}
+                     <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
+                       alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
+                     {% endif %}
                   {% target_classifications spec.target %}
                 {% else %}
                   <p>No linked target</p>
@@ -34,6 +40,9 @@
         </div>
       {% endfor %}
     </div>
+	{% else %}
+	Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
+	{% endif %}
   </div>
 </div>
 {% endblock %}

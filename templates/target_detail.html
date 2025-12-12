@@ -281,6 +281,7 @@ fetch("{% static 'json/line_data.json' %}")
 });
 </script>
 
+{% if request.user.is_authenticated %}
 <div class="row">
 
   <div class="col-md-3">
@@ -307,6 +308,9 @@ fetch("{% static 'json/line_data.json' %}")
 					{% if object.auto_tidesclass_subclass %}
 						<br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
 					{% endif %}
+          {% if object.auto_tidesclass_z %}
+						<br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
+					{% endif %}
 					{% if object.auto_tidesclass_prob %}
 						<br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
 					{% endif %}
@@ -330,17 +334,20 @@ fetch("{% static 'json/line_data.json' %}")
 			<p>
 				<u><strong>All Human Classifications:</strong></u>
 				{% if human_classifications %}
-					{% for submission in human_classifications %}
-						<strong>{{ submission.user.username }}</strong> submitted
-						<strong>{{ submission.tidesclass }}</strong>
-						{% if submission.tidesclass_other %}(Other: {{ submission.tidesclass_other }}){% endif %}
-						{% if submission.tidesclass_subclass %}(Subclass: {{ submission.tidesclass_subclass }}){% endif %}
-						on {{ submission.timestamp|date:"Y-m-d H:i" }}<br>
-					{% endfor %}
-				{% else %}
-					<br><i>No human classifications submitted yet.</i>
-				{% endif %}
-			</p>
+                    {% for submission in human_classifications %}
+                        <strong>{{ submission.user.username }}</strong> submitted
+                        <strong>{{ submission.sn_type }}</strong>
+                        {% if submission.sn_subtype %}(Subclass: {{ submission.sn_subtype }}){% endif %}
+                        {% if submission.sn_z %}(z: {{ submission.sn_z|floatformat:4 }}){% endif %}
+                        {% if submission.host_z %}(host z: {{ submission.host_z|floatformat:4 }}){% endif %}
+                        {% if submission.phase %}(phase: {{ submission.phase|floatformat:1 }} d){% endif %}
+                        {% if submission.comments %}(Comments: {{ submission.comments }}){% endif %}
+                        on {{ submission.created|date:"Y-m-d H:i" }}<br>
+                    {% endfor %}
+                {% else %}
+                    <br><i>No human classifications submitted yet.</i>
+                {% endif %}
+            </p>
 
 			{% classification_form target.id %}
 			<!--{% recent_photometry object limit=3 %}
@@ -471,8 +478,9 @@ fetch("{% static 'json/line_data.json' %}")
       <label for="redshiftSlider" style="display:block; width:250px;">
           Redshift (z):
       </label>
-      <input type="range" id="redshiftSlider" min="0" max="2" step="0.0001" value="0" style="width: 300px">
-        <label for="redshiftInput"></label><input type="number" id="redshiftInput" min="0" max="2" step="0.0001" value="0" style="width: 80px; text-align: center;">
+    <input type="range" id="redshiftSlider" min="0" max="2" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 300px">
+      <label for="redshiftInput"></label><input type="number" id="redshiftInput" min="0" max="2" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 80px; text-align: center;">
+  
     </div>
       <!-- Velocity Slider -->
     <div class="spectroscopy-only">
@@ -771,5 +779,8 @@ $(document).ready(function() {
 
 </div>
   </div>
+  {% else %}
+		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
+  {% endif %}
 </div>
 {% endblock %}

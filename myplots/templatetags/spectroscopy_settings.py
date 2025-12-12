@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import os
+import zipfile
 
 import extinction
 from extinction import apply
@@ -187,6 +189,16 @@ def add_ngsf_templates(ngsf_file: str, obs_wave: np.ndarray, obs_flux: np.ndarra
     Returns:
     fig: Updated figure with NGSF templates.
     """
+
+    if not os.path.exists(ngsf_path / 'bank'):
+        os.system('git clone https://github.com/temuller/superfit_bank.git')
+        file_path = 'superfit_bank/supyfit_bank.zip'
+
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extractall(ngsf_path)
+
+        os.system('rm -rf superfit_bank')
+
     median = np.nanmedian(obs_flux)  # to scale the templates
     sn_df = pd.read_csv(ngsf_file)
     for i, row in sn_df[:n].iterrows():

@@ -1,9 +1,9 @@
 <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js"></script> -->
-<div class="card">
+<div class="card" style="min-width:0;">
     <div class="card-header">
        Run SNID
     </div>
-    <div class="card-body">
+    <div class="card-body" style="min-width:0;">
 			<form id="snid-form" class='ajax-form' data-result-id='snid-result' method="post" action="{% url 'snid-run' %}">
 			{% csrf_token %}
 			<!--Spectrum Inputs-->

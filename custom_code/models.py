@@ -103,6 +103,39 @@ class TidesTarget(TomTarget):
             default=None,
         )
         return best.sn_type if best else None
+    @property
+    def auto_tidesclass_z(self):
+        g = self.pipeline_classifications_global.order_by('-probability').only('z').first()
+        if g:
+            return g.z
+        best = max(
+            [
+                self.pipeline_classifications_superfit.order_by('-probability').only('z', 'probability').first(),
+                self.pipeline_classifications_snid.order_by('-probability').only('z', 'probability').first(),
+                self.pipeline_classifications_dash.order_by('-probability').only('z', 'probability').first(),
+                self.pipeline_classifications_ed.order_by('-probability').only('z', 'probability').first(),
+            ],
+            key=lambda r: (r.probability if r else -1.0),
+            default=None,
+        )
+        return best.z if best else None
+    
+    @property
+    def auto_tidesclass_zerr(self):
+        g = self.pipeline_classifications_global.order_by('-probability').only('zerr').first()
+        if g:
+            return g.zerr
+        best = max(
+            [
+                self.pipeline_classifications_superfit.order_by('-probability').only('zerr', 'probability').first(),
+                self.pipeline_classifications_snid.order_by('-probability').only('zerr', 'probability').first(),
+                self.pipeline_classifications_dash.order_by('-probability').only('zerr', 'probability').first(),
+                self.pipeline_classifications_ed.order_by('-probability').only('zerr', 'probability').first(),
+            ],
+            key=lambda r: (r.probability if r else -1.0),
+            default=None,
+        )
+        return best.zerr if best else None
 
     @property
     def auto_tidesclass_prob(self):
@@ -126,7 +159,7 @@ class TidesTarget(TomTarget):
 # Human classifications (remote)
 # ----------------------------
 class HumanClassification(models.Model):
-    tides = models.ForeignKey(
+    tides_id = models.ForeignKey(
         TidesTarget,
         on_delete=models.CASCADE,
         related_name='human_classifications',
@@ -138,6 +171,8 @@ class HumanClassification(models.Model):
     obs_id = models.IntegerField(null=True, blank=True)
     sn_type = models.CharField(max_length=50)
     sn_z = models.FloatField(null=True, blank=True)
+    phase = models.FloatField(null=True, blank=True)  
+    host_z = models.FloatField(null=True, blank=True)  
     sn_subtype = models.CharField(max_length=50, null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
     created = models.DateTimeField()
@@ -161,7 +196,9 @@ class PipelineClassificationGlobal(models.Model):
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
-
+    phase = models.FloatField(null=True, blank=True)
+    z = models.FloatField(null=True, blank=True)
+    zerr = models.FloatField(null=True, blank=True)
     class Meta:
         managed = False
         db_table = 'pipeline_classification_global'
@@ -193,7 +230,9 @@ class PipelineClassificationSnid(models.Model):
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
-
+    phase = models.FloatField(null=True, blank=True)
+    z = models.FloatField(null=True, blank=True)
+    zerr = models.FloatField(null=True, blank=True)
     class Meta:
         managed = False
         db_table = 'pipeline_classification_snid'
