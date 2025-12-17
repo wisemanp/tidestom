@@ -131,7 +131,7 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
     """
     mean = np.nanmean(obs_flux)
     snidres = get_pysnid_results(pysnid_file)
-    for i in range(1, n + 1):
+    for i in range(n):
         model_df = snidres.get_modeldata(i, fluxcorr=True)
         model_wave = model_df.wavelength.values
         model_flux = model_df.flux.values
