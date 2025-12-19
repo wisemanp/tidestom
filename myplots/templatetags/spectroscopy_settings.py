@@ -133,7 +133,7 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
     snidres = get_pysnid_results(pysnid_file)
     m = 0
     for _, row in snidres.get_bestmatches().iterrows():
-        if m == 3:
+        if m == n:
             break
         else:
             m+=1
@@ -151,7 +151,7 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
         fig.add_trace(go.Scatter(
             x=model_wave,
             y=model_flux,
-            name=f"{i}. {temp_info.sn}<br>{temp_info.type} (SNID)",
+            name=f"HELLO{i}. {temp_info.sn}<br>{temp_info.type} (SNID)",
             hovertemplate=(f'Name: {temp_info.sn}<br>Type: {temp_info.type}<br>'
                            f'Phase: {temp_info.age} d<br>Wave.:%{{x}}'),
             showlegend=True,
