@@ -132,7 +132,7 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
     mean = np.nanmean(obs_flux)
     snidres = get_pysnid_results(pysnid_file)
     n = 0
-    for _, row in snidres.iterrows():
+    for _, row in snidres.get_bestmatches().iterrows():
         if n == 3:
             break
 
