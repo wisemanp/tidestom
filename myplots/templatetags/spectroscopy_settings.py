@@ -135,7 +135,8 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
     for _, row in snidres.get_bestmatches().iterrows():
         if n == 3:
             break
-
+        else:
+            n+=1
         i = int(row['no.'])
         model_df = snidres.get_modeldata(i, fluxcorr=True)
         model_wave = model_df.wavelength.values
@@ -146,7 +147,7 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
         # match observed grid
         model_wave, model_flux = match_grid(obs_wave, model_wave, model_flux)
 
-        temp_info = snidres.results.iloc[i]
+        temp_info = snidres.results.iloc[i-1]
         fig.add_trace(go.Scatter(
             x=model_wave,
             y=model_flux,
