@@ -298,56 +298,90 @@ fetch("{% static 'json/line_data.json' %}")
 			{% target_unknown_statuses object %}
 			{% target_buttons object %}
 			{% tides_target_data object %}
-      
-      <h3>Classifications</h3>
 
-			<p>
-				<u><strong>Auto Classification</strong></u>&emsp;
-				{% if object.auto_tidesclass %}
-					<br><strong>Class:</strong> {{ object.auto_tidesclass }}
-					{% if object.auto_tidesclass_subclass %}
-						<br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
-					{% endif %}
-          {% if object.auto_tidesclass_z %}
-						<br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
-					{% endif %}
-					{% if object.auto_tidesclass_prob %}
-						<br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
-					{% endif %}
-				{% else %}
-					<br>No Auto Classification
-				{% endif %}
-			</p>
+      <h3>Tags</h3>
+      <div class="mb-2">
+        {% if object.tags.all %}
+          {% for t in object.tags.all %}
+            <span class="badge badge-info">{{ t.name }}</span>
+          {% endfor %}
+        {% else %}
+          <i>No tags</i>
+        {% endif %}
+      </div>
+      {% if request.user.is_authenticated %}
+        <form id="tag-toggle-form" class="d-flex flex-wrap gap-2">
+          {% for t in tags %}
+            <button type="button"
+                    class="btn btn-sm {% if t in object.tags.all %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                    data-tag-id="{{ t.id }}">
+              {{ t.name }}
+            </button>
+          {% endfor %}
+        </form>
+        <script>
+          document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const tagId = e.currentTarget.dataset.tagId;
+              const url = '{% url "toggle_tag" object.id 0 %}'.replace('0', tagId);
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+              });
+              if (res.ok) location.reload();
+            });
+          });
+        </script>
+      {% endif %}
 
-			<p>
-				<u><strong>Human Classification:</strong></u>
-				{% if aggregated_human_class %}
-					<br><strong>Most Common:</strong> {{ aggregated_human_class.most_common_class }}
-					<br><strong>Total Submissions:</strong> {{ aggregated_human_class.total_submissions }}
-					<br><strong>No. of Most Common:</strong> {{ aggregated_human_class.count }}
-                    <br><strong>Agreement:</strong> {% with ratio=aggregated_human_class.count|divide:aggregated_human_class.total_submissions %}{{ ratio|floatformat:3 }}{% endwith %}
-				{% else %}
-					<br><i>No human classifications submitted yet.</i>
-				{% endif %}
-			</p>
+       <h3>Classifications</h3>
+       <p>
+         <u><strong>Auto Classification</strong></u>&emsp;
+         {% if object.auto_tidesclass %}
+           <br><strong>Class:</strong> {{ object.auto_tidesclass }}
+           {% if object.auto_tidesclass_subclass %}
+             <br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
+           {% endif %}
+           {% if object.auto_tidesclass_z %}
+             <br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
+           {% endif %}
+           {% if object.auto_tidesclass_prob %}
+             <br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
+           {% endif %}
+         {% else %}
+           <br>No Auto Classification
+         {% endif %}
+       </p>
 
-			<p>
-				<u><strong>All Human Classifications:</strong></u>
-				{% if human_classifications %}
-                    {% for submission in human_classifications %}
-                        <strong>{{ submission.user.username }}</strong> submitted
-                        <strong>{{ submission.sn_type }}</strong>
-                        {% if submission.sn_subtype %}(Subclass: {{ submission.sn_subtype }}){% endif %}
-                        {% if submission.sn_z %}(z: {{ submission.sn_z|floatformat:4 }}){% endif %}
-                        {% if submission.host_z %}(host z: {{ submission.host_z|floatformat:4 }}){% endif %}
-                        {% if submission.phase %}(phase: {{ submission.phase|floatformat:1 }} d){% endif %}
-                        {% if submission.comments %}(Comments: {{ submission.comments }}){% endif %}
-                        on {{ submission.created|date:"Y-m-d H:i" }}<br>
-                    {% endfor %}
-                {% else %}
-                    <br><i>No human classifications submitted yet.</i>
-                {% endif %}
-            </p>
+       <p>
+         <u><strong>Human Classification:</strong></u>
+         {% if aggregated_human_class %}
+           <br><strong>Most Common:</strong> {{ aggregated_human_class.most_common_class }}
+           <br><strong>Total Submissions:</strong> {{ aggregated_human_class.total_submissions }}
+           <br><strong>No. of Most Common:</strong> {{ aggregated_human_class.count }}
+                   <br><strong>Agreement:</strong> {% with ratio=aggregated_human_class.count|divide:aggregated_human_class.total_submissions %}{{ ratio|floatformat:3 }}{% endwith %}
+         {% else %}
+           <br><i>No human classifications submitted yet.</i>
+         {% endif %}
+       </p>
+
+       <p>
+         <u><strong>All Human Classifications:</strong></u>
+         {% if human_classifications %}
+                     {% for submission in human_classifications %}
+                         <strong>{{ submission.user.username }}</strong> submitted
+                         <strong>{{ submission.sn_type }}</strong>
+                         {% if submission.sn_subtype %}(Subclass: {{ submission.sn_subtype }}){% endif %}
+                         {% if submission.sn_z %}(z: {{ submission.sn_z|floatformat:4 }}){% endif %}
+                         {% if submission.host_z %}(host z: {{ submission.host_z|floatformat:4 }}){% endif %}
+                         {% if submission.phase %}(phase: {{ submission.phase|floatformat:1 }} d){% endif %}
+                         {% if submission.comments %}(Comments: {{ submission.comments }}){% endif %}
+                         on {{ submission.created|date:"Y-m-d H:i" }}<br>
+                     {% endfor %}
+                 {% else %}
+                     <br><i>No human classifications submitted yet.</i>
+                 {% endif %}
+       </p>
 
 			{% classification_form target.id %}
 			<!--{% recent_photometry object limit=3 %}
