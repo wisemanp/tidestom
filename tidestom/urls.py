@@ -19,7 +19,8 @@ from django.views.generic import TemplateView
 from .views import (
     LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
-from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView, PreviousSNIDRunsView, ToggleTagView, TagSearchView
+from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView, PreviousSNIDRunsView
+from custom_code.views import ToggleTagView  
 from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
 
 urlpatterns = [

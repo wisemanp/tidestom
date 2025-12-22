@@ -1,6 +1,9 @@
-from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic.edit import FormView
 from django.views import View
+from django.http import JsonResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .models import TidesTarget, Tag, TargetTag
 from django.conf import settings
 from datetime import datetime
 import requests
@@ -13,9 +16,6 @@ from pathlib import Path
 from custom_code.models import TidesSpec
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import TidesTarget, Tag, TargetTag
 
 logger = logging.getLogger(__name__)
 
@@ -195,11 +195,16 @@ class NGSFFormAJAXView(FormView):
         return JsonResponse({"success": True, "data": response.json()})
 
 class ToggleTagView(LoginRequiredMixin, View):
+    """
+    POST to add/remove a tag for a target. Returns JSON.
+    """
     def post(self, request, target_id, tag_id):
         target = get_object_or_404(TidesTarget, pk=target_id)
         tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
 
-        tt, created = TargetTag.objects.get_or_create(tides=target, tag=tag, defaults={'user': request.user})
+        tt, created = TargetTag.objects.get_or_create(
+            tides=target, tag=tag, defaults={'user': request.user}
+        )
         if not created:
             tt.delete()
             return JsonResponse({'toggled': 'removed', 'tag': tag.name})
