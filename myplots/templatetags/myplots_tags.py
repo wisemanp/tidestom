@@ -96,6 +96,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                 print(exc)
                 pass
         except IndexError:
+            warnings.warn(f"{target}", UserWarning)
             pass
 
     if ngsf_path is not None:
