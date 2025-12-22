@@ -812,4 +812,5 @@ $(document).ready(function() {
   </script>
 {% endif %}
 </div>
+{% endif %} {# closes the outer `{% if request.user.is_authenticated %}` that wraps the main row #}
 {% endblock %}
