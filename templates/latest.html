@@ -8,10 +8,15 @@
 	
 	{% if request.user.is_authenticated %}
     <form method="get" action="{% url 'latest' %}" class="mb-4">
-      <label for="days_range">Show targets observed in the last:</label>
-      <input type="number" name="days_range" id="days_range" value="{{ default_days_range }}" min="1" class="form-control d-inline-block w-auto">
-      <button type="submit" class="btn btn-primary">Update</button>
-    </form>
+		<div class="d-flex align-items-center gap-2">
+           <label class="form-label mb-0" for="days_range">Show targets observed in the last:</label>
+           <div class="input-group w-auto">
+           <input type="number" name="days_range" id="days_range" value="{{ default_days_range }}" min="1" class="form-control">
+			<span class="input-group-text">days</span>
+           </div>
+		<button type="submit" class="btn btn-primary">Update</button>
+		</div>
+	</form>
 
     <div class="row">
       {% for spec in targets %}
