@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(primary_key=True, serialize=False)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('tides', models.ForeignKey(to='tom_targets.target', on_delete=models.CASCADE, db_column='tides_id', related_name='target_tags')),
+                ('tides', models.ForeignKey(to='tom_targets.Target', on_delete=models.CASCADE, db_column='tides_id', related_name='target_tags')),
                 ('tag', models.ForeignKey(to='custom_code.tag', on_delete=models.CASCADE, related_name='target_tags')),
                 ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)),
             ],
