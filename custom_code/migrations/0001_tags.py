@@ -19,7 +19,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('tom_targets', '0001_initial'),  # adjust if your tom_targets has later migrations
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -52,7 +51,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(primary_key=True, serialize=False)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('tides', models.ForeignKey(to='tom_targets.Target', on_delete=models.CASCADE, db_column='tides_id', related_name='target_tags')),
+                # DB column only; no FK yet to avoid resolution issues
+                ('tides', models.BigIntegerField(db_column='tides_id')),
                 ('tag', models.ForeignKey(to='custom_code.tag', on_delete=models.CASCADE, related_name='target_tags')),
                 ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)),
             ],
