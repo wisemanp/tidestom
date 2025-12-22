@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 from datetime import datetime
 from astropy.time import Time
 from django import template
+import glob
 
 from .spectroscopy_settings import add_snid_templates, add_ngsf_templates, load_spectra
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
@@ -77,6 +78,19 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                              fig,
                              n=3
                              )
+        except Exception as exc:
+            print(exc)
+            pass
+    else:
+        paths= glob.glob(f'/snid_api_results/pipeline_out/*/{target}/*h5')
+        auto_snid = f'{paths[0]}'
+        try:
+            fig = add_snid_templates(auto_snid,
+                            spectrum.spectral_axis.value,
+                            spectrum.flux.value,
+                            fig,
+                            n=3
+                            )
         except Exception as exc:
             print(exc)
             pass
