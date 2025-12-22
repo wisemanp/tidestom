@@ -53,9 +53,6 @@ class TidesTarget(TomTarget):
     z_source = models.CharField(max_length=50, null=True, blank=True)
     confidence = models.FloatField(null=True, blank=True)
 
-    # Predefined tag relationship (managed through table)
-    tags = models.ManyToManyField('Tag', through='TargetTag', related_name='targets')
-
     class Meta:
         managed = False
         db_table = 'tides_cand'
@@ -157,6 +154,10 @@ class TidesTarget(TomTarget):
         )
         return best.probability if best else None
 
+    @property
+    def tags(self):
+        # Returns a queryset so templates can call .all
+        return Tag.objects.filter(target_tags__tides_id=self.pk, is_active=True)
 
 # ----------------------------
 # Tags (managed locally)
@@ -175,8 +176,9 @@ class Tag(models.Model):
 
 
 class TargetTag(models.Model):
+    # IMPORTANT: FK to TomTarget (managed), but keep the column name tides_id
     tides = models.ForeignKey(
-        TidesTarget,
+        TomTarget,
         on_delete=models.CASCADE,
         db_column='tides_id',
         related_name='target_tags'
