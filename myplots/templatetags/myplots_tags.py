@@ -83,16 +83,19 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             pass
     else:
         paths= glob.glob(f'/snid_api_results/pipeline_out/*/{target}/*h5')
-        auto_snid = f'{paths[0]}'
         try:
-            fig = add_snid_templates(auto_snid,
-                            spectrum.spectral_axis.value,
-                            spectrum.flux.value,
-                            fig,
-                            n=3
-                            )
-        except Exception as exc:
-            print(exc)
+            auto_snid = f'{paths[0]}'
+            try:
+                fig = add_snid_templates(auto_snid,
+                                spectrum.spectral_axis.value,
+                                spectrum.flux.value,
+                                fig,
+                                n=3
+                                )
+            except Exception as exc:
+                print(exc)
+                pass
+        except IndexError:
             pass
 
     if ngsf_path is not None:
