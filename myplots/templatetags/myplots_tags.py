@@ -82,7 +82,8 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             print(exc)
             pass
     else:
-        paths= glob.glob(f'/snid_api_results/pipeline_out/*/{str(target)[6:]}/*h5')
+        tar = f"{target}"
+        paths= glob.glob(f'/snid_api_runs/pipeline_out/*/{tar[6:]}/*h5')
         try:
             auto_snid = f'{paths[0]}'
             try:
