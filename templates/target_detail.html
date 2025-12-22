@@ -777,10 +777,39 @@ $(document).ready(function() {
  -->
 
 
-</div>
-  </div>
+<h3>Tags</h3>
+<div class="mb-2">
+  {% if object.tags.all %}
+    {% for t in object.tags.all %}
+      <span class="badge badge-info">{{ t.name }}</span>
+    {% endfor %}
   {% else %}
-		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
+    <i>No tags</i>
   {% endif %}
+</div>
+
+{% if request.user.is_authenticated %}
+  <form id="tag-toggle-form" class="d-flex flex-wrap gap-2">
+    {% for t in tags %}
+      <button type="button"
+              class="btn btn-sm {% if t in object.tags.all %}btn-success{% else %}btn-outline-secondary{% endif %}"
+              data-tag-id="{{ t.id }}">
+        {{ t.name }}
+      </button>
+    {% endfor %}
+  </form>
+  <script>
+    document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const tagId = e.currentTarget.dataset.tagId;
+        const res = await fetch('{% url "toggle_tag" object.id 0 %}'.replace('0', tagId), {
+          method: 'POST',
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        if (res.ok) location.reload();
+      });
+    });
+  </script>
+{% endif %}
 </div>
 {% endblock %}

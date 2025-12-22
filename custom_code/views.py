@@ -13,6 +13,9 @@ from pathlib import Path
 from custom_code.models import TidesSpec
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .models import TidesTarget, Tag, TargetTag
 
 logger = logging.getLogger(__name__)
 
@@ -190,3 +193,33 @@ class NGSFFormAJAXView(FormView):
                 logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
 
         return JsonResponse({"success": True, "data": response.json()})
+
+class ToggleTagView(LoginRequiredMixin, View):
+    def post(self, request, target_id, tag_id):
+        target = get_object_or_404(TidesTarget, pk=target_id)
+        tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
+
+        tt, created = TargetTag.objects.get_or_create(tides=target, tag=tag, defaults={'user': request.user})
+        if not created:
+            tt.delete()
+            return JsonResponse({'toggled': 'removed', 'tag': tag.name})
+        return JsonResponse({'toggled': 'added', 'tag': tag.name})
+
+class TagSearchView(View):
+    def get(self, request):
+        # Filter targets by exact tag or list tags by substring
+        tag_name = request.GET.get('tag')
+        q = request.GET.get('q')
+
+        if tag_name:
+            targets = (TidesTarget.objects
+                       .filter(tags__name=tag_name)
+                       .distinct()
+                       .values('id', 'name'))
+            return JsonResponse({'results': list(targets)})
+
+        if q:
+            tags = Tag.objects.filter(name__icontains=q, is_active=True).values('id', 'name')
+            return JsonResponse({'results': list(tags)})
+
+        return JsonResponse({'results': []})

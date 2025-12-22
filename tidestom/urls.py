@@ -19,7 +19,7 @@ from django.views.generic import TemplateView
 from .views import (
     LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
-from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView, PreviousSNIDRunsView
+from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView, PreviousSNIDRunsView, ToggleTagView, TagSearchView
 from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
 
 urlpatterns = [
@@ -68,4 +68,6 @@ urlpatterns = [
         "api/previous_snid_runs/", PreviousSNIDRunsView.as_view(),
         name="previous_snid_runs"
     ),
+    path('targets/<int:target_id>/tags/toggle/<int:tag_id>/', ToggleTagView.as_view(), name='toggle_tag'),
+    path('tags/search/', TagSearchView.as_view(), name='tags_search'),
 ]

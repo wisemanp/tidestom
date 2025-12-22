@@ -53,6 +53,9 @@ class TidesTarget(TomTarget):
     z_source = models.CharField(max_length=50, null=True, blank=True)
     confidence = models.FloatField(null=True, blank=True)
 
+    # Predefined tag relationship (managed through table)
+    tags = models.ManyToManyField('Tag', through='TargetTag', related_name='targets')
+
     class Meta:
         managed = False
         db_table = 'tides_cand'
@@ -154,6 +157,61 @@ class TidesTarget(TomTarget):
         )
         return best.probability if best else None
 
+
+# ----------------------------
+# Tags (managed locally)
+# ----------------------------
+class Tag(models.Model):
+    name = models.CharField(max_length=64, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['name']
+        db_table = 'tides_tag'
+
+    def __str__(self):
+        return self.name
+
+
+class TargetTag(models.Model):
+    tides = models.ForeignKey(
+        TidesTarget,
+        on_delete=models.CASCADE,
+        db_column='tides_id',
+        related_name='target_tags'
+    )
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='target_tags')
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tides_target_tag'
+        unique_together = (('tides', 'tag'),)
+        ordering = ['-created']
+
+    def __str__(self):
+        return f'{self.tides_id} - {self.tag.name}'
+
+
+class TagProposal(models.Model):
+    name = models.CharField(max_length=64)
+    justification = models.TextField()
+    proposed_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(
+        max_length=16,
+        choices=[('open', 'Open'), ('accepted', 'Accepted'), ('rejected', 'Rejected')],
+        default='open'
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'tides_tag_proposal'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f'{self.name} ({self.status})'
 
 # ----------------------------
 # Human classifications (remote)
