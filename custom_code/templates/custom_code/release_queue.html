@@ -67,7 +67,7 @@
             <input type="checkbox" name="target_id" value="{{ t.id }}">
           </td>
           <td>{{ t.tides_id }}</td>
-          <td><a href="{% url 'target-detail' t.id %}">{{ t.name }}</a></td>
+          <td><a href="{% url 'target_detail' t.id %}">{{ t.name }}</a></td>
           <td>{{ t.auto_tidesclass }}</td>
           <td>{{ t.auto_tidesclass_prob|floatformat:3 }}</td>
           <td>
