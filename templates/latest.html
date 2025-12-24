@@ -10,9 +10,9 @@
       <form method="get" action="{% url 'latest' %}" class="mb-4">
         <div class="row g-2 align-items-end">
 
-          <!-- (Optional) Days range input kept but not used strongly in view yet -->
+          <!-- Days range -->
           <div class="col-md-3">
-            <label class="form-label" for="days_range">In the last (days)</label>
+            <label class="form-label" for="days_range">Observed in the last (days)</label>
             <input type="number"
                    name="days_range"
                    id="days_range"
@@ -34,9 +34,9 @@
             </select>
           </div>
 
-          <!-- Class filter (dropdown) -->
+          <!-- Class filter: same options as TidesTargetForm -->
           <div class="col-md-3">
-            <label class="form-label" for="class">Classification</label>
+            <label class="form-label" for="class">TiDES class</label>
             <select name="class" id="class" class="form-select form-control">
               <option value="">(any)</option>
               {% for c in all_classes %}
@@ -45,9 +45,9 @@
             </select>
           </div>
 
-          <!-- Redshift filters (z) -->
+          <!-- Redshift filters (PipelineClassificationGlobal.z) -->
           <div class="col-md-3">
-            <label class="form-label d-block">Redshift</label>
+            <label class="form-label d-block">Redshift (pipeline)</label>
             <div class="input-group mb-1">
               <span class="input-group-text">z ≥</span>
               <input type="number"
@@ -79,11 +79,10 @@
           <tr>
             <th>Tides ID</th>
             <th>Name</th>
-            <th>Class</th>
-            <th>z</th>
+            <th>Pipeline class</th>
+            <th>z (pipeline)</th>
             <th>Prob</th>
             <th>Tags</th>
-            <th>ID</th>
           </tr>
         </thead>
         <tbody>
@@ -93,7 +92,7 @@
                 {% if pc.target %}
                   <a href="{% url 'target_detail' pc.target.id %}">{{ pc.target.tides_id }}</a>
                 {% else %}
-                  -
+                  {{ pc.tides_id }}
                 {% endif %}
               </td>
               <td>
@@ -117,10 +116,9 @@
                   <i>n/a</i>
                 {% endif %}
               </td>
-              <td>{{ pc.id }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="7"><i>No classifications match your filters.</i></td></tr>
+            <tr><td colspan="6"><i>No classifications match your filters.</i></td></tr>
           {% endfor %}
         </tbody>
       </table>

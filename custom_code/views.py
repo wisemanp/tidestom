@@ -4,10 +4,18 @@ from django.views.generic import TemplateView, ListView   # <-- add this
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import TidesTarget, Tag, TargetTag, TidesSpec, PipelineClassificationGlobal
-from .forms import SnidParamsForm, NGSFParamsForm
+from custom_code.models import (
+    TidesTarget,
+    Tag,
+    TargetTag,
+    TidesSpec,
+    PipelineClassificationGlobal,
+    TidesClass,
+)
+from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm
 from django.conf import settings
-from datetime import datetime
+from datetime import datetime, timedelta
+from django.utils.timezone import now
 import requests
 import shutil
 import os
@@ -16,6 +24,7 @@ import logging
 from workspaces import utils
 from pathlib import Path
 from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
+from django.db import DatabaseError
 
 logger = logging.getLogger(__name__)
 
@@ -310,34 +319,43 @@ class PublicClassificationsDownloadView(View):
 
 class LatestView(ListView):
     """
-    Latest classifications, driven by PipelineClassificationGlobal and joined to TidesTarget.
+    Latest *classifications*, driven by PipelineClassificationGlobal,
+    filtered by TiDES class/z and tags, but still linking back to TidesTarget.
     """
-    model = PipelineClassificationGlobal
     template_name = 'latest.html'
+    paginate_by = 200
+    model = PipelineClassificationGlobal
     context_object_name = 'classifications'
-    paginate_by = 50
 
     def get_queryset(self):
         qs = PipelineClassificationGlobal.objects.all()
 
-        # Order newest first: by id or version
-        qs = qs.order_by('-id')
+        # --- Date range: use an approximate 'created from spectra' via last obs_date ---
+        # If you prefer pure classification-age, skip this and just order by id.
+        try:
+            days_range = int(self.request.GET.get('days_range', 30))
+        except ValueError:
+            days_range = 30
+        date_threshold = now() - timedelta(days=days_range)
 
-        # Preload related TidesTarget (FK is 'tides')
-        qs = qs.select_related('tides')
+        # Restrict to classifications whose target has a spectrum in this date range
+        recent_specs = TidesSpec.objects.filter(obs_date__gte=date_threshold)
+        recent_tides_ids = list(recent_specs.values_list('tides_id', flat=True))
+        qs = qs.filter(tides_id__in=recent_tides_ids)
 
-        # --- tag filter (on underlying TidesTarget) ---
-        tag = self.request.GET.get('tag')
-        if tag:
-            target_qs = filter_by_tags(TidesTarget.objects.all(), include_tags=[tag])
+        # --- Tag filter (on TidesTarget via tides FK) ---
+        tag_name = self.request.GET.get('tag')
+        if tag_name:
+            target_qs = filter_by_tags(TidesTarget.objects.all(), include_tags=[tag_name])
             qs = qs.filter(tides__in=target_qs)
 
-        # --- class filter (dropdown) ---
+        # --- Classification filter: TiDES class name ---
         ctype = self.request.GET.get('class')
         if ctype:
+            # Here we assume sn_type holds the TiDES main class label (Ia, Ib, II, ...)
             qs = qs.filter(sn_type=ctype)
 
-        # --- redshift filters (field is 'z') ---
+        # --- Redshift filter: PipelineClassificationGlobal.z ---
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         if z_min:
@@ -353,8 +371,8 @@ class LatestView(ListView):
             except ValueError:
                 pass
 
-        # --- days_range: approximate with id if requested (optional) ---
-        # If you don't have a timestamp, you can ignore days_range or leave this commented out.
+        # Newest classifications first
+        qs = qs.order_by('-id').select_related('tides')
 
         return qs
 
@@ -362,33 +380,22 @@ class LatestView(ListView):
         ctx = super().get_context_data(**kwargs)
         pcs = ctx['classifications']
 
-        # Attach underlying targets as .target for convenience
+        # attach the underlying TidesTarget as .target for convenience
         target_ids = [pc.tides_id for pc in pcs if pc.tides_id]
-        target_map = {
-            t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)
-        }
+        target_map = {t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)}
         for pc in pcs:
             pc.target = target_map.get(pc.tides_id)
 
-        # Filter state
-        ctx['default_days_range'] = self.request.GET.get('days_range', '')
+        # filter state
+        ctx['default_days_range'] = self.request.GET.get('days_range', 30)
         ctx['filter_tag'] = self.request.GET.get('tag', '')
         ctx['filter_class'] = self.request.GET.get('class', '')
         ctx['filter_z_min'] = self.request.GET.get('z_min', '')
         ctx['filter_z_max'] = self.request.GET.get('z_max', '')
 
-        # Tag choices
+        # tag and class choices
         ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-
-        # Class choices dropdown from sn_type
-        ctx['all_classes'] = (
-            PipelineClassificationGlobal.objects
-            .exclude(sn_type__isnull=True)
-            .exclude(sn_type='')
-            .values_list('sn_type', flat=True)
-            .distinct()
-            .order_by('sn_type')
-        )
+        ctx['all_classes'] = get_tides_class_choices()
 
         return ctx
 
@@ -446,3 +453,15 @@ class ReleaseQueueActionView(LoginRequiredMixin, View):
             return JsonResponse({'error': 'Unknown action'}, status=400)
 
         return JsonResponse({'updated': n})
+
+def get_tides_class_choices():
+    """
+    Match TidesTargetForm: use DB TidesClass names if available,
+    otherwise fall back to TidesTarget.TIDES_CLASS_CHOICES (if defined).
+    """
+    try:
+        db_choices = list(TidesClass.objects.order_by('name').values_list('name', flat=True))
+    except DatabaseError:
+        db_choices = []
+    fallback = [c[0] for getattr(TidesTarget, 'TIDES_CLASS_CHOICES', [])] if hasattr(TidesTarget, 'TIDES_CLASS_CHOICES') else []
+    return db_choices if db_choices else fallback
