@@ -34,45 +34,45 @@ def get_tides_class_choices():
     Get classification choices by instantiating TidesTargetForm.
     This guarantees we get the exact same list as the form uses.
     """
-    logger.info("DEBUG: Starting get_tides_class_choices")
+    # Use print with flush=True to bypass logging config and force output to Docker logs
+    print("DEBUG: Starting get_tides_class_choices", flush=True)
     try:
         # Instantiate the form to trigger its __init__ logic (which queries the DB)
         form = TidesTargetForm()
-        logger.info(f"DEBUG: Form instantiated. Fields: {list(form.fields.keys())}")
+        print(f"DEBUG: Form instantiated. Fields: {list(form.fields.keys())}", flush=True)
         
         field = form.fields.get('tidesclass')
         
         if field:
-            logger.info("DEBUG: Found 'tidesclass' field.")
+            print("DEBUG: Found 'tidesclass' field.", flush=True)
             if hasattr(field, 'choices'):
                 # Extract just the values (first element of tuple), filtering out empty ones
-                # list() handles both lists and ModelChoiceIterators
                 raw_choices = list(field.choices)
-                logger.info(f"DEBUG: Raw choices sample (first 5): {raw_choices[:5]}")
+                print(f"DEBUG: Raw choices sample (first 5): {raw_choices[:5]}", flush=True)
                 
                 choices = [c[0] for c in raw_choices if c[0]]
                 if choices:
-                    logger.info(f"DEBUG: Returning {len(choices)} choices from form.")
+                    print(f"DEBUG: Returning {len(choices)} choices from form.", flush=True)
                     return choices
                 else:
-                    logger.info("DEBUG: Choices list was empty after filtering blanks.")
+                    print("DEBUG: Choices list was empty after filtering blanks.", flush=True)
             else:
-                logger.info("DEBUG: 'tidesclass' field has no 'choices' attribute.")
+                print("DEBUG: 'tidesclass' field has no 'choices' attribute.", flush=True)
         else:
-            logger.info("DEBUG: 'tidesclass' field NOT found in form.")
+            print("DEBUG: 'tidesclass' field NOT found in form.", flush=True)
 
     except Exception as e:
-        logger.error(f"DEBUG: Error inspecting TidesTargetForm: {e}", exc_info=True)
+        print(f"DEBUG: Error inspecting TidesTargetForm: {e}", flush=True)
 
     # Fallback: If form instantiation fails, try the hardcoded list from forms.py
-    logger.info("DEBUG: Falling back to USE_CHOICES from forms.py")
+    print("DEBUG: Falling back to USE_CHOICES from forms.py", flush=True)
     try:
         from .forms import USE_CHOICES
         choices = [c[0] for c in USE_CHOICES]
-        logger.info(f"DEBUG: Found USE_CHOICES. Count: {len(choices)}")
+        print(f"DEBUG: Found USE_CHOICES. Count: {len(choices)}", flush=True)
         return choices
     except (ImportError, AttributeError) as e:
-        logger.warning(f"DEBUG: Could not import USE_CHOICES: {e}")
+        print(f"DEBUG: Could not import USE_CHOICES: {e}", flush=True)
         return []
 
 class SnidFormAjaxView(FormView):
