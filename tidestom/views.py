@@ -24,6 +24,8 @@ from django.db.models import Q
 import csv
 import json
 from custom_code.services import filter_by_tags  # ADD THIS import
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
 
