@@ -7,7 +7,7 @@ def add_released_tag(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('custom_code', '0003_humanclassification_pipelineclassificationdash_and_more'),
+        ('custom_code', '0002_targettag_fk_state'),
     ]
 
     operations = [
