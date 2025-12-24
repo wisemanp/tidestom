@@ -460,8 +460,18 @@ def get_tides_class_choices():
     otherwise fall back to TidesTarget.TIDES_CLASS_CHOICES (if defined).
     """
     try:
-        db_choices = list(TidesClass.objects.order_by('name').values_list('name', flat=True))
+        db_choices = list(
+            TidesClass.objects.order_by('name').values_list('name', flat=True)
+        )
     except DatabaseError:
         db_choices = []
-    fallback = [c[0] for getattr(TidesTarget, 'TIDES_CLASS_CHOICES', [])] if hasattr(TidesTarget, 'TIDES_CLASS_CHOICES') else []
-    return db_choices if db_choices else fallback
+
+    if db_choices:
+        return db_choices
+
+    if hasattr(TidesTarget, 'TIDES_CLASS_CHOICES'):
+        fallback = [c[0] for c in TidesTarget.TIDES_CLASS_CHOICES]
+    else:
+        fallback = []
+
+    return fallback
