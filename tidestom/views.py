@@ -7,8 +7,16 @@ from tom_targets.models import Target
 from tom_dataproducts.models import DataProduct
 from datetime import timedelta
 from collections import Counter
-from custom_code.models import TidesTarget, HumanClassification, PipelineClassificationGlobal, TidesSpec, TidesClass, TidesClassSubClass
-from custom_code.models import Tag, TargetTag  
+from custom_code.models import (
+    TidesTarget,
+    HumanClassification,
+    PipelineClassificationGlobal,
+    TidesSpec,
+    TidesClass,
+    TidesClassSubClass,
+    Tag,
+    TargetTag,
+)
 from custom_code.forms import TidesTargetForm
 import psycopg2
 from django.conf import settings
@@ -23,9 +31,15 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 import csv
 import json
-from custom_code.services import filter_by_tags  # ADD THIS import
+from custom_code.services import (
+    filter_by_tags,
+    unreleased_queryset,   # make sure these exist in services.py
+    mark_released,
+    unmark_released,
+)
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.views import View   # <-- IMPORTANT
 
 logger = logging.getLogger(__name__)
 
