@@ -8,6 +8,7 @@ from tom_dataproducts.models import DataProduct
 from datetime import timedelta
 from collections import Counter
 from custom_code.models import TidesTarget, HumanClassification, PipelineClassificationGlobal, TidesSpec, TidesClass, TidesClassSubClass
+from custom_code.models import Tag  
 from custom_code.forms import TidesTargetForm
 import psycopg2
 from django.conf import settings
@@ -87,6 +88,7 @@ class MyTargetDetailView(DetailView):
 
         # Individual submissions (ordered by remote 'created' column)
         context['human_classifications'] = submissions.order_by('-created')
+        context['tags'] = Tag.objects.filter(is_active=True).order_by('name')  # NEW
         return context
 
 

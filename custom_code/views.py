@@ -1,6 +1,9 @@
-from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic.edit import FormView
 from django.views import View
+from django.http import JsonResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .models import TidesTarget, Tag, TargetTag
 from django.conf import settings
 from datetime import datetime
 import requests
@@ -190,3 +193,47 @@ class NGSFFormAJAXView(FormView):
                 logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
 
         return JsonResponse({"success": True, "data": response.json()})
+
+class ToggleTagView(LoginRequiredMixin, View):
+    """
+    POST to add/remove a tag for a target. Returns JSON:
+    { "toggled": "added" | "removed", "tag": "<tag name>" }
+    """
+    def post(self, request, target_id, tag_id):
+        target = get_object_or_404(TidesTarget, pk=target_id)
+        tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
+
+        # TargetTag.tides is a FK to tom_targets.BaseTarget, so pass target (subclass)
+        tt, created = TargetTag.objects.get_or_create(
+            tides=target,
+            tag=tag,
+            defaults={'user': request.user},
+        )
+
+        if created:
+            logger.info("Tag '%s' added to target %s by %s", tag.name, target.id, request.user)
+            return JsonResponse({'toggled': 'added', 'tag': tag.name})
+
+        # Already existed: delete to "un-tag"
+        tt.delete()
+        logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
+        return JsonResponse({'toggled': 'removed', 'tag': tag.name})
+
+class TagSearchView(View):
+    def get(self, request):
+        # Filter targets by exact tag or list tags by substring
+        tag_name = request.GET.get('tag')
+        q = request.GET.get('q')
+
+        if tag_name:
+            targets = (TidesTarget.objects
+                       .filter(tags__name=tag_name)
+                       .distinct()
+                       .values('id', 'name'))
+            return JsonResponse({'results': list(targets)})
+
+        if q:
+            tags = Tag.objects.filter(name__icontains=q, is_active=True).values('id', 'name')
+            return JsonResponse({'results': list(tags)})
+
+        return JsonResponse({'results': []})
