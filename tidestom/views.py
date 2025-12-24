@@ -17,6 +17,7 @@ from custom_code.models import (
     Tag,
     TargetTag,
 )
+from django.db import models   
 from custom_code.forms import TidesTargetForm
 import psycopg2
 from django.conf import settings
