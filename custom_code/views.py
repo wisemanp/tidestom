@@ -390,6 +390,9 @@ class LatestView(ListView):
                 qs = qs.filter(z__lte=float(z_max))
             except ValueError:
                 pass
+
+        return qs.select_related('tides').order_by('-id')
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
@@ -409,3 +412,65 @@ class LatestView(ListView):
         ctx['all_classes'] = get_tides_class_choices()
 
         return ctx
+
+
+# --- Reinstated Release Queue Views ---
+
+class ReleaseQueueView(LoginRequiredMixin, TemplateView):
+    template_name = 'custom_code/release_queue.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        
+        # Start with unreleased targets
+        qs = unreleased_queryset().select_related()
+
+        # Filters
+        min_prob = self.request.GET.get('min_prob')
+        include = self.request.GET.getlist('include_tag')
+        exclude = self.request.GET.getlist('exclude_tag')
+
+        if min_prob:
+            try:
+                # Filter on the related pipeline classification probability
+                qs = qs.filter(pipeline_classifications_global__probability__gte=float(min_prob))
+                ctx['min_prob'] = float(min_prob)
+            except ValueError:
+                pass
+
+        if include:
+            qs = filter_by_tags(qs, include_tags=include)
+        if exclude:
+            qs = filter_by_tags(qs, exclude_tags=exclude)
+
+        # Limit results to avoid massive page loads
+        ctx['targets'] = qs.distinct()[:500]
+        
+        # Context for filter form
+        ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
+        ctx['include_tags'] = include
+        ctx['exclude_tags'] = exclude
+        
+        return ctx
+
+
+class ReleaseQueueActionView(LoginRequiredMixin, View):
+    def post(self, request):
+        action = request.POST.get('action')
+        ids = request.POST.getlist('target_id')
+        
+        if not ids:
+            return JsonResponse({'error': 'No targets selected'}, status=400)
+
+        targets = TidesTarget.objects.filter(pk__in=ids)
+
+        if action == 'mark':
+            count = mark_released(targets, request.user)
+            return JsonResponse({'updated': count, 'message': f'Marked {count} targets as released.'})
+            
+        elif action == 'unmark':
+            count = unmark_released(targets)
+            return JsonResponse({'updated': count, 'message': f'Unmarked {count} targets.'})
+            
+        else:
+            return JsonResponse({'error': 'Unknown action'}, status=400)
