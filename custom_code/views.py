@@ -399,3 +399,58 @@ class LatestView(ListView):
         )
 
         return ctx
+
+class ReleaseQueueView(LoginRequiredMixin, TemplateView):
+    """
+    Staging area: show unreleased targets, with filters on auto prob and tags.
+    """
+    template_name = 'custom_code/release_queue.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        # base: unreleased
+        qs = unreleased_queryset()
+
+        # filters from query params
+        min_prob = self.request.GET.get('min_prob')
+        include = self.request.GET.getlist('include_tag')  # ?include_tag=high-redshift&include_tag=...
+        exclude = self.request.GET.getlist('exclude_tag')
+
+        if min_prob:
+            try:
+                mp = float(min_prob)
+                qs = qs.filter(auto_tidesclass_prob__gte=mp)
+                ctx['min_prob'] = mp
+            except ValueError:
+                pass
+
+        if include:
+            qs = filter_by_tags(qs, include_tags=include)
+        if exclude:
+            qs = filter_by_tags(qs, exclude_tags=exclude)
+
+        ctx['targets'] = qs.select_related()[:500]  # safety limit
+        ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
+        ctx['include_tags'] = include
+        ctx['exclude_tags'] = exclude
+        return ctx
+
+
+class ReleaseQueueActionView(LoginRequiredMixin, View):
+    """
+    POST endpoint to mark/unmark 'released' for a selection of targets from the queue.
+    """
+    def post(self, request):
+        action = request.POST.get('action')  # 'mark' or 'unmark'
+        ids = request.POST.getlist('target_id')  # repeated target_id fields
+        targets = TidesTarget.objects.filter(pk__in=ids)
+
+        if action == 'mark':
+            n = mark_released(targets, request.user)
+        elif action == 'unmark':
+            n = unmark_released(targets)
+        else:
+            return JsonResponse({'error': 'Unknown action'}, status=400)
+
+        return JsonResponse({'updated': n})
