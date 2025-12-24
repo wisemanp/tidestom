@@ -314,19 +314,28 @@ fetch("{% static 'json/line_data.json' %}")
           {% for t in tags %}
             <button type="button"
                     class="btn btn-sm {% if t in object.tags.all %}btn-success{% else %}btn-outline-secondary{% endif %}"
-                    data-tag-id="{{ t.id }}">
+                    data-url="{% url 'toggle_tag' object.id t.id %}">
               {{ t.name }}
             </button>
           {% endfor %}
         </form>
         <script>
+          function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+          }
+          const csrftoken = getCookie('csrftoken');
+
           document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-              const tagId = e.currentTarget.dataset.tagId;
-              const url = '{% url "toggle_tag" object.id 0 %}'.replace('0', tagId);
+              const url = e.currentTarget.dataset.url;
+              if (!url) return;
+
               const res = await fetch(url, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                headers: { 'X-CSRFToken': csrftoken }
               });
               if (res.ok) location.reload();
             });
@@ -549,268 +558,11 @@ fetch("{% static 'json/line_data.json' %}")
 
 <script>
 $(document).ready(function() {
-    
-    // Debug what's available
-    console.log('jQuery version:', $.fn.jquery);
-    console.log('Bootstrap loaded:', typeof $.fn.modal !== 'undefined');
-    console.log('Multiselect available:', typeof $.fn.multiselect !== 'undefined');
-    console.log('Multiselect function:', $.fn.multiselect);
-    
-    // Function to manually load multiselect if it's not available
-    function ensureMultiselect(callback) {
-        if (typeof $.fn.multiselect !== 'undefined') {
-            console.log('Multiselect is available');
-            callback();
-            return;
-        }
-        
-        console.log('Multiselect not available, attempting to reload...');
-        
-        // Try to reload the multiselect script
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js';
-        script.onload = function() {
-            console.log('Multiselect reloaded, checking again...');
-            setTimeout(function() {
-                if (typeof $.fn.multiselect !== 'undefined') {
-                    console.log('Multiselect now available!');
-                    callback();
-                } else {
-                    console.error('Multiselect still not available after reload');
-                    // Fallback: convert to regular selects
-                    fallbackToRegularSelects();
-                }
-            }, 100);
-        };
-        script.onerror = function() {
-            console.error('Failed to load multiselect script');
-            fallbackToRegularSelects();
-        };
-        document.head.appendChild(script);
-    }
-    
-    // Fallback function to style regular selects
-    function fallbackToRegularSelects() {
-        console.log('Using fallback styling for regular selects');
-        ['#use', '#usesub', '#avoid', '#avoidsub'].forEach(function(selector) {
-            const $select = $(selector);
-            if ($select.length) {
-                $select.addClass('form-control').css({
-                    'height': 'auto',
-                    'min-height': '38px'
-                });
-                
-                // Add "Select All" functionality manually
-                const selectAllId = selector.replace('#', '') + '-select-all';
-                const $selectAllBtn = $('<button type="button" class="btn btn-sm btn-secondary mb-2" id="' + selectAllId + '">Select All</button>');
-                
-                $select.before($selectAllBtn);
-                
-                $selectAllBtn.on('click', function() {
-                    if ($select.find('option:selected').length === $select.find('option').length) {
-                        // Deselect all
-                        $select.find('option').prop('selected', false);
-                        $(this).text('Select All');
-                    } else {
-                        // Select all
-                        $select.find('option').prop('selected', true);
-                        $(this).text('Deselect All');
-                    }
-                });
-            }
-        });
-    }
-    
-    // Function to initialize multiselects (same as before but with better error handling)
-    function initializeMultiselects() {
-        console.log('Attempting to initialize multiselects...');
-        
-        // Destroy existing multiselects safely
-        ['#use', '#usesub', '#avoid', '#avoidsub'].forEach(function(selector) {
-            try {
-                const $select = $(selector);
-                if ($select.length && $select.data('multiselect')) {
-                    console.log('Destroying existing multiselect for', selector);
-                    $select.multiselect('destroy');
-                }
-            } catch (e) {
-                console.log('Error destroying multiselect for', selector, ':', e);
-            }
-        });
-        
-        setTimeout(function() {
-            try {
-                const multiselectOptions = {
-                    includeSelectAllOption: true,
-                    enableFiltering: true,
-                    enableCaseInsensitiveFiltering: true,
-                    buttonWidth: '100%',
-                    nonSelectedText: 'Select options',
-                    maxHeight: 200
-                };
-                
-                // Initialize each multiselect
-                if ($('#use').length) {
-                    $('#use').multiselect(multiselectOptions);
-                    $('#use').multiselect('selectAll', false);
-                    $('#use').multiselect('updateButtonText');
-                }
-                
-                if ($('#usesub').length) {
-                    $('#usesub').multiselect(multiselectOptions);
-                    $('#usesub').multiselect('selectAll', false);
-                    $('#usesub').multiselect('updateButtonText');
-                }
-                
-                if ($('#avoid').length) {
-                    $('#avoid').multiselect(multiselectOptions);
-                }
-                
-                if ($('#avoidsub').length) {
-                    $('#avoidsub').multiselect(multiselectOptions);
-                }
-                
-                console.log('All multiselects initialized successfully');
-                
-            } catch (error) {
-                console.error('Error during multiselect initialization:', error);
-                console.log('Falling back to regular selects...');
-                fallbackToRegularSelects();
-            }
-        }, 100);
-    }
-    
-    // Tab switching function (simplified)
-    function switchTab(activeTabId, targetPaneId) {
-        console.log('Switching to tab:', activeTabId, 'pane:', targetPaneId);
-        
-        // Remove active from all tabs
-        $('#fittingTabs .nav-link').removeClass('active');
-        
-        // Hide all panes
-        $('#fittingTabsContent .tab-pane').removeClass('show active').hide();
-        
-        // Activate target
-        $('#' + activeTabId).addClass('active');
-        $('#' + targetPaneId).addClass('show active').show();
-        
-        // Initialize multiselects for SNID tab
-        if (targetPaneId === 'snid-pane') {
-            setTimeout(function() {
-                ensureMultiselect(initializeMultiselects);
-            }, 200);
-        }
-    }
-    
-    function initInnerTabs() {
-        if (!$('.spectroscopy-only').is(':visible')) {
-            return;
-        }
-        
-        console.log('Initializing inner tabs...');
-        
-        // Remove existing handlers
-        $('#fittingTabs a[data-toggle="tab"]').off('click.inner-tabs');
-        
-        // Add click handlers
-        $('#fittingTabs a[data-toggle="tab"]').on('click.inner-tabs', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const tabId = $(this).attr('id');
-            const href = $(this).attr('href');
-            const targetPaneId = href.substring(1);
-            
-            switchTab(tabId, targetPaneId);
-        });
-        
-        // Initialize default tab
-        if (!$('#fittingTabs .nav-link.active').length) {
-            switchTab('snid-tab', 'snid-pane');
-        } else if ($('#snid-tab').hasClass('active')) {
-            setTimeout(function() {
-                ensureMultiselect(initializeMultiselects);
-            }, 200);
-        }
-    }
-    
-    // Initialize when spectroscopy tab becomes active
-    $(document).on('shown.bs.tab', 'a#spectroscopy-tab', function () {
-        console.log('Spectroscopy tab shown');
-        setTimeout(initInnerTabs, 200);
-    });
-    
-    // Initialize on page load
-    setTimeout(function() {
-        if ($('.spectroscopy-only').is(':visible')) {
-            console.log('Initializing on page load...');
-            initInnerTabs();
-        }
-    }, 1000);
+  // ...existing SNID/NGSF JS...
 });
 </script>
 
-<!-- 
-<script>
-$(document).ready(function() {
-    $(document).off("submit.snidForm", "#snid-form").on("submit.snidForm", "#snid-form", function(e) {
-    console.log("Submit handler triggered");
-    console.trace();
-        e.preventDefault();
-
-        $.ajax({
-          url: $(this).attr("action"),
-          type: "POST",
-          data: $(this).serialize(),
-          success: function(response) {
-            if (response.success) {
-              const filePath = response.data.data.file_path;
-              const container = document.getElementById('spectroscopy');
-              const targetId = container.dataset.targetId;
-
-              htmx.ajax('GET',
-                `/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
-                { target: '#spectroscopy' }
-              );
-            } else {
-              $("#snid-result").text("Error: " + response.error);
-            }
-          }
-        });
-    });
-});
-</script>
-
-<script>
-  $(document).off("submit", "#ngsf-form").on("submit", "#ngsf-form", function(e) {
-	e.preventDefault();
-
-    $.ajax({
-      url: $(this).attr("action"),
-      type: "POST",
-      data: $(this).serialize(),
-      success: function(response) {
-        if (response.success) {
-          const filePath = response.data.data.file_path;
-          const container = document.getElementById('spectroscopy');
-          const targetId = container.dataset.targetId;
-          console.log(`variable = ${targetId}`);
-
-          // Ask HTMX to reload the spectroscopy block
-          htmx.ajax('GET',
-            `/target_spectroscopy/${targetId}/?ngsf_path=${encodeURIComponent(filePath)}`,
-            { target: '#spectroscopy' }
-          );
-        } else {
-          $("#ngsf-result").text("Error: " + response.error);
-        }
-      }
-    });
-  });
-</script>  
- -->
-
-
+<!-- Tags block -->
 <h3>Tags</h3>
 <div class="mb-2">
   {% if object.tags.all %}
@@ -827,24 +579,39 @@ $(document).ready(function() {
     {% for t in tags %}
       <button type="button"
               class="btn btn-sm {% if t in object.tags.all %}btn-success{% else %}btn-outline-secondary{% endif %}"
-              data-tag-id="{{ t.id }}">
+              data-url="{% url 'toggle_tag' object.id t.id %}">
         {{ t.name }}
       </button>
     {% endfor %}
   </form>
   <script>
+    // Define getCookie/csrftoken only if not already defined
+    if (typeof getCookie === 'undefined') {
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+      }
+      window.getCookie = getCookie;
+    }
+    if (typeof csrftoken === 'undefined') {
+      window.csrftoken = getCookie('csrftoken');
+    }
+
     document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const tagId = e.currentTarget.dataset.tagId;
-        const res = await fetch('{% url "toggle_tag" object.id 0 %}'.replace('0', tagId), {
+        const url = e.currentTarget.dataset.url;
+        if (!url) return;
+
+        const res = await fetch(url, {
           method: 'POST',
-          headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+          headers: { 'X-CSRFToken': csrftoken }
         });
         if (res.ok) location.reload();
       });
     });
   </script>
 {% endif %}
-</div>
-{% endif %} {# closes the outer `{% if request.user.is_authenticated %}` that wraps the main row #}
+
 {% endblock %}
