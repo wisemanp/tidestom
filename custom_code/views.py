@@ -1,6 +1,6 @@
 from django.views.generic.edit import FormView
 from django.views import View
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import TidesTarget, Tag, TargetTag
@@ -16,6 +16,7 @@ from pathlib import Path
 from custom_code.models import TidesSpec
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm
+from custom_code.services import filter_by_tags
 
 logger = logging.getLogger(__name__)
 
@@ -237,3 +238,105 @@ class TagSearchView(View):
             return JsonResponse({'results': list(tags)})
 
         return JsonResponse({'results': []})
+
+class PublicClassificationsView(TemplateView):
+    """Public, no-login list of released classifications."""
+    template_name = 'custom_code/public_classifications.html'
+
+    def get_context_data(self, **kwargs):
+        from .services import released_queryset
+        ctx = super().get_context_data(**kwargs)
+        qs = released_queryset()
+
+        # Simple filters for now
+        z_min = self.request.GET.get('z_min')
+        z_max = self.request.GET.get('z_max')
+        ctype = self.request.GET.get('class')
+
+        if z_min:
+            try:
+                ctx['z_min'] = float(z_min)
+                qs = qs.filter(auto_tidesclass_z__gte=ctx['z_min'])
+            except ValueError:
+                pass
+        if z_max:
+            try:
+                ctx['z_max'] = float(z_max)
+                qs = qs.filter(auto_tidesclass_z__lte=ctx['z_max'])
+            except ValueError:
+                pass
+        if ctype:
+            qs = qs.filter(auto_tidesclass=ctype)
+            ctx['class'] = ctype
+
+        ctx['targets'] = qs.select_related()[:1000]  # limit
+        return ctx
+
+
+class PublicClassificationsDownloadView(View):
+    """Download released classifications as CSV or JSON."""
+    def get(self, request):
+        from .services import released_queryset
+        fmt = request.GET.get('format', 'csv').lower()
+
+        qs = released_queryset().select_related()
+
+        rows = []
+        for t in qs:
+            rows.append({
+                'tides_id': t.tides_id,
+                'name': t.name,
+                'auto_class': getattr(t, 'auto_tidesclass', ''),
+                'auto_subclass': getattr(t, 'auto_tidesclass_subclass', None).sub_class
+                                  if getattr(t, 'auto_tidesclass_subclass', None) else '',
+                'auto_prob': getattr(t, 'auto_tidesclass_prob', None),
+                'auto_z': getattr(t, 'auto_tidesclass_z', None),
+            })
+
+        if fmt == 'json':
+            return HttpResponse(
+                json.dumps(rows, default=str),
+                content_type='application/json'
+            )
+
+        # default: CSV
+        resp = HttpResponse(content_type='text/csv')
+        resp['Content-Disposition'] = 'attachment; filename="classifications.csv"'
+        writer = csv.DictWriter(resp, fieldnames=rows[0].keys() if rows else
+                                ['tides_id','name','auto_class','auto_subclass','auto_prob','auto_z'])
+        writer.writeheader()
+        for r in rows:
+            writer.writerow(r)
+        return resp
+
+class LatestView(ListView):
+    model = TidesTarget
+    template_name = 'latest.html'
+    context_object_name = 'targets'
+    paginate_by = 50
+
+    def get_queryset(self):
+        qs = TidesTarget.objects.all().order_by('-created')  # or your timestamp field
+
+        tag = self.request.GET.get('tag')
+        if tag:
+            qs = filter_by_tags(qs, include_tags=[tag])
+
+        ctype = self.request.GET.get('class')
+        if ctype:
+            qs = qs.filter(auto_tidesclass=ctype)
+
+        z_min = self.request.GET.get('z_min')
+        z_max = self.request.GET.get('z_max')
+        if z_min:
+            try:
+                qs = qs.filter(auto_tidesclass_z__gte=float(z_min))
+            except ValueError:
+                pass
+        if z_max:
+            try:
+                qs = qs.filter(auto_tidesclass_z__lte=float(z_max))
+            except ValueError:
+                pass
+
+        return qs
