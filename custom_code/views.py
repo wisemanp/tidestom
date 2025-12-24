@@ -383,4 +383,29 @@ class LatestView(ListView):
         if z_min:
             try:
                 qs = qs.filter(z__gte=float(z_min))
-           
+            except ValueError:
+                pass
+        if z_max:
+            try:
+                qs = qs.filter(z__lte=float(z_max))
+            except ValueError:
+                pass
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        classifications = ctx[self.context_object_name]
+        target_ids = [pc.tides_id for pc in classifications if pc.tides_id]
+        target_map = {t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)}
+        for pc in classifications:
+            pc.target = target_map.get(pc.tides_id)
+
+        ctx['default_days_range'] = self.request.GET.get('days_range', 30)
+        ctx['filter_tag'] = self.request.GET.get('tag', '')
+        ctx['filter_class'] = self.request.GET.get('class', '')
+        ctx['filter_z_min'] = self.request.GET.get('z_min', '')
+        ctx['filter_z_max'] = self.request.GET.get('z_max', '')
+
+        ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
+        ctx['all_classes'] = get_tides_class_choices()
+
+        return ctx
