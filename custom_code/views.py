@@ -5,6 +5,7 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import TidesTarget, Tag, TargetTag, TidesSpec, PipelineClassificationGlobal
+from .forms import SnidParamsForm, NGSFParamsForm
 from django.conf import settings
 from datetime import datetime
 import requests
