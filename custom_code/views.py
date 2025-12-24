@@ -12,7 +12,7 @@ from custom_code.models import (
     PipelineClassificationGlobal,
     TidesClass,
 )
-from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm
+from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm, USE_CHOICES
 from django.conf import settings
 from datetime import datetime, timedelta
 from django.utils.timezone import now
@@ -27,6 +27,28 @@ from custom_code.services import filter_by_tags, unreleased_queryset, mark_relea
 from django.db import DatabaseError
 
 logger = logging.getLogger(__name__)
+
+def get_tides_class_choices():
+    """
+    Match TidesTargetForm: prefer DB TidesClass entries,
+    fall back to the hard-coded USE_CHOICES, then any TIDES_CLASS_CHOICES on the model.
+    """
+    try:
+        db_choices = list(
+            TidesClass.objects.order_by('name').values_list('name', flat=True)
+        )
+        if db_choices:
+            return db_choices
+    except DatabaseError:
+        pass
+
+    if USE_CHOICES:
+        return [label for label, _ in USE_CHOICES] if isinstance(USE_CHOICES[0], tuple) else USE_CHOICES
+
+    if hasattr(TidesTarget, 'TIDES_CLASS_CHOICES'):
+        return [c[0] for c in TidesTarget.TIDES_CLASS_CHOICES]
+
+    return []
 
 class SnidFormAjaxView(FormView):
     form_class = SnidParamsForm
@@ -319,8 +341,8 @@ class PublicClassificationsDownloadView(View):
 
 class LatestView(ListView):
     """
-    Latest *classifications*, driven by PipelineClassificationGlobal,
-    filtered by TiDES class/z and tags, but still linking back to TidesTarget.
+    Latest classifications (PipelineClassificationGlobal) filtered by spectra recency,
+    TiDES class, pipeline redshift, and tags—mirroring target_classifications usage.
     """
     template_name = 'latest.html'
     paginate_by = 200
@@ -328,150 +350,37 @@ class LatestView(ListView):
     context_object_name = 'classifications'
 
     def get_queryset(self):
-        qs = PipelineClassificationGlobal.objects.all()
-
-        # --- Date range: use an approximate 'created from spectra' via last obs_date ---
-        # If you prefer pure classification-age, skip this and just order by id.
         try:
             days_range = int(self.request.GET.get('days_range', 30))
-        except ValueError:
+        except (TypeError, ValueError):
             days_range = 30
         date_threshold = now() - timedelta(days=days_range)
 
-        # Restrict to classifications whose target has a spectrum in this date range
-        recent_specs = TidesSpec.objects.filter(obs_date__gte=date_threshold)
-        recent_tides_ids = list(recent_specs.values_list('tides_id', flat=True))
-        qs = qs.filter(tides_id__in=recent_tides_ids)
+        # Only keep classifications whose target has spectra within the range
+        recent_tides_ids = list(
+            TidesSpec.objects.filter(obs_date__gte=date_threshold)
+            .values_list('tides_id', flat=True)
+        )
 
-        # --- Tag filter (on TidesTarget via tides FK) ---
+        qs = PipelineClassificationGlobal.objects.all()
+        if recent_tides_ids:
+            qs = qs.filter(tides_id__in=recent_tides_ids)
+
+        # Tag filter via TidesTarget tags
         tag_name = self.request.GET.get('tag')
         if tag_name:
-            target_qs = filter_by_tags(TidesTarget.objects.all(), include_tags=[tag_name])
-            qs = qs.filter(tides__in=target_qs)
+            tagged_targets = filter_by_tags(TidesTarget.objects.all(), include_tags=[tag_name])
+            qs = qs.filter(tides__in=tagged_targets)
 
-        # --- Classification filter: TiDES class name ---
-        ctype = self.request.GET.get('class')
-        if ctype:
-            # Here we assume sn_type holds the TiDES main class label (Ia, Ib, II, ...)
-            qs = qs.filter(sn_type=ctype)
+        # TiDES class filter (sn_type)
+        class_filter = self.request.GET.get('class')
+        if class_filter:
+            qs = qs.filter(sn_type=class_filter)
 
-        # --- Redshift filter: PipelineClassificationGlobal.z ---
+        # Redshift filter (pipeline z column)
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         if z_min:
             try:
-                zmin_f = float(z_min)
-                qs = qs.filter(z__gte=zmin_f)
-            except ValueError:
-                pass
-        if z_max:
-            try:
-                zmax_f = float(z_max)
-                qs = qs.filter(z__lte=zmax_f)
-            except ValueError:
-                pass
-
-        # Newest classifications first
-        qs = qs.order_by('-id').select_related('tides')
-
-        return qs
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        pcs = ctx['classifications']
-
-        # attach the underlying TidesTarget as .target for convenience
-        target_ids = [pc.tides_id for pc in pcs if pc.tides_id]
-        target_map = {t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)}
-        for pc in pcs:
-            pc.target = target_map.get(pc.tides_id)
-
-        # filter state
-        ctx['default_days_range'] = self.request.GET.get('days_range', 30)
-        ctx['filter_tag'] = self.request.GET.get('tag', '')
-        ctx['filter_class'] = self.request.GET.get('class', '')
-        ctx['filter_z_min'] = self.request.GET.get('z_min', '')
-        ctx['filter_z_max'] = self.request.GET.get('z_max', '')
-
-        # tag and class choices
-        ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        ctx['all_classes'] = get_tides_class_choices()
-
-        return ctx
-
-class ReleaseQueueView(LoginRequiredMixin, TemplateView):
-    """
-    Staging area: show unreleased targets, with filters on auto prob and tags.
-    """
-    template_name = 'custom_code/release_queue.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-
-        # base: unreleased
-        qs = unreleased_queryset()
-
-        # filters from query params
-        min_prob = self.request.GET.get('min_prob')
-        include = self.request.GET.getlist('include_tag')  # ?include_tag=high-redshift&include_tag=...
-        exclude = self.request.GET.getlist('exclude_tag')
-
-        if min_prob:
-            try:
-                mp = float(min_prob)
-                qs = qs.filter(auto_tidesclass_prob__gte=mp)
-                ctx['min_prob'] = mp
-            except ValueError:
-                pass
-
-        if include:
-            qs = filter_by_tags(qs, include_tags=include)
-        if exclude:
-            qs = filter_by_tags(qs, exclude_tags=exclude)
-
-        ctx['targets'] = qs.select_related()[:500]  # safety limit
-        ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        ctx['include_tags'] = include
-        ctx['exclude_tags'] = exclude
-        return ctx
-
-
-class ReleaseQueueActionView(LoginRequiredMixin, View):
-    """
-    POST endpoint to mark/unmark 'released' for a selection of targets from the queue.
-    """
-    def post(self, request):
-        action = request.POST.get('action')  # 'mark' or 'unmark'
-        ids = request.POST.getlist('target_id')  # repeated target_id fields
-        targets = TidesTarget.objects.filter(pk__in=ids)
-
-        if action == 'mark':
-            n = mark_released(targets, request.user)
-        elif action == 'unmark':
-            n = unmark_released(targets)
-        else:
-            return JsonResponse({'error': 'Unknown action'}, status=400)
-
-        return JsonResponse({'updated': n})
-
-def get_tides_class_choices():
-    """
-    Match TidesTargetForm: use DB TidesClass names if available,
-    otherwise fall back to TidesTarget.TIDES_CLASS_CHOICES (if defined).
-    """
-    try:
-        db_choices = list(
-            TidesClass.objects.order_by('name').values_list('name', flat=True)
-        )
-    except DatabaseError:
-        db_choices = []
-
-    if db_choices:
-        return db_choices
-
-    if hasattr(TidesTarget, 'TIDES_CLASS_CHOICES'):
-        fallback = [c[0] for c in TidesTarget.TIDES_CLASS_CHOICES]
-    else:
-        fallback = []
-
-    return fallback
+                qs = qs.filter(z__gte=float(z_min))
+           
