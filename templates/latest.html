@@ -1,21 +1,22 @@
 {% extends 'tom_common/base.html' %}
 {% load bootstrap4 static tides_targets_extras %}
-{% block title %}Latest Classifications{% endblock %}
+{% block title %}Latest Spectra{% endblock %}
 {% block content %}
 <div class="row">
   <div class="col-md-10">
-    <h2>Latest Classifications</h2>
+    <h2>Latest Spectra</h2>
 
     {% if request.user.is_authenticated %}
       <form method="get" action="{% url 'latest' %}" class="mb-4">
         <div class="row g-2 align-items-end">
+          <!-- Days Range -->
           <div class="col-md-3">
-            <label class="form-label" for="days_range">Observed in the last (days)</label>
-            <input type="number" name="days_range" id="days_range"
-                   class="form-control" min="1"
-                   value="{{ default_days_range }}">
+            <label class="form-label" for="days_range">Observed in last (days)</label>
+            <input type="number" name="days_range" id="days_range" class="form-control" 
+                   value="{{ default_days_range }}" min="1">
           </div>
 
+          <!-- Tag Filter -->
           <div class="col-md-3">
             <label class="form-label" for="tag">Tag</label>
             <select name="tag" id="tag" class="form-select form-control">
@@ -26,8 +27,9 @@
             </select>
           </div>
 
+          <!-- Class Filter -->
           <div class="col-md-3">
-            <label class="form-label" for="class">TiDES class</label>
+            <label class="form-label" for="class">TiDES Class</label>
             <select name="class" id="class" class="form-select form-control">
               <option value="">(any)</option>
               {% for c in all_classes %}
@@ -36,17 +38,16 @@
             </select>
           </div>
 
+          <!-- Redshift Filter -->
           <div class="col-md-3">
-            <label class="form-label d-block">Redshift (pipeline)</label>
+            <label class="form-label d-block">Redshift (Pipeline)</label>
             <div class="input-group mb-1">
               <span class="input-group-text">z ≥</span>
-              <input type="number" step="0.001" name="z_min"
-                     class="form-control" value="{{ filter_z_min }}">
+              <input type="number" step="0.001" name="z_min" class="form-control" value="{{ filter_z_min }}">
             </div>
             <div class="input-group">
               <span class="input-group-text">z ≤</span>
-              <input type="number" step="0.001" name="z_max"
-                     class="form-control" value="{{ filter_z_max }}">
+              <input type="number" step="0.001" name="z_max" class="form-control" value="{{ filter_z_max }}">
             </div>
           </div>
         </div>
@@ -62,52 +63,59 @@
           <tr>
             <th>Tides ID</th>
             <th>Name</th>
-            <th>Pipeline class</th>
+            <th>Obs Date</th>
+            <th>Pipeline Class</th>
             <th>z</th>
-            <th>Prob</th>
             <th>Tags</th>
           </tr>
         </thead>
         <tbody>
-          {% for pc in classifications %}
+          {% for spec in targets %}
             <tr>
               <td>
-                {% if pc.target %}
-                  <a href="{% url 'target_detail' pc.target.id %}">{{ pc.target.tides_id }}</a>
+                {% if spec.target %}
+                  <a href="{% url 'target_detail' spec.target.id %}">{{ spec.target.tides_id }}</a>
                 {% else %}
-                  {{ pc.tides_id }}
+                  {{ spec.tides_id }}
                 {% endif %}
               </td>
+              <td>{{ spec.target.name|default:"-" }}</td>
+              <td>{{ spec.obs_date|date:"Y-m-d" }}</td>
               <td>
-                {% if pc.target %}
-                  {{ pc.target.name }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-              <td>{{ pc.sn_type }}</td>
-              <td>{{ pc.z|floatformat:4 }}</td>
-              <td>{{ pc.probability|floatformat:3 }}</td>
-              <td>
-                {% if pc.target %}
-                  {% for tag in pc.target.tags.all %}
-                    <span class="badge bg-info text-dark">{{ tag.name }}</span>
+                {# Show first pipeline classification if available #}
+                {% if spec.target %}
+                  {% for pc in spec.target.pipeline_classifications_global.all|slice:":1" %}
+                    {{ pc.sn_type }}
                   {% empty %}
-                    <i>None</i>
+                    -
                   {% endfor %}
-                {% else %}
-                  <i>n/a</i>
+                {% endif %}
+              </td>
+              <td>
+                {% if spec.target %}
+                  {% for pc in spec.target.pipeline_classifications_global.all|slice:":1" %}
+                    {{ pc.z|floatformat:4 }}
+                  {% empty %}
+                    -
+                  {% endfor %}
+                {% endif %}
+              </td>
+              <td>
+                {% if spec.target %}
+                  {% for tag in spec.target.tags.all %}
+                    <span class="badge bg-info text-dark">{{ tag.name }}</span>
+                  {% endfor %}
                 {% endif %}
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="6"><i>No classifications match your filters.</i></td></tr>
+            <tr><td colspan="6"><i>No spectra match your filters.</i></td></tr>
           {% endfor %}
         </tbody>
       </table>
 
     {% else %}
-      Please <a href="{% url 'login' %}?next={% url 'latest' %}">login</a> to view classifications.
+      Please <a href="{% url 'login' %}?next={% url 'latest' %}">login</a> to view.
     {% endif %}
   </div>
 </div>

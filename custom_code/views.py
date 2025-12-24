@@ -341,77 +341,74 @@ class PublicClassificationsDownloadView(View):
 
 class LatestView(ListView):
     """
-    Latest classifications (PipelineClassificationGlobal) filtered by spectra recency,
-    TiDES class, pipeline redshift, and tags—mirroring target_classifications usage.
+    Latest Spectra (TidesSpec), optionally filtered by the Target's tags
+    or Pipeline Classifications.
     """
     template_name = 'latest.html'
     paginate_by = 200
-    model = PipelineClassificationGlobal
-    context_object_name = 'classifications'
+    model = TidesSpec
+    context_object_name = 'targets'  # Kept as 'targets' to match old template logic
 
     def get_queryset(self):
+        # 1. Base: Spectra in the last N days
         try:
             days_range = int(self.request.GET.get('days_range', 30))
-        except (TypeError, ValueError):
+        except (ValueError, TypeError):
             days_range = 30
         date_threshold = now() - timedelta(days=days_range)
+        
+        # Start with recent spectra, joining the target (tides)
+        qs = TidesSpec.objects.filter(obs_date__gte=date_threshold).select_related('tides')
 
-        # Only keep classifications whose target has spectra within the range
-        recent_tides_ids = list(
-            TidesSpec.objects.filter(obs_date__gte=date_threshold)
-            .values_list('tides_id', flat=True)
-        )
+        # 2. Tag Filter (on the related Target)
+        tag = self.request.GET.get('tag')
+        if tag:
+            qs = qs.filter(tides__target_tags__tag__name=tag)
 
-        qs = PipelineClassificationGlobal.objects.all()
-        if recent_tides_ids:
-            qs = qs.filter(tides_id__in=recent_tides_ids)
+        # 3. Class Filter (on the related PipelineClassificationGlobal)
+        # Note: This filters the *Spectra* to only those whose Target has this classification
+        ctype = self.request.GET.get('class')
+        if ctype:
+            qs = qs.filter(tides__pipeline_classifications_global__sn_type=ctype)
 
-        # Tag filter via TidesTarget tags
-        tag_name = self.request.GET.get('tag')
-        if tag_name:
-            tagged_targets = filter_by_tags(TidesTarget.objects.all(), include_tags=[tag_name])
-            qs = qs.filter(tides__in=tagged_targets)
-
-        # TiDES class filter (sn_type)
-        class_filter = self.request.GET.get('class')
-        if class_filter:
-            qs = qs.filter(sn_type=class_filter)
-
-        # Redshift filter (pipeline z column)
+        # 4. Redshift Filter (on the related PipelineClassificationGlobal)
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         if z_min:
             try:
-                qs = qs.filter(z__gte=float(z_min))
+                qs = qs.filter(tides__pipeline_classifications_global__z__gte=float(z_min))
             except ValueError:
                 pass
         if z_max:
             try:
-                qs = qs.filter(z__lte=float(z_max))
+                qs = qs.filter(tides__pipeline_classifications_global__z__lte=float(z_max))
             except ValueError:
                 pass
 
-        return qs.select_related('tides').order_by('-id')
+        # Distinct is needed because filtering on one-to-many relations (tags/classifications) 
+        # can return duplicates.
+        return qs.distinct().order_by('-obs_date')
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
+        
+        # Pass filter values back to template
+        context['default_days_range'] = self.request.GET.get('days_range', 30)
+        context['filter_tag'] = self.request.GET.get('tag', '')
+        context['filter_class'] = self.request.GET.get('class', '')
+        context['filter_z_min'] = self.request.GET.get('z_min', '')
+        context['filter_z_max'] = self.request.GET.get('z_max', '')
 
-        classifications = ctx[self.context_object_name]
-        target_ids = [pc.tides_id for pc in classifications if pc.tides_id]
-        target_map = {t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)}
-        for pc in classifications:
-            pc.target = target_map.get(pc.tides_id)
+        # Dropdown options
+        context['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
+        context['all_classes'] = get_tides_class_choices()
 
-        ctx['default_days_range'] = self.request.GET.get('days_range', 30)
-        ctx['filter_tag'] = self.request.GET.get('tag', '')
-        ctx['filter_class'] = self.request.GET.get('class', '')
-        ctx['filter_z_min'] = self.request.GET.get('z_min', '')
-        ctx['filter_z_max'] = self.request.GET.get('z_max', '')
+        # Helper: Alias spec.tides to spec.target for template compatibility
+        # (The queryset already did select_related('tides'), so this is cheap)
+        for spec in context['targets']:
+            spec.target = spec.tides
 
-        ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        ctx['all_classes'] = get_tides_class_choices()
-
-        return ctx
+        return context
 
 
 # --- Reinstated Release Queue Views ---
