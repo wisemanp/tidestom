@@ -1,19 +1,20 @@
 {% extends 'tom_common/base.html' %}
 {% load bootstrap4 static tides_targets_extras %}
-{% block title %}Latest Spectra{% endblock %}
+{% block title %}Latest Targets{% endblock %}
 {% block content %}
 <div class="row">
-  <div class="col-md-10">
-    <h2>Latest Spectra</h2>
+  <div class="col-md-12">
+    <h2>Latest Targets</h2>
 
     {% if request.user.is_authenticated %}
-      <form method="get" action="{% url 'latest' %}" class="mb-4">
-        <div class="row g-2 align-items-end">
+      <form method="get" action="{% url 'latest' %}" class="mb-4 border p-3 rounded bg-light">
+        <div class="row g-3">
+          
           <!-- Days Range -->
           <div class="col-md-3">
             <label class="form-label" for="days_range">Observed in last (days)</label>
-            <input type="number" name="days_range" id="days_range" class="form-control" 
-                   value="{{ default_days_range }}" min="1">
+            <input type="number" name="days_range" id="days_range" 
+                   value="{{ default_days_range }}" min="1" class="form-control">
           </div>
 
           <!-- Tag Filter -->
@@ -22,7 +23,9 @@
             <select name="tag" id="tag" class="form-select form-control">
               <option value="">(any)</option>
               {% for t in all_tags %}
-                <option value="{{ t.name }}" {% if t.name == filter_tag %}selected{% endif %}>{{ t.name }}</option>
+                <option value="{{ t.name }}" {% if t.name == filter_tag %}selected{% endif %}>
+                  {{ t.name }}
+                </option>
               {% endfor %}
             </select>
           </div>
@@ -40,82 +43,72 @@
 
           <!-- Redshift Filter -->
           <div class="col-md-3">
-            <label class="form-label d-block">Redshift (Pipeline)</label>
-            <div class="input-group mb-1">
+            <label class="form-label">Redshift (Pipeline)</label>
+            <div class="input-group">
               <span class="input-group-text">z ≥</span>
               <input type="number" step="0.001" name="z_min" class="form-control" value="{{ filter_z_min }}">
-            </div>
-            <div class="input-group">
               <span class="input-group-text">z ≤</span>
               <input type="number" step="0.001" name="z_max" class="form-control" value="{{ filter_z_max }}">
             </div>
           </div>
-        </div>
 
-        <div class="mt-3">
-          <button type="submit" class="btn btn-primary">Update</button>
-          <a href="{% url 'latest' %}" class="btn btn-outline-secondary">Clear filters</a>
+          <div class="col-12 mt-2">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a href="{% url 'latest' %}" class="btn btn-outline-secondary">Clear filters</a>
+          </div>
         </div>
       </form>
 
-      <table class="table table-sm table-striped">
-        <thead>
-          <tr>
-            <th>Tides ID</th>
-            <th>Name</th>
-            <th>Obs Date</th>
-            <th>Pipeline Class</th>
-            <th>z</th>
-            <th>Tags</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for spec in targets %}
-            <tr>
-              <td>
+      <div class="row">
+        {% for spec in targets %}
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+            <div class="card h-100">
+              <div class="card-body">
+                <h5 class="card-title text-truncate">
+                  {% if spec.target %}
+                    <a href="{% url 'target_detail' spec.target.id %}" title="{{ spec.target.id }}">
+                      {{ spec.target.id }}
+                    </a>
+                  {% else %}
+                    <span class="text-muted">No Target</span>
+                  {% endif %}
+                </h5>
+                
                 {% if spec.target %}
-                  <a href="{% url 'target_detail' spec.target.id %}">{{ spec.target.tides_id }}</a>
+                  <div class="text-center mb-2" style="min-height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                    {% if spec.target.additional_info and spec.target.additional_info.THUMBNAIL %}
+                      <img src="{{ spec.target.additional_info.THUMBNAIL }}"
+                           alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;">
+                    {% else %}
+                      <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
+                           alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;"
+                           onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\'text-muted\'>No Image</span>'">
+                    {% endif %}
+                  </div>
+
+                  <!-- Use the existing template tag to show classifications -->
+                  {% target_classifications spec.target %}
+                  
+                  <div class="mt-2">
+                    <small class="text-muted">Obs: {{ spec.obs_date|date:"Y-m-d" }}</small>
+                  </div>
                 {% else %}
-                  {{ spec.tides_id }}
+                  <p class="text-muted">No linked target data.</p>
                 {% endif %}
-              </td>
-              <td>{{ spec.target.name|default:"-" }}</td>
-              <td>{{ spec.obs_date|date:"Y-m-d" }}</td>
-              <td>
-                {# Show first pipeline classification if available #}
-                {% if spec.target %}
-                  {% for pc in spec.target.pipeline_classifications_global.all|slice:":1" %}
-                    {{ pc.sn_type }}
-                  {% empty %}
-                    -
-                  {% endfor %}
-                {% endif %}
-              </td>
-              <td>
-                {% if spec.target %}
-                  {% for pc in spec.target.pipeline_classifications_global.all|slice:":1" %}
-                    {{ pc.z|floatformat:4 }}
-                  {% empty %}
-                    -
-                  {% endfor %}
-                {% endif %}
-              </td>
-              <td>
-                {% if spec.target %}
-                  {% for tag in spec.target.tags.all %}
-                    <span class="badge bg-info text-dark">{{ tag.name }}</span>
-                  {% endfor %}
-                {% endif %}
-              </td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="6"><i>No spectra match your filters.</i></td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="col-12">
+            <div class="alert alert-info">No spectra match your filters.</div>
+          </div>
+        {% endfor %}
+      </div>
 
     {% else %}
-      Please <a href="{% url 'login' %}?next={% url 'latest' %}">login</a> to view.
+      <div class="alert alert-warning">
+        Please <a href="{% url 'login' %}?next={% url 'latest' %}">login</a> to view or create targets.
+      </div>
     {% endif %}
   </div>
 </div>

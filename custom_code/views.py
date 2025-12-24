@@ -30,24 +30,46 @@ logger = logging.getLogger(__name__)
 
 def get_tides_class_choices():
     """
-    Match TidesTargetForm: prefer DB TidesClass entries,
-    fall back to the hard-coded USE_CHOICES, then any TIDES_CLASS_CHOICES on the model.
+    Get classification choices for the filter dropdown.
+    Priority:
+    1. DB TidesClass table (if populated)
+    2. USE_CHOICES from forms.py
+    3. TidesTarget.TIDES_CLASS_CHOICES
+    4. Fallback: Distinct 'sn_type' values actually present in PipelineClassificationGlobal
     """
+    choices = []
+    
+    # 1. Try DB TidesClass
     try:
-        db_choices = list(
-            TidesClass.objects.order_by('name').values_list('name', flat=True)
-        )
-        if db_choices:
-            return db_choices
+        choices = list(TidesClass.objects.order_by('name').values_list('name', flat=True))
     except DatabaseError:
         pass
+    
+    if choices:
+        return choices
 
+    # 2. Try USE_CHOICES from forms
     if USE_CHOICES:
-        return [label for label, _ in USE_CHOICES] if isinstance(USE_CHOICES[0], tuple) else USE_CHOICES
+        # Handle list of tuples [('Ia', 'Ia'), ...] or flat list
+        choices = [c[0] if isinstance(c, (list, tuple)) else c for c in USE_CHOICES]
+        return choices
 
+    # 3. Try TidesTarget model constant
     if hasattr(TidesTarget, 'TIDES_CLASS_CHOICES'):
-        return [c[0] for c in TidesTarget.TIDES_CLASS_CHOICES]
+        choices = [c[0] for c in TidesTarget.TIDES_CLASS_CHOICES]
+        return choices
 
+    # 4. Fallback: Query the actual data
+    # This ensures the dropdown is never empty if there is data in the table
+    choices = list(
+        PipelineClassificationGlobal.objects
+        .exclude(sn_type__isnull=True)
+        .exclude(sn_type='')
+        .values_list('sn_type', flat=True)
+        .distinct()
+        .order_by('sn_type')
+    )
+    
     return []
 
 class SnidFormAjaxView(FormView):
