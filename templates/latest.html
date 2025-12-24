@@ -17,26 +17,24 @@
                    value="{{ default_days_range }}" min="1" class="form-control">
           </div>
 
-          <!-- Tag Filter -->
+          <!-- Tag Filter (Multi-select) -->
           <div class="col-md-3">
-            <label class="form-label" for="tag">Tag</label>
-            <select name="tag" id="tag" class="form-select form-control">
-              <option value="">(any)</option>
+            <label class="form-label" for="tag">Tags (hold Ctrl/Cmd to select multiple)</label>
+            <select name="tag" id="tag" class="form-select form-control" multiple size="4">
               {% for t in all_tags %}
-                <option value="{{ t.name }}" {% if t.name == filter_tag %}selected{% endif %}>
+                <option value="{{ t.name }}" {% if t.name in filter_tags %}selected{% endif %}>
                   {{ t.name }}
                 </option>
               {% endfor %}
             </select>
           </div>
 
-          <!-- Class Filter -->
+          <!-- Class Filter (Multi-select) -->
           <div class="col-md-3">
-            <label class="form-label" for="class">TiDES Class</label>
-            <select name="class" id="class" class="form-select form-control">
-              <option value="">(any)</option>
+            <label class="form-label" for="class">TiDES Class (hold Ctrl/Cmd)</label>
+            <select name="class" id="class" class="form-select form-control" multiple size="4">
               {% for c in all_classes %}
-                <option value="{{ c }}" {% if c == filter_class %}selected{% endif %}>{{ c }}</option>
+                <option value="{{ c }}" {% if c in filter_classes %}selected{% endif %}>{{ c }}</option>
               {% endfor %}
             </select>
           </div>

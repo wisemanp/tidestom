@@ -12,7 +12,7 @@ from custom_code.models import (
     PipelineClassificationGlobal,
     TidesClass,
 )
-from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm, USE_CHOICES
+from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm  # Ensure this is imported
 from django.conf import settings
 from datetime import datetime, timedelta
 from django.utils.timezone import now
@@ -31,37 +31,22 @@ logger = logging.getLogger(__name__)
 def get_tides_class_choices():
     """
     Get classification choices for the filter dropdown.
-    Priority:
-    1. DB TidesClass table (if populated)
-    2. USE_CHOICES from forms.py
-    3. TidesTarget.TIDES_CLASS_CHOICES
-    4. Fallback: Distinct 'sn_type' values actually present in PipelineClassificationGlobal
     """
-    choices = []
-    
     # 1. Try DB TidesClass
     try:
         choices = list(TidesClass.objects.order_by('name').values_list('name', flat=True))
+        if choices:
+            return choices
     except DatabaseError:
         pass
-    
-    if choices:
-        return choices
 
-    # 2. Try USE_CHOICES from forms
-    if USE_CHOICES:
-        # Handle list of tuples [('Ia', 'Ia'), ...] or flat list
-        choices = [c[0] if isinstance(c, (list, tuple)) else c for c in USE_CHOICES]
-        return choices
+    # 2. Try TidesTargetForm.USE_CHOICES (Class Attribute)
+    # This matches the form's logic exactly
+    if hasattr(TidesTargetForm, 'USE_CHOICES'):
+        return [c[0] for c in TidesTargetForm.USE_CHOICES]
 
-    # 3. Try TidesTarget model constant
-    if hasattr(TidesTarget, 'TIDES_CLASS_CHOICES'):
-        choices = [c[0] for c in TidesTarget.TIDES_CLASS_CHOICES]
-        return choices
-
-    # 4. Fallback: Query the actual data
-    # This ensures the dropdown is never empty if there is data in the table
-    choices = list(
+    # 3. Fallback: Query the actual data
+    return list(
         PipelineClassificationGlobal.objects
         .exclude(sn_type__isnull=True)
         .exclude(sn_type='')
@@ -69,8 +54,6 @@ def get_tides_class_choices():
         .distinct()
         .order_by('sn_type')
     )
-    
-    return []
 
 class SnidFormAjaxView(FormView):
     form_class = SnidParamsForm
@@ -369,7 +352,7 @@ class LatestView(ListView):
     template_name = 'latest.html'
     paginate_by = 200
     model = TidesSpec
-    context_object_name = 'targets'  # Kept as 'targets' to match old template logic
+    context_object_name = 'targets'
 
     def get_queryset(self):
         # 1. Base: Spectra in the last N days
@@ -382,114 +365,22 @@ class LatestView(ListView):
         # Start with recent spectra, joining the target (tides)
         qs = TidesSpec.objects.filter(obs_date__gte=date_threshold).select_related('tides')
 
-        # 2. Tag Filter (on the related Target)
-        tag = self.request.GET.get('tag')
-        if tag:
-            qs = qs.filter(tides__target_tags__tag__name=tag)
+        # 2. Tag Filter (on the related Target) - Handle multiple
+        tags = self.request.GET.getlist('tag')
+        if tags:
+            # Filter targets that have ANY of the selected tags
+            qs = qs.filter(tides__target_tags__tag__name__in=tags)
 
-        # 3. Class Filter (on the related PipelineClassificationGlobal)
-        # Note: This filters the *Spectra* to only those whose Target has this classification
-        ctype = self.request.GET.get('class')
-        if ctype:
-            qs = qs.filter(tides__pipeline_classifications_global__sn_type=ctype)
+        # 3. Class Filter (on the related PipelineClassificationGlobal) - Handle multiple
+        classes = self.request.GET.getlist('class')
+        if classes:
+            # Filter targets that have ANY of the selected classifications
+            qs = qs.filter(tides__pipeline_classifications_global__sn_type__in=classes)
 
-        # 4. Redshift Filter (on the related PipelineClassificationGlobal)
+        # 4. Redshift Filter
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         if z_min:
             try:
                 qs = qs.filter(tides__pipeline_classifications_global__z__gte=float(z_min))
-            except ValueError:
-                pass
-        if z_max:
-            try:
-                qs = qs.filter(tides__pipeline_classifications_global__z__lte=float(z_max))
-            except ValueError:
-                pass
-
-        # Distinct is needed because filtering on one-to-many relations (tags/classifications) 
-        # can return duplicates.
-        return qs.distinct().order_by('-obs_date')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        
-        # Pass filter values back to template
-        context['default_days_range'] = self.request.GET.get('days_range', 30)
-        context['filter_tag'] = self.request.GET.get('tag', '')
-        context['filter_class'] = self.request.GET.get('class', '')
-        context['filter_z_min'] = self.request.GET.get('z_min', '')
-        context['filter_z_max'] = self.request.GET.get('z_max', '')
-
-        # Dropdown options
-        context['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        context['all_classes'] = get_tides_class_choices()
-
-        # Helper: Alias spec.tides to spec.target for template compatibility
-        # (The queryset already did select_related('tides'), so this is cheap)
-        for spec in context['targets']:
-            spec.target = spec.tides
-
-        return context
-
-
-# --- Reinstated Release Queue Views ---
-
-class ReleaseQueueView(LoginRequiredMixin, TemplateView):
-    template_name = 'custom_code/release_queue.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        
-        # Start with unreleased targets
-        qs = unreleased_queryset().select_related()
-
-        # Filters
-        min_prob = self.request.GET.get('min_prob')
-        include = self.request.GET.getlist('include_tag')
-        exclude = self.request.GET.getlist('exclude_tag')
-
-        if min_prob:
-            try:
-                # Filter on the related pipeline classification probability
-                qs = qs.filter(pipeline_classifications_global__probability__gte=float(min_prob))
-                ctx['min_prob'] = float(min_prob)
-            except ValueError:
-                pass
-
-        if include:
-            qs = filter_by_tags(qs, include_tags=include)
-        if exclude:
-            qs = filter_by_tags(qs, exclude_tags=exclude)
-
-        # Limit results to avoid massive page loads
-        ctx['targets'] = qs.distinct()[:500]
-        
-        # Context for filter form
-        ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        ctx['include_tags'] = include
-        ctx['exclude_tags'] = exclude
-        
-        return ctx
-
-
-class ReleaseQueueActionView(LoginRequiredMixin, View):
-    def post(self, request):
-        action = request.POST.get('action')
-        ids = request.POST.getlist('target_id')
-        
-        if not ids:
-            return JsonResponse({'error': 'No targets selected'}, status=400)
-
-        targets = TidesTarget.objects.filter(pk__in=ids)
-
-        if action == 'mark':
-            count = mark_released(targets, request.user)
-            return JsonResponse({'updated': count, 'message': f'Marked {count} targets as released.'})
-            
-        elif action == 'unmark':
-            count = unmark_released(targets)
-            return JsonResponse({'updated': count, 'message': f'Unmarked {count} targets.'})
-            
-        else:
-            return JsonResponse({'error': 'Unknown action'}, status=400)
+           
