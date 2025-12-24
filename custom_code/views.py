@@ -32,20 +32,45 @@ def get_tides_class_choices():
     """
     Get classification choices for the filter dropdown.
     """
-    # 1. Try DB TidesClass
+    choices = []
+
+    # 1. Try to extract directly from the TidesTargetForm fields (Source of Truth)
+    # This works regardless of where USE_CHOICES is defined (global or class)
     try:
-        choices = list(TidesClass.objects.order_by('name').values_list('name', flat=True))
-        if choices:
-            return choices
-    except DatabaseError:
+        form = TidesTargetForm()
+        # Look for common classification field names
+        for field_name in ['classification', 'tidesclass', 'auto_tidesclass', 'sn_type', 'type']:
+            if field_name in form.fields:
+                field = form.fields[field_name]
+                if hasattr(field, 'choices'):
+                    # Extract the value (first element of tuple), filtering out blanks
+                    # list(field.choices) handles both lists and iterators
+                    choices = [c[0] for c in list(field.choices) if c[0]]
+                    if choices:
+                        return choices
+    except Exception:
         pass
 
     # 2. Try TidesTargetForm.USE_CHOICES (Class Attribute)
-    # This matches the form's logic exactly
     if hasattr(TidesTargetForm, 'USE_CHOICES'):
         return [c[0] for c in TidesTargetForm.USE_CHOICES]
 
-    # 3. Fallback: Query the actual data
+    # 3. Try importing USE_CHOICES from forms module (Global Attribute)
+    try:
+        from .forms import USE_CHOICES
+        return [c[0] for c in USE_CHOICES]
+    except ImportError:
+        pass
+
+    # 4. Try DB TidesClass
+    try:
+        db_choices = list(TidesClass.objects.order_by('name').values_list('name', flat=True))
+        if db_choices:
+            return db_choices
+    except DatabaseError:
+        pass
+
+    # 5. Fallback: Query the actual data in PipelineClassificationGlobal
     return list(
         PipelineClassificationGlobal.objects
         .exclude(sn_type__isnull=True)
