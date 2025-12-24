@@ -25,6 +25,7 @@ from workspaces import utils
 from pathlib import Path
 from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
 from django.db import DatabaseError
+import csv
 
 logger = logging.getLogger(__name__)
 
@@ -33,24 +34,45 @@ def get_tides_class_choices():
     Get classification choices by instantiating TidesTargetForm.
     This guarantees we get the exact same list as the form uses.
     """
+    logger.info("DEBUG: Starting get_tides_class_choices")
     try:
         # Instantiate the form to trigger its __init__ logic (which queries the DB)
         form = TidesTargetForm()
+        logger.info(f"DEBUG: Form instantiated. Fields: {list(form.fields.keys())}")
+        
         field = form.fields.get('tidesclass')
         
-        if field and hasattr(field, 'choices'):
-            # Extract just the values (first element of tuple), filtering out empty ones
-            choices = [c[0] for c in field.choices if c[0]]
-            if choices:
-                return choices
-    except Exception:
-        pass
+        if field:
+            logger.info("DEBUG: Found 'tidesclass' field.")
+            if hasattr(field, 'choices'):
+                # Extract just the values (first element of tuple), filtering out empty ones
+                # list() handles both lists and ModelChoiceIterators
+                raw_choices = list(field.choices)
+                logger.info(f"DEBUG: Raw choices sample (first 5): {raw_choices[:5]}")
+                
+                choices = [c[0] for c in raw_choices if c[0]]
+                if choices:
+                    logger.info(f"DEBUG: Returning {len(choices)} choices from form.")
+                    return choices
+                else:
+                    logger.info("DEBUG: Choices list was empty after filtering blanks.")
+            else:
+                logger.info("DEBUG: 'tidesclass' field has no 'choices' attribute.")
+        else:
+            logger.info("DEBUG: 'tidesclass' field NOT found in form.")
+
+    except Exception as e:
+        logger.error(f"DEBUG: Error inspecting TidesTargetForm: {e}", exc_info=True)
 
     # Fallback: If form instantiation fails, try the hardcoded list from forms.py
+    logger.info("DEBUG: Falling back to USE_CHOICES from forms.py")
     try:
         from .forms import USE_CHOICES
-        return [c[0] for c in USE_CHOICES]
-    except (ImportError, AttributeError):
+        choices = [c[0] for c in USE_CHOICES]
+        logger.info(f"DEBUG: Found USE_CHOICES. Count: {len(choices)}")
+        return choices
+    except (ImportError, AttributeError) as e:
+        logger.warning(f"DEBUG: Could not import USE_CHOICES: {e}")
         return []
 
 class SnidFormAjaxView(FormView):
@@ -281,7 +303,7 @@ class PublicClassificationsView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         qs = released_queryset()
 
-        # Simple filters for now
+        # Simple filters
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         ctype = self.request.GET.get('class')
@@ -289,20 +311,23 @@ class PublicClassificationsView(TemplateView):
         if z_min:
             try:
                 ctx['z_min'] = float(z_min)
-                qs = qs.filter(auto_tidesclass_z__gte=ctx['z_min'])
+                # Filter on the related pipeline classification 'z'
+                qs = qs.filter(pipeline_classifications_global__z__gte=ctx['z_min'])
             except ValueError:
                 pass
         if z_max:
             try:
                 ctx['z_max'] = float(z_max)
-                qs = qs.filter(auto_tidesclass_z__lte=ctx['z_max'])
+                # Filter on the related pipeline classification 'z'
+                qs = qs.filter(pipeline_classifications_global__z__lte=ctx['z_max'])
             except ValueError:
                 pass
         if ctype:
-            qs = qs.filter(auto_tidesclass=ctype)
+            # Filter on the related pipeline classification 'sn_type'
+            qs = qs.filter(pipeline_classifications_global__sn_type=ctype)
             ctx['class'] = ctype
 
-        ctx['targets'] = qs.select_related()[:1000]  # limit
+        ctx['targets'] = qs.select_related().distinct()[:1000]
         return ctx
 
 
@@ -312,18 +337,20 @@ class PublicClassificationsDownloadView(View):
         from .services import released_queryset
         fmt = request.GET.get('format', 'csv').lower()
 
-        qs = released_queryset().select_related()
+        # Prefetch classifications to avoid N+1 queries
+        qs = released_queryset().prefetch_related('pipeline_classifications_global')
 
         rows = []
         for t in qs:
+            # Grab the first classification (if any) to get z/type
+            pc = t.pipeline_classifications_global.first()
+            
             rows.append({
                 'tides_id': t.tides_id,
                 'name': t.name,
-                'auto_class': getattr(t, 'auto_tidesclass', ''),
-                'auto_subclass': getattr(t, 'auto_tidesclass_subclass', None).sub_class
-                                  if getattr(t, 'auto_tidesclass_subclass', None) else '',
-                'auto_prob': getattr(t, 'auto_tidesclass_prob', None),
-                'auto_z': getattr(t, 'auto_tidesclass_z', None),
+                'auto_class': pc.sn_type if pc else '',
+                'auto_prob': pc.probability if pc else '',
+                'auto_z': pc.z if pc else '',
             })
 
         if fmt == 'json':
@@ -335,12 +362,12 @@ class PublicClassificationsDownloadView(View):
         # default: CSV
         resp = HttpResponse(content_type='text/csv')
         resp['Content-Disposition'] = 'attachment; filename="classifications.csv"'
-        writer = csv.DictWriter(resp, fieldnames=rows[0].keys() if rows else
-                                ['tides_id','name','auto_class','auto_subclass','auto_prob','auto_z'])
+        writer = csv.DictWriter(resp, fieldnames=['tides_id','name','auto_class','auto_prob','auto_z'])
         writer.writeheader()
         for r in rows:
             writer.writerow(r)
         return resp
+
 
 class LatestView(ListView):
     """
@@ -366,25 +393,25 @@ class LatestView(ListView):
         # 2. Tag Filter (on the related Target) - Handle multiple
         tags = self.request.GET.getlist('tag')
         if tags:
-            # Filter targets that have ANY of the selected tags
             qs = qs.filter(tides__target_tags__tag__name__in=tags)
 
         # 3. Class Filter (on the related PipelineClassificationGlobal) - Handle multiple
         classes = self.request.GET.getlist('class')
         if classes:
-            # Filter targets that have ANY of the selected classifications
             qs = qs.filter(tides__pipeline_classifications_global__sn_type__in=classes)
 
-        # 4. Redshift Filter
+        # 4. Redshift Filter (on the related PipelineClassificationGlobal)
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         if z_min:
             try:
+                # Use 'z' from PipelineClassificationGlobal
                 qs = qs.filter(tides__pipeline_classifications_global__z__gte=float(z_min))
             except ValueError:
                 pass
         if z_max:
             try:
+                # Use 'z' from PipelineClassificationGlobal
                 qs = qs.filter(tides__pipeline_classifications_global__z__lte=float(z_max))
             except ValueError:
                 pass
@@ -394,17 +421,12 @@ class LatestView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Pass filter values back to template
         context['default_days_range'] = self.request.GET.get('days_range', 60)
-        
-        # Pass lists for multi-selects
         context['filter_tags'] = self.request.GET.getlist('tag')
         context['filter_classes'] = self.request.GET.getlist('class')
-        
         context['filter_z_min'] = self.request.GET.get('z_min', '')
         context['filter_z_max'] = self.request.GET.get('z_max', '')
 
-        # Dropdown options
         context['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
         context['all_classes'] = get_tides_class_choices()
 
