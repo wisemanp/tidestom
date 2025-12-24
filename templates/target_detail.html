@@ -300,50 +300,111 @@ fetch("{% static 'json/line_data.json' %}")
 
       <!-- TAGS: LEFT COLUMN -->
       <h3>Tags</h3>
-      <div class="mb-2">
+      <div class="mb-2" id="current-tags">
         {% if object.tags.all %}
           {% for t in object.tags.all %}
-            <span class="badge badge-info">{{ t.name }}</span>
+            <span class="badge badge-info me-1" data-tag-id="{{ t.id }}">{{ t.name }}</span>
           {% endfor %}
         {% else %}
-          <i>No tags</i>
+          <i id="no-tags-label">No tags</i>
         {% endif %}
       </div>
+
       {% if request.user.is_authenticated %}
         <form id="tag-toggle-form" class="d-flex flex-wrap gap-2">
           {% for t in tags %}
             <button type="button"
                     class="btn btn-sm {% if t in object.tags.all %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                    data-tag-id="{{ t.id }}"
                     data-url="{% url 'toggle_tag' object.id t.id %}">
               {{ t.name }}
             </button>
           {% endfor %}
         </form>
         <script>
-          // Define getCookie/csrftoken only once
-          if (typeof getCookie === 'undefined') {
-            function getCookie(name) {
+          // Define getCookie/csrftoken only once globally
+          if (typeof window.getCookie === 'undefined') {
+            window.getCookie = function(name) {
               const value = `; ${document.cookie}`;
               const parts = value.split(`; ${name}=`);
               if (parts.length === 2) return parts.pop().split(';').shift();
               return '';
-            }
-            window.getCookie = getCookie;
+            };
           }
-          if (typeof csrftoken === 'undefined') {
-            window.csrftoken = getCookie('csrftoken');
+          if (typeof window.csrftoken === 'undefined') {
+            window.csrftoken = window.getCookie('csrftoken');
+          }
+
+          function updateCurrentTags(tagId, tagName, action) {
+            const container = document.getElementById('current-tags');
+            if (!container) return;
+
+            const noLabel = document.getElementById('no-tags-label');
+            if (noLabel) noLabel.remove();
+
+            const sel = '[data-tag-id="' + tagId + '"]';
+            const existing = container.querySelector(sel);
+
+            if (action === 'added') {
+              if (!existing) {
+                const span = document.createElement('span');
+                span.className = 'badge badge-info me-1';
+                span.dataset.tagId = tagId;
+                span.textContent = tagName;
+                container.appendChild(span);
+              }
+            } else if (action === 'removed') {
+              if (existing) existing.remove();
+              if (!container.querySelector('[data-tag-id]')) {
+                const i = document.createElement('i');
+                i.id = 'no-tags-label';
+                i.textContent = 'No tags';
+                container.appendChild(i);
+              }
+            }
           }
 
           document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-              const url = e.currentTarget.dataset.url;
-              if (!url) return;
+              const el = e.currentTarget;
+              const url = el.dataset.url;
+              const tagId = el.dataset.tagId;
+              const tagName = el.textContent.trim();
+              if (!url || !tagId) return;
 
-              const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': csrftoken }
-              });
-              if (res.ok) location.reload();
+              try {
+                el.disabled = true;
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: {
+                    'X-CSRFToken': window.csrftoken,
+                    'Accept': 'application/json'
+                  },
+                });
+                if (!res.ok) {
+                  console.error('Tag toggle failed', res.status, await res.text());
+                  el.disabled = false;
+                  return;
+                }
+                const data = await res.json(); // {toggled: "added"/"removed", tag: "..."}
+                const toggled = data.toggled;
+
+                // Toggle button style
+                if (toggled === 'added') {
+                  el.classList.remove('btn-outline-secondary');
+                  el.classList.add('btn-success');
+                } else if (toggled === 'removed') {
+                  el.classList.remove('btn-success');
+                  el.classList.add('btn-outline-secondary');
+                }
+
+                // Update visible tag list
+                updateCurrentTags(tagId, tagName, toggled);
+                el.disabled = false;
+              } catch (err) {
+                console.error('Tag toggle error', err);
+                el.disabled = false;
+              }
             });
           });
         </script>
@@ -570,13 +631,13 @@ $(document).ready(function() {
 
 <!-- Tags block -->
 <h3>Tags</h3>
-<div class="mb-2">
+<div class="mb-2" id="current-tags">
   {% if object.tags.all %}
     {% for t in object.tags.all %}
-      <span class="badge badge-info">{{ t.name }}</span>
+      <span class="badge badge-info" data-tag-id="{{ t.id }}">{{ t.name }}</span>
     {% endfor %}
   {% else %}
-    <i>No tags</i>
+    <i id="no-tags-label">No tags</i>
   {% endif %}
 </div>
 
@@ -585,6 +646,7 @@ $(document).ready(function() {
     {% for t in tags %}
       <button type="button"
               class="btn btn-sm {% if t in object.tags.all %}btn-success{% else %}btn-outline-secondary{% endif %}"
+              data-tag-id="{{ t.id }}"
               data-url="{% url 'toggle_tag' object.id t.id %}">
         {{ t.name }}
       </button>
@@ -605,16 +667,70 @@ $(document).ready(function() {
       window.csrftoken = getCookie('csrftoken');
     }
 
+    function updateCurrentTags(tagId, tagName, action) {
+      const container = document.getElementById('current-tags');
+      if (!container) return;
+
+      const noLabel = document.getElementById('no-tags-label');
+      if (noLabel) noLabel.remove();
+
+      const existing = container.querySelector('[data-tag-id="' + tagId + '"]');
+
+      if (action === 'added') {
+        if (!existing) {
+          const span = document.createElement('span');
+          span.className = 'badge badge-info';
+          span.dataset.tagId = tagId;
+          span.textContent = tagName;
+          container.appendChild(span);
+          container.appendChild(document.createTextNode(' '));
+        }
+      } else if (action === 'removed') {
+        if (existing) existing.remove();
+        if (!container.querySelector('[data-tag-id]')) {
+          const i = document.createElement('i');
+          i.id = 'no-tags-label';
+          i.textContent = 'No tags';
+          container.appendChild(i);
+        }
+      }
+    }
+
     document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const url = e.currentTarget.dataset.url;
-        if (!url) return;
+        const tagId = e.currentTarget.dataset.tagId;
+        const tagName = e.currentTarget.textContent.trim();
+        if (!url || !tagId) return;
 
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': csrftoken }
-        });
-        if (res.ok) location.reload();
+        try {
+          e.currentTarget.disabled = true;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken, 'Accept': 'application/json' }
+          });
+          if (!res.ok) {
+            console.error('Tag toggle failed', res.status, await res.text());
+            e.currentTarget.disabled = false;
+            return;
+          }
+          const data = await res.json();  // expects {toggled: "added"/"removed", tag: "..."}
+          const toggled = data.toggled || '';
+          // update button style
+          if (toggled === 'added') {
+            e.currentTarget.classList.remove('btn-outline-secondary');
+            e.currentTarget.classList.add('btn-success');
+          } else if (toggled === 'removed') {
+            e.currentTarget.classList.remove('btn-success');
+            e.currentTarget.classList.add('btn-outline-secondary');
+          }
+          // update visible tag list
+          updateCurrentTags(tagId, tagName, toggled);
+          e.currentTarget.disabled = false;
+        } catch (err) {
+          console.error('Tag toggle error', err);
+          e.currentTarget.disabled = false;
+        }
       });
     });
   </script>
