@@ -30,70 +30,28 @@ logger = logging.getLogger(__name__)
 
 def get_tides_class_choices():
     """
-    Get classification choices for the filter dropdown.
+    Get classification choices by instantiating TidesTargetForm.
+    This guarantees we get the exact same list as the form uses.
     """
-    choices = []
-    logger.info("DEBUG: Starting get_tides_class_choices")
-
-    # 1. Try to extract directly from the TidesTargetForm fields (Source of Truth)
     try:
+        # Instantiate the form to trigger its __init__ logic (which queries the DB)
         form = TidesTargetForm()
-        # Look for common classification field names
-        for field_name in ['classification', 'tidesclass', 'auto_tidesclass', 'sn_type', 'type']:
-            if field_name in form.fields:
-                field = form.fields[field_name]
-                logger.info(f"DEBUG: Found field '{field_name}' in TidesTargetForm")
-                if hasattr(field, 'choices'):
-                    # Extract the value (first element of tuple), filtering out blanks
-                    choices = [c[0] for c in list(field.choices) if c[0]]
-                    if choices:
-                        logger.info(f"DEBUG: Found choices in field '{field_name}': {choices}")
-                        return choices
-                else:
-                    logger.info(f"DEBUG: Field '{field_name}' has no 'choices' attribute")
-    except Exception as e:
-        logger.error(f"DEBUG: Error inspecting TidesTargetForm: {e}")
+        field = form.fields.get('tidesclass')
+        
+        if field and hasattr(field, 'choices'):
+            # Extract just the values (first element of tuple), filtering out empty ones
+            choices = [c[0] for c in field.choices if c[0]]
+            if choices:
+                return choices
+    except Exception:
+        pass
 
-    # 2. Try TidesTargetForm.USE_CHOICES (Class Attribute)
-    if hasattr(TidesTargetForm, 'USE_CHOICES'):
-        logger.info("DEBUG: Found TidesTargetForm.USE_CHOICES")
-        return [c[0] for c in TidesTargetForm.USE_CHOICES]
-    else:
-        logger.info("DEBUG: TidesTargetForm has no USE_CHOICES attribute")
-
-    # 3. Try importing USE_CHOICES from forms module (Global Attribute)
+    # Fallback: If form instantiation fails, try the hardcoded list from forms.py
     try:
         from .forms import USE_CHOICES
-        logger.info("DEBUG: Imported USE_CHOICES from .forms")
         return [c[0] for c in USE_CHOICES]
-    except ImportError:
-        logger.info("DEBUG: Could not import USE_CHOICES from .forms")
-    except Exception as e:
-        logger.error(f"DEBUG: Error importing USE_CHOICES: {e}")
-
-    # 4. Try DB TidesClass
-    try:
-        db_choices = list(TidesClass.objects.order_by('name').values_list('name', flat=True))
-        if db_choices:
-            logger.info(f"DEBUG: Found choices in TidesClass DB: {db_choices}")
-            return db_choices
-        else:
-            logger.info("DEBUG: TidesClass DB table is empty")
-    except DatabaseError as e:
-        logger.error(f"DEBUG: DatabaseError querying TidesClass: {e}")
-
-    # 5. Fallback: Query the actual data in PipelineClassificationGlobal
-    logger.info("DEBUG: Falling back to PipelineClassificationGlobal distinct values")
-    fallback_choices = list(
-        PipelineClassificationGlobal.objects
-        .exclude(sn_type__isnull=True)
-        .exclude(sn_type='')
-        .values_list('sn_type', flat=True)
-        .distinct()
-        .order_by('sn_type')
-    )
-    logger.info(f"DEBUG: PipelineClassificationGlobal choices: {fallback_choices}")
-    return fallback_choices
+    except (ImportError, AttributeError):
+        return []
 
 class SnidFormAjaxView(FormView):
     form_class = SnidParamsForm
