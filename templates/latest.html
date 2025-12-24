@@ -12,16 +12,13 @@
 
           <!-- Days range -->
           <div class="col-md-3">
-            <label class="form-label" for="days_range">Observed in the last (days)</label>
-            <div class="input-group">
-              <input type="number"
-                     name="days_range"
-                     id="days_range"
-                     value="{{ default_days_range }}"
-                     min="1"
-                     class="form-control">
-              <span class="input-group-text">days</span>
-            </div>
+            <label class="form-label" for="days_range">In the last (days)</label>
+            <input type="number"
+                   name="days_range"
+                   id="days_range"
+                   value="{{ default_days_range }}"
+                   min="1"
+                   class="form-control">
           </div>
 
           <!-- Tag filter -->
@@ -37,20 +34,20 @@
             </select>
           </div>
 
-          <!-- Class filter -->
+          <!-- Class filter (dropdown) -->
           <div class="col-md-3">
-            <label class="form-label" for="class">Auto class</label>
-            <input type="text"
-                   name="class"
-                   id="class"
-                   class="form-control"
-                   placeholder="e.g. SN Ia"
-                   value="{{ filter_class }}">
+            <label class="form-label" for="class">Classification</label>
+            <select name="class" id="class" class="form-select form-control">
+              <option value="">(any)</option>
+              {% for c in all_classes %}
+                <option value="{{ c }}" {% if c == filter_class %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
           </div>
 
           <!-- Redshift filters -->
           <div class="col-md-3">
-            <label class="form-label d-block">Redshift (auto)</label>
+            <label class="form-label d-block">Redshift</label>
             <div class="input-group mb-1">
               <span class="input-group-text">z ≥</span>
               <input type="number"
@@ -77,43 +74,57 @@
         </div>
       </form>
 
-      <div class="row">
-        {% for spec in targets %}
-          <div class="col-12 col-sm-6 col-md-4 col-lg-4 mb-4">
-            <div class="card">
-              <div class="card-body">
-                {% if spec.target %}
-                  <h5 class="card-title">
-                    <a href="{% url 'target_detail' spec.target.id %}">
-                      {{ spec.target.id }}
-                    </a>
-                  </h5>
-
-                  {% if spec.target.additional_info and spec.target.additional_info.THUMBNAIL %}
-                    <img src="{{ spec.target.additional_info.THUMBNAIL }}"
-                         alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
-                  {% else %}
-                    <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
-                         alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
-                  {% endif %}
-
-                  <!-- Existing classifications snippet -->
-                  {% target_classifications spec.target %}
-
+      <table class="table table-sm table-striped">
+        <thead>
+          <tr>
+            <th>Tides ID</th>
+            <th>Name</th>
+            <th>Class</th>
+            <th>z</th>
+            <th>Tags</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pc in classifications %}
+            <tr>
+              <td>
+                {% if pc.target %}
+                  <a href="{% url 'target_detail' pc.target.id %}">{{ pc.target.tides_id }}</a>
                 {% else %}
-                  <p>No linked target</p>
+                  -
                 {% endif %}
-              </div>
-            </div>
-          </div>
-        {% empty %}
-          <div class="col-12">
-            <i>No spectra match your filters.</i>
-          </div>
-        {% endfor %}
-      </div>
+              </td>
+              <td>
+                {% if pc.target %}
+                  {{ pc.target.name }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>{{ pc.sn_type }}</td>
+              <td>{{ pc.sn_z|floatformat:4 }}</td>
+              <td>
+                {% if pc.target %}
+                  {% for tag in pc.target.tags.all %}
+                    <span class="badge bg-info text-dark">{{ tag.name }}</span>
+                  {% empty %}
+                    <i>None</i>
+                  {% endfor %}
+                {% else %}
+                  <i>n/a</i>
+                {% endif %}
+              </td>
+              <td>{{ pc.created|date:"Y-m-d H:i" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><i>No classifications match your filters.</i></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
     {% else %}
-      Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
+      Please <a href="{% url 'login' %}?next={% url 'latest' %}">login</a> to view classifications.
     {% endif %}
   </div>
 </div>

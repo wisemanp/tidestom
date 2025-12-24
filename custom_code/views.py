@@ -4,7 +4,7 @@ from django.views.generic import TemplateView, ListView   # <-- add this
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import TidesTarget, Tag, TargetTag
+from .models import TidesTarget, Tag, TargetTag, TidesSpec, PipelineClassificationGlobal
 from django.conf import settings
 from datetime import datetime
 import requests
@@ -14,10 +14,7 @@ import json
 import logging
 from workspaces import utils
 from pathlib import Path
-from custom_code.models import TidesSpec
-from workspaces.models import UserWorkspace
-from .forms import SnidParamsForm, NGSFParamsForm
-from custom_code.services import filter_by_tags
+from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
 
 logger = logging.getLogger(__name__)
 
@@ -311,88 +308,93 @@ class PublicClassificationsDownloadView(View):
         return resp
 
 class LatestView(ListView):
-    model = TidesTarget
+    """
+    Latest *classifications*, not just targets.
+    Driven by PipelineClassificationGlobal and joined to TidesTarget.
+    """
+    model = PipelineClassificationGlobal
     template_name = 'latest.html'
-    context_object_name = 'targets'
+    context_object_name = 'classifications'
     paginate_by = 50
 
     def get_queryset(self):
-        qs = TidesTarget.objects.all().order_by('-created')  # or your timestamp field
+        qs = (
+            PipelineClassificationGlobal.objects
+            .select_related('tides_target')              # adjust if FK name differs
+            .order_by('-created')                        # or your timestamp field on PCG
+        )
 
+        # --- tag filter (on the underlying TidesTarget) ---
         tag = self.request.GET.get('tag')
         if tag:
-            qs = filter_by_tags(qs, include_tags=[tag])
+            target_qs = TidesTarget.objects.all()
+            target_qs = filter_by_tags(target_qs, include_tags=[tag])
+            qs = qs.filter(tides_target__in=target_qs)
 
+        # --- class filter (dropdown) ---
         ctype = self.request.GET.get('class')
         if ctype:
-            qs = qs.filter(auto_tidesclass=ctype)
+            qs = qs.filter(sn_type=ctype)  # or use the correct field for your auto class
 
+        # --- redshift filters ---
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         if z_min:
             try:
-                qs = qs.filter(auto_tidesclass_z__gte=float(z_min))
+                zmin_f = float(z_min)
+                qs = qs.filter(sn_z__gte=zmin_f)  # or host_z if that's what you want
             except ValueError:
                 pass
         if z_max:
             try:
-                qs = qs.filter(auto_tidesclass_z__lte=float(z_max))
+                zmax_f = float(z_max)
+                qs = qs.filter(sn_z__lte=zmax_f)
+            except ValueError:
+                pass
+
+        # optional: days_range based on created timestamp
+        days_range = self.request.GET.get('days_range')
+        if days_range:
+            try:
+                from django.utils.timezone import now
+                from datetime import timedelta
+                dr = int(days_range)
+                qs = qs.filter(created__gte=now() - timedelta(days=dr))
             except ValueError:
                 pass
 
         return qs
 
-class ReleaseQueueView(LoginRequiredMixin, TemplateView):
-    """
-    Staging area: show unreleased targets, with filters on auto prob and tags.
-    """
-    template_name = 'custom_code/release_queue.html'
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
-        # base: unreleased
-        qs = unreleased_queryset()
+        # Make the underlying targets easily available in the template
+        pcs = ctx['classifications']
+        target_ids = [pc.tides_target_id for pc in pcs if pc.tides_target_id]
+        target_map = {
+            t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)
+        }
+        for pc in pcs:
+            pc.target = target_map.get(pc.tides_target_id)
 
-        # filters from query params
-        min_prob = self.request.GET.get('min_prob')
-        include = self.request.GET.getlist('include_tag')  # ?include_tag=high-redshift&include_tag=...
-        exclude = self.request.GET.getlist('exclude_tag')
+        # Filters state
+        ctx['default_days_range'] = self.request.GET.get('days_range', '')
+        ctx['filter_tag'] = self.request.GET.get('tag', '')
+        ctx['filter_class'] = self.request.GET.get('class', '')
+        ctx['filter_z_min'] = self.request.GET.get('z_min', '')
+        ctx['filter_z_max'] = self.request.GET.get('z_max', '')
 
-        if min_prob:
-            try:
-                mp = float(min_prob)
-                qs = qs.filter(auto_tidesclass_prob__gte=mp)
-                ctx['min_prob'] = mp
-            except ValueError:
-                pass
-
-        if include:
-            qs = filter_by_tags(qs, include_tags=include)
-        if exclude:
-            qs = filter_by_tags(qs, exclude_tags=exclude)
-
-        ctx['targets'] = qs.select_related()[:500]  # safety limit
+        # Tag choices
         ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        ctx['include_tags'] = include
-        ctx['exclude_tags'] = exclude
+
+        # Class choices (dropdown) from PipelineClassificationGlobal.sn_type
+        ctx['all_classes'] = (
+            PipelineClassificationGlobal.objects
+            .exclude(sn_type__isnull=True)
+            .exclude(sn_type='')
+            .values_list('sn_type', flat=True)
+            .distinct()
+            .order_by('sn_type')
+        )
+
         return ctx
-
-
-class ReleaseQueueActionView(LoginRequiredMixin, View):
-    """
-    POST endpoint to mark/unmark 'released' for a selection of targets from the queue.
-    """
-    def post(self, request):
-        action = request.POST.get('action')  # 'mark' or 'unmark'
-        ids = request.POST.getlist('target_id')  # repeated target_id fields
-        targets = TidesTarget.objects.filter(pk__in=ids)
-
-        if action == 'mark':
-            n = mark_released(targets, request.user)
-        elif action == 'unmark':
-            n = unmark_released(targets)
-        else:
-            return JsonResponse({'error': 'Unknown action'}, status=400)
-
-        return JsonResponse({'updated': n})
