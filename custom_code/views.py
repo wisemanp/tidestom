@@ -382,9 +382,9 @@ class LatestView(ListView):
     def get_queryset(self):
         # 1. Base: Spectra in the last N days
         try:
-            days_range = int(self.request.GET.get('days_range', 30))
+            days_range = int(self.request.GET.get('days_range', 60))
         except (ValueError, TypeError):
-            days_range = 30
+            days_range = 60
         date_threshold = now() - timedelta(days=days_range)
         
         # Start with recent spectra, joining the target (tides)
@@ -422,7 +422,7 @@ class LatestView(ListView):
         context = super().get_context_data(**kwargs)
         
         # Pass filter values back to template
-        context['default_days_range'] = self.request.GET.get('days_range', 30)
+        context['default_days_range'] = self.request.GET.get('days_range', 60)
         
         # Pass lists for multi-selects
         context['filter_tags'] = self.request.GET.getlist('tag')
