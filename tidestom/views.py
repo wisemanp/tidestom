@@ -7,8 +7,17 @@ from tom_targets.models import Target
 from tom_dataproducts.models import DataProduct
 from datetime import timedelta
 from collections import Counter
-from custom_code.models import TidesTarget, HumanClassification, PipelineClassificationGlobal, TidesSpec, TidesClass, TidesClassSubClass
-from custom_code.models import Tag  
+from custom_code.models import (
+    TidesTarget,
+    HumanClassification,
+    PipelineClassificationGlobal,
+    TidesSpec,
+    TidesClass,
+    TidesClassSubClass,
+    Tag,
+    TargetTag,
+)
+from django.db import models   
 from custom_code.forms import TidesTargetForm
 import psycopg2
 from django.conf import settings
@@ -17,12 +26,21 @@ from django.views.generic.list import ListView
 from django.utils.timezone import now
 import logging
 from django.urls import reverse
-from django.http import JsonResponse
-from custom_code.classification_list import CLASSIFICATIONS
-from django.db import models  # FIX: needed for models.Count
-from django.core.exceptions import FieldError
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
+import csv
+import json
+from custom_code.services import (
+    filter_by_tags,
+    unreleased_queryset,   # make sure these exist in services.py
+    mark_released,
+    unmark_released,
+)
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.views import View   # <-- IMPORTANT
 
 logger = logging.getLogger(__name__)
 
@@ -35,20 +53,75 @@ class LatestView(ListView):
     def get_queryset(self):
         days_range = int(self.request.GET.get('days_range', 30))
         date_threshold = now() - timedelta(days=days_range)
-        return TidesSpec.objects.filter(obs_date__gte=date_threshold).order_by('-obs_date')
+
+        # Base queryset: recent spectra
+        qs = (
+            TidesSpec.objects
+            .filter(obs_date__gte=date_threshold)
+            .order_by('-obs_date')
+        )
+
+        # Collect tides_ids and prefetch their TidesTarget objects
+        tides_ids = [s.tides_id for s in qs if getattr(s, 'tides_id', None) is not None]
+        targets_qs = TidesTarget.objects.filter(pk__in=tides_ids)
+
+        # Apply filters on the TidesTarget side, then restrict specs to those targets
+
+        # --- Tag filter ---
+        tag_name = self.request.GET.get('tag')  # ?tag=high-redshift
+        if tag_name:
+            targets_qs = filter_by_tags(targets_qs, include_tags=[tag_name])
+
+        # --- Classification type filter ---
+        ctype = self.request.GET.get('class')  # ?class=SN Ia, etc.
+        if ctype:
+            targets_qs = targets_qs.filter(auto_tidesclass=ctype)
+
+        # --- Redshift filters ---
+        z_min = self.request.GET.get('z_min')
+        z_max = self.request.GET.get('z_max')
+        if z_min:
+            try:
+                zmin_f = float(z_min)
+                targets_qs = targets_qs.filter(auto_tidesclass_z__gte=zmin_f)
+            except ValueError:
+                pass
+        if z_max:
+            try:
+                zmax_f = float(z_max)
+                targets_qs = targets_qs.filter(auto_tidesclass_z__lte=zmax_f)
+            except ValueError:
+                pass
+
+        # Restrict TidesSpec to the filtered targets
+        filtered_ids = list(targets_qs.values_list('pk', flat=True))
+        qs = qs.filter(tides_id__in=filtered_ids)
+
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Keep existing days_range
         context['default_days_range'] = self.request.GET.get('days_range', 30)
 
         specs = context[self.context_object_name]
-        # Collect tides_ids from TidesSpec (Django exposes <fk>_id)
+
+        # Attach the corresponding TidesTarget to each spec as .target
         tides_ids = [s.tides_id for s in specs if getattr(s, 'tides_id', None) is not None]
         target_map = {t.pk: t for t in TidesTarget.objects.filter(pk__in=tides_ids)}
 
-        # Attach the corresponding TidesTarget to each spec as .target
         for s in specs:
             s.target = target_map.get(getattr(s, 'tides_id', None))
+
+        # Expose filters back to template
+        context['filter_tag'] = self.request.GET.get('tag', '')
+        context['filter_class'] = self.request.GET.get('class', '')
+        context['filter_z_min'] = self.request.GET.get('z_min', '')
+        context['filter_z_max'] = self.request.GET.get('z_max', '')
+
+        # Optional: all tags for a dropdown in latest.html
+        context['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
 
         return context
 
@@ -215,4 +288,21 @@ def get_subclasses(request):
     except Exception as e:
         logger.exception(f"[get_subclasses] Error fetching subclasses: {e}")
     return JsonResponse(out, safe=False)
+
+class ToggleTagView(LoginRequiredMixin, View):
+    def post(self, request, target_id, tag_id):
+        target = get_object_or_404(TidesTarget, pk=target_id)
+        tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
+        tt, created = TargetTag.objects.get_or_create(
+            tides=target,
+            tag=tag,
+            defaults={'user': request.user},
+        )
+        if created:
+            return JsonResponse({'toggled': 'added', 'tag': tag.name})
+        tt.delete()
+        return JsonResponse({'toggled': 'removed', 'tag': tag.name})
+
+
+
 
