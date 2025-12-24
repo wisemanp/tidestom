@@ -27,6 +27,9 @@ from custom_code.services import filter_by_tags, unreleased_queryset, mark_relea
 from django.db import DatabaseError
 import csv
 
+# 1. Add this at the very top level of the file to confirm the module loads
+print("DEBUG: custom_code/views.py module loaded", flush=True)
+
 logger = logging.getLogger(__name__)
 
 def get_tides_class_choices():
@@ -380,6 +383,9 @@ class LatestView(ListView):
     context_object_name = 'targets'
 
     def get_queryset(self):
+        # 2. Add debug here to confirm the view is processing the request
+        print("DEBUG: LatestView.get_queryset called", flush=True)
+        
         # 1. Base: Spectra in the last N days
         try:
             days_range = int(self.request.GET.get('days_range', 60))
@@ -387,7 +393,6 @@ class LatestView(ListView):
             days_range = 60
         date_threshold = now() - timedelta(days=days_range)
         
-        # Start with recent spectra, joining the target (tides)
         qs = TidesSpec.objects.filter(obs_date__gte=date_threshold).select_related('tides')
 
         # 2. Tag Filter (on the related Target) - Handle multiple
@@ -405,13 +410,11 @@ class LatestView(ListView):
         z_max = self.request.GET.get('z_max')
         if z_min:
             try:
-                # Use 'z' from PipelineClassificationGlobal
                 qs = qs.filter(tides__pipeline_classifications_global__z__gte=float(z_min))
             except ValueError:
                 pass
         if z_max:
             try:
-                # Use 'z' from PipelineClassificationGlobal
                 qs = qs.filter(tides__pipeline_classifications_global__z__lte=float(z_max))
             except ValueError:
                 pass
@@ -419,6 +422,9 @@ class LatestView(ListView):
         return qs.distinct().order_by('-obs_date')
 
     def get_context_data(self, **kwargs):
+        # 3. Add debug here to confirm context preparation
+        print("DEBUG: LatestView.get_context_data called", flush=True)
+        
         context = super().get_context_data(**kwargs)
         
         context['default_days_range'] = self.request.GET.get('days_range', 60)
@@ -428,9 +434,12 @@ class LatestView(ListView):
         context['filter_z_max'] = self.request.GET.get('z_max', '')
 
         context['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        context['all_classes'] = get_tides_class_choices()
+        
+        # 4. Call the helper and print the result
+        choices = get_tides_class_choices()
+        print(f"DEBUG: get_tides_class_choices returned {len(choices)} items: {choices}", flush=True)
+        context['all_classes'] = choices
 
-        # Helper: Alias spec.tides to spec.target
         for spec in context['targets']:
             spec.target = spec.tides
 
