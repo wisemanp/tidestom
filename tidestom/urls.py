@@ -17,9 +17,10 @@ Including another URLconf
 from django.urls import path, include
 from django.views.generic import TemplateView
 from .views import (
-    LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
+    SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
 from custom_code.views import (
+    LatestView,
     SnidFormAjaxView,
     NGSFFormAJAXView,
     PreviousSNIDRunsView,
