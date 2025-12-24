@@ -78,7 +78,13 @@
                   {{ pc.tides_id }}
                 {% endif %}
               </td>
-              <td>{{ pc.target.name if pc.target else '-' }}</td>
+              <td>
+                {% if pc.target %}
+                  {{ pc.target.name }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
               <td>{{ pc.sn_type }}</td>
               <td>{{ pc.z|floatformat:4 }}</td>
               <td>{{ pc.probability|floatformat:3 }}</td>
