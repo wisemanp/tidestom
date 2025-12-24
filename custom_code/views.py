@@ -310,7 +310,7 @@ class PublicClassificationsDownloadView(View):
 
 class LatestView(ListView):
     """
-    Latest *classifications*, driven by PipelineClassificationGlobal and joined to TidesTarget.
+    Latest classifications, driven by PipelineClassificationGlobal and joined to TidesTarget.
     """
     model = PipelineClassificationGlobal
     template_name = 'latest.html'
@@ -320,98 +320,55 @@ class LatestView(ListView):
     def get_queryset(self):
         qs = PipelineClassificationGlobal.objects.all()
 
-        # Try to order by a sensible timestamp if it exists
-        if hasattr(PipelineClassificationGlobal, 'created'):
-            qs = qs.order_by('-created')
-        elif hasattr(PipelineClassificationGlobal, 'modified'):
-            qs = qs.order_by('-modified')
-        else:
-            qs = qs.order_by('-pk')
+        # Order newest first: by id or version
+        qs = qs.order_by('-id')
 
-        # Always prefetch the related TidesTarget if FK exists
-        if hasattr(PipelineClassificationGlobal, 'tides_target'):
-            qs = qs.select_related('tides_target')
+        # Preload related TidesTarget (FK is 'tides')
+        qs = qs.select_related('tides')
 
         # --- tag filter (on underlying TidesTarget) ---
         tag = self.request.GET.get('tag')
         if tag:
-            target_qs = TidesTarget.objects.all()
-            target_qs = filter_by_tags(target_qs, include_tags=[tag])
-            if hasattr(PipelineClassificationGlobal, 'tides_target'):
-                qs = qs.filter(tides_target__in=target_qs)
-            else:
-                # If FK has a different name, adjust here
-                qs = qs.none()  # fail loud; no results
+            target_qs = filter_by_tags(TidesTarget.objects.all(), include_tags=[tag])
+            qs = qs.filter(tides__in=target_qs)
 
         # --- class filter (dropdown) ---
         ctype = self.request.GET.get('class')
         if ctype:
-            field = None
-            for fname in ['sn_type', 'classification', 'class_name']:
-                if fname in [f.name for f in PipelineClassificationGlobal._meta.fields]:
-                    field = fname
-                    break
-            if field:
-                qs = qs.filter(**{field: ctype})
+            qs = qs.filter(sn_type=ctype)
 
-        # --- redshift filters ---
-        field_z = None
-        for fname in ['sn_z', 'host_z', 'z', 'redshift']:
-            if fname in [f.name for f in PipelineClassificationGlobal._meta.fields]:
-                field_z = fname
-                break
-
+        # --- redshift filters (field is 'z') ---
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
-        if field_z:
-            if z_min:
-                try:
-                    zmin_f = float(z_min)
-                    qs = qs.filter(**{f'{field_z}__gte': zmin_f})
-                except ValueError:
-                    pass
-            if z_max:
-                try:
-                    zmax_f = float(z_max)
-                    qs = qs.filter(**{f'{field_z}__lte': zmax_f})
-                except ValueError:
-                    pass
-
-        # --- days_range based on created/modified if provided ---
-        days_range = self.request.GET.get('days_range')
-        if days_range:
+        if z_min:
             try:
-                from django.utils.timezone import now
-                from datetime import timedelta
-                dr = int(days_range)
-                tfield = None
-                for fname in ['created', 'modified']:
-                    if fname in [f.name for f in PipelineClassificationGlobal._meta.fields]:
-                        tfield = fname
-                        break
-                if tfield:
-                    qs = qs.filter(**{f'{tfield}__gte': now() - timedelta(days=dr)})
+                zmin_f = float(z_min)
+                qs = qs.filter(z__gte=zmin_f)
             except ValueError:
                 pass
+        if z_max:
+            try:
+                zmax_f = float(z_max)
+                qs = qs.filter(z__lte=zmax_f)
+            except ValueError:
+                pass
+
+        # --- days_range: approximate with id if requested (optional) ---
+        # If you don't have a timestamp, you can ignore days_range or leave this commented out.
 
         return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-
         pcs = ctx['classifications']
 
-        # Attach underlying targets if FK exists
-        if hasattr(PipelineClassificationGlobal, 'tides_target'):
-            target_ids = [pc.tides_target_id for pc in pcs if pc.tides_target_id]
-            target_map = {
-                t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)
-            }
-            for pc in pcs:
-                pc.target = target_map.get(pc.tides_target_id)
-        else:
-            for pc in pcs:
-                pc.target = None
+        # Attach underlying targets as .target for convenience
+        target_ids = [pc.tides_id for pc in pcs if pc.tides_id]
+        target_map = {
+            t.id: t for t in TidesTarget.objects.filter(id__in=target_ids)
+        }
+        for pc in pcs:
+            pc.target = target_map.get(pc.tides_id)
 
         # Filter state
         ctx['default_days_range'] = self.request.GET.get('days_range', '')
@@ -423,24 +380,15 @@ class LatestView(ListView):
         # Tag choices
         ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
 
-        # Class choices dropdown: look for a reasonable field to derive from
-        class_field = None
-        for fname in ['sn_type', 'classification', 'class_name']:
-            if fname in [f.name for f in PipelineClassificationGlobal._meta.fields]:
-                class_field = fname
-                break
-
-        if class_field:
-            ctx['all_classes'] = (
-                PipelineClassificationGlobal.objects
-                .exclude(**{f'{class_field}__isnull': True})
-                .exclude(**{class_field: ''})
-                .values_list(class_field, flat=True)
-                .distinct()
-                .order_by(class_field)
-            )
-        else:
-            ctx['all_classes'] = []
+        # Class choices dropdown from sn_type
+        ctx['all_classes'] = (
+            PipelineClassificationGlobal.objects
+            .exclude(sn_type__isnull=True)
+            .exclude(sn_type='')
+            .values_list('sn_type', flat=True)
+            .distinct()
+            .order_by('sn_type')
+        )
 
         return ctx
 
