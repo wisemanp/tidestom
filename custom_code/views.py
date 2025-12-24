@@ -196,19 +196,28 @@ class NGSFFormAJAXView(FormView):
 
 class ToggleTagView(LoginRequiredMixin, View):
     """
-    POST to add/remove a tag for a target. Returns JSON.
+    POST to add/remove a tag for a target. Returns JSON:
+    { "toggled": "added" | "removed", "tag": "<tag name>" }
     """
     def post(self, request, target_id, tag_id):
         target = get_object_or_404(TidesTarget, pk=target_id)
         tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
 
+        # TargetTag.tides is a FK to tom_targets.BaseTarget, so pass target (subclass)
         tt, created = TargetTag.objects.get_or_create(
-            tides=target, tag=tag, defaults={'user': request.user}
+            tides=target,
+            tag=tag,
+            defaults={'user': request.user},
         )
-        if not created:
-            tt.delete()
-            return JsonResponse({'toggled': 'removed', 'tag': tag.name})
-        return JsonResponse({'toggled': 'added', 'tag': tag.name})
+
+        if created:
+            logger.info("Tag '%s' added to target %s by %s", tag.name, target.id, request.user)
+            return JsonResponse({'toggled': 'added', 'tag': tag.name})
+
+        # Already existed: delete to "un-tag"
+        tt.delete()
+        logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
+        return JsonResponse({'toggled': 'removed', 'tag': tag.name})
 
 class TagSearchView(View):
     def get(self, request):
