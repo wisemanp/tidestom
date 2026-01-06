@@ -12,6 +12,7 @@ from custom_code.models import (
     PipelineClassificationGlobal,
     TidesClass,
 )
+from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm  # Ensure this is imported
 from django.conf import settings
 from datetime import datetime, timedelta
