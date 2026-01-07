@@ -60,6 +60,11 @@ urlpatterns = [
         'api/get_subclasses/', get_subclasses, name='get_subclasses'
     ),
     path(
+        'targets/<int:pk>/update/',
+        StrictTargetUpdateView.as_view(),
+        name='target_update'
+    ),
+    path(
         '', include('tom_common.urls')
     ),
     path(
@@ -101,10 +106,5 @@ urlpatterns = [
         'public/classifications/download/',
         PublicClassificationsDownloadView.as_view(),
         name='public_classifications_download',
-    ),
-    path(
-        'targets/<int:pk>/update/',
-        StrictTargetUpdateView.as_view(),
-        name='target_update'
     ),
 ]
