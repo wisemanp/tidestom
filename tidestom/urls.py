@@ -30,6 +30,7 @@ from custom_code.views import (
     ReleaseQueueActionView,
     PublicClassificationsView,
     PublicClassificationsDownloadView,
+    StrictTargetUpdateView,
 )
 from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
 
@@ -100,5 +101,10 @@ urlpatterns = [
         'public/classifications/download/',
         PublicClassificationsDownloadView.as_view(),
         name='public_classifications_download',
+    ),
+    path(
+        'targets/<int:pk>/update/',
+        StrictTargetUpdateView.as_view(),
+        name='target_update'
     ),
 ]

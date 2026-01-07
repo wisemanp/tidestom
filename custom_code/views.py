@@ -27,6 +27,8 @@ from pathlib import Path
 from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
 from django.db import DatabaseError
 import csv
+from tom_targets.views import TargetUpdateView
+from .permissions import strict_targets_for_user
 
 # 1. Add this at the very top level of the file to confirm the module loads
 print("DEBUG: custom_code/views.py module loaded", flush=True)
@@ -507,3 +509,16 @@ class ReleaseQueueActionView(LoginRequiredMixin, View):
             
         else:
             return JsonResponse({'error': 'Unknown action'}, status=400)
+
+class StrictTargetUpdateView(TargetUpdateView):
+    """
+    Target update view with strict object-level permissions.
+    """
+
+    def get_queryset(self, *args, **kwargs):
+        qs = super(TargetUpdateView, self).get_queryset(*args, **kwargs)
+        return strict_targets_for_user(
+            self.request.user,
+            qs,
+            'change_target'
+        )
