@@ -298,7 +298,23 @@ fetch("{% static 'json/line_data.json' %}")
       <div class='btn-group' role='group' aria-label='Slack button'>
         {% if request.user.is_authenticated %}
         <button id="slackButton" class="btn btn-slack">
-        <i class="fab fa-slack"></i> Send to Slack
+		<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 122.8 122.8"
+    width="18"
+    height="18"
+    aria-hidden="true"
+  >
+    <path fill="#E01E5A" d="M30.3 77.3c0 8.4-6.8 15.3-15.3 15.3S-.3 85.7-.3 77.3s6.8-15.3 15.3-15.3h15.3v15.3z"/>
+    <path fill="#E01E5A" d="M38 77.3c0-8.4 6.8-15.3 15.3-15.3s15.3 6.8 15.3 15.3v38.2c0 8.4-6.8 15.3-15.3 15.3S38 123.9 38 115.5V77.3z"/>
+    <path fill="#36C5F0" d="M45.3 30.3c-8.4 0-15.3-6.8-15.3-15.3S36.9-.3 45.3-.3s15.3 6.8 15.3 15.3v15.3H45.3z"/>
+    <path fill="#36C5F0" d="M45.3 38c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3H7.1c-8.4 0-15.3-6.8-15.3-15.3S-1.3 38 7.1 38h38.2z"/>
+    <path fill="#2EB67D" d="M92.5 45.3c0-8.4 6.8-15.3 15.3-15.3s15.3 6.8 15.3 15.3-6.8 15.3-15.3 15.3H92.5V45.3z"/>
+    <path fill="#2EB67D" d="M84.8 45.3c0 8.4-6.8 15.3-15.3 15.3s-15.3-6.8-15.3-15.3V7.1c0-8.4 6.8-15.3 15.3-15.3s15.3 6.8 15.3 15.3v38.2z"/>
+    <path fill="#ECB22E" d="M77.5 92.5c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3-15.3-6.8-15.3-15.3V92.5h15.3z"/>
+    <path fill="#ECB22E" d="M77.5 84.8c-8.4 0-15.3-6.8-15.3-15.3s6.8-15.3 15.3-15.3h38.2c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3H77.5z"/>
+  </svg>
+			<span> Send to Slack</span>
         </button>
 
         {% endif %}
@@ -318,6 +334,10 @@ fetch("{% static 'json/line_data.json' %}")
     transition: background-color 0.2s;
 }
 
+.btn-slack svg {
+  margin-right: 0.5rem;
+}
+
 .btn-slack:hover {
     background-color: #611f69; /* Slightly lighter on hover */
     color: white;
@@ -332,7 +352,6 @@ fetch("{% static 'json/line_data.json' %}")
 }
 </style>
 
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
       {% tides_target_data object %}
       <!-- TAGS: LEFT COLUMN -->
       <h3>Tags</h3>
