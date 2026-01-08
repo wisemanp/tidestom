@@ -1,0 +1,17 @@
+{% load targets_extras %}
+<div class='btn-group' role='group' aria-label='Target detail button'>
+	{% if perms.tom_targets.change_target or request.user.has_perm "tom_targets.change_target" target %}
+    <a href="{% url 'target_update' target.pk %}" class="btn btn-primary">
+        Update
+    </a>
+	{% endif %}
+	{% if sharing %}
+    <a href="{% url 'tom_targets:share' pk=target.id %}" title="Share target" class="btn  btn-info">Share</a>
+    {% endif %}
+	{% if perms.tom_targets.delete_target or request.user.has_perm "tom_targets.delete_target" target %}
+    <a href="{% url 'target_delete' target.pk %}" class="btn btn-danger">
+        Delete
+    </a>
+	{% endif %}
+	{% get_buttons %}
+</div>
