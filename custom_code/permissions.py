@@ -8,6 +8,6 @@ def strict_targets_for_user(user, qs, perm):
         user,
         f"tom_targets.{perm}",
         qs,
-        accept_global_perms=False
+        accept_global_perms=True
     )
 
