@@ -517,8 +517,9 @@ fetch("{% static 'json/line_data.json' %}")
           <br><i>No human classifications submitted yet.</i>
         {% endif %}
       </p>
-
+	  {% if request.user.is_authenticated %}
       {% classification_form target.id %}
+	  {% endif %}
     </div>
   </div>
 
