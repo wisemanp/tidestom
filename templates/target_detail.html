@@ -295,9 +295,45 @@ fetch("{% static 'json/line_data.json' %}")
       {% endif %}
 
       {% target_unknown_statuses object %}
-      {% target_buttons object %}
-      {% tides_target_data object %}
+      <div class='btn-group' role='group' aria-label='Slack button'>
+        {% if request.user.is_authenticated %}
+        <button id="slackButton" class="btn btn-slack">
+        <i class="fab fa-slack"></i> Send to Slack
+        </button>
 
+        {% endif %}
+		</div>
+
+<style>
+.btn-slack {
+    background-color: #4A154B; /* Slack dark purple */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem; /* space between icon and text */
+    transition: background-color 0.2s;
+}
+
+.btn-slack:hover {
+    background-color: #611f69; /* Slightly lighter on hover */
+    color: white;
+}
+
+.btn-slack:active {
+    background-color: #3a0f38;
+}
+
+.btn-slack i {
+    font-size: 1rem; /* Adjust icon size if using Font Awesome */
+}
+</style>
+
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+      {% tides_target_data object %}
       <!-- TAGS: LEFT COLUMN -->
       <h3>Tags</h3>
       <div class="mb-2" id="current-tags">
