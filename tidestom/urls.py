@@ -31,6 +31,7 @@ from custom_code.views import (
     PublicClassificationsView,
     PublicClassificationsDownloadView,
     StrictTargetUpdateView,
+    StrictTargetDeleteView,
 )
 from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
 
@@ -63,6 +64,11 @@ urlpatterns = [
         'targets/<int:pk>/update/',
         StrictTargetUpdateView.as_view(),
         name='target_update'
+    ),
+    path(
+        'targets/<int:pk>/delete/',
+        StrictTargetDeleteView.as_view(),
+        name='delete_target'
     ),
     path(
         '', include('tom_common.urls')

@@ -27,7 +27,7 @@ from pathlib import Path
 from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
 from django.db import DatabaseError
 import csv
-from tom_targets.views import TargetUpdateView
+from tom_targets.views import TargetUpdateView, TargetDeleteView
 from .permissions import strict_targets_for_user
 
 # 1. Add this at the very top level of the file to confirm the module loads
@@ -521,4 +521,14 @@ class StrictTargetUpdateView(TargetUpdateView):
             self.request.user,
             qs,
             'change_target'
+        )
+
+class StrictTargetDeleteView(TargetDeleteView):
+
+    def get_queryset(self, *args, **kwargs):
+        qs = super(TargetDeleteView, self).get_queryset(*args, **kwargs)
+        return strict_targets_for_user(
+                self.request.user,
+                qs,
+                'delete_target'
         )
