@@ -280,7 +280,7 @@ fetch("{% static 'json/line_data.json' %}")
     toggleSpectroscopyElements();  // Run once on page load
 });
 </script>
-
+{% if request.user.is_authenticated %}
 <div class="row">
 
   <div class="col-md-3">
@@ -878,6 +878,13 @@ $(document).ready(function() {
     }, 1000);
 });
 </script>
+</div>
+  </div>
+  {% else %}
+ 		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
 
+
+  {% endif %}
+</div>
 
 {% endblock %}
