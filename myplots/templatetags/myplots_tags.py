@@ -43,6 +43,8 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     ]
 
     fig = go.Figure(data=plot_data)
+    fig.update_xaxes(range=[min(spectrum.spectral_axis.value)*1.01,
+                            max(spectrum.spectral_axis.value)*0.99])
 
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
