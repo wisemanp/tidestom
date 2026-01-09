@@ -44,8 +44,8 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     ]
 
     fig = go.Figure(data=plot_data)
-    fig.update_yaxes(range=[np.percentile(spectrum.flux.value, 5),
-                            np.percentile(spectrum.flux.value,95)])
+    fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value, 0.1),
+                            np.nanpercentile(spectrum.flux.value,99.9)])
 
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
