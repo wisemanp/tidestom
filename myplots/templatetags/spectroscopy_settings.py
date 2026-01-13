@@ -114,7 +114,7 @@ def get_pysnid_results(inputfile: str) -> SNIDReader:
     snidres = SNIDReader.from_filename(inputfile)
     return snidres
 
-def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndarray,
+def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndarray, 
                        fig: go.Figure, n: int = 3) -> go.Figure:
     """Adds best-match SNID templates to the figure.
 
@@ -151,7 +151,7 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
         fig.add_trace(go.Scatter(
             x=model_wave,
             y=model_flux,
-            name=f"SNID: {m}. {temp_info.sn}<br>{temp_info.type} ({temp_info.nentries} of type)",
+            name=f"{i}. {temp_info.sn}<br>{temp_info.type} (SNID)",
             hovertemplate=(f'Name: {temp_info.sn}<br>Type: {temp_info.type}<br>'
                            f'Phase: {temp_info.age} d<br>Wave.:%{{x}}'),
             showlegend=True,
