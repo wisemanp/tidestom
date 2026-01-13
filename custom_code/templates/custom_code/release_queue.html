@@ -1,0 +1,95 @@
+{% extends 'tom_common/base.html' %}
+{% load static %}
+
+{% block title %}Release Queue{% endblock %}
+
+{% block content %}
+<h2>Release queue (unreleased targets)</h2>
+
+<form method="get" class="mb-3">
+  <div class="form-row">
+    <div class="form-group col-md-2">
+      <label for="min_prob">Min auto prob</label>
+      <input type="number" step="0.01" min="0" max="1"
+             class="form-control" id="min_prob" name="min_prob"
+             value="{{ min_prob|default_if_none:'' }}">
+    </div>
+
+    <div class="form-group col-md-4">
+      <label>Include tags</label>
+      <select name="include_tag" class="form-control" multiple>
+        {% for t in all_tags %}
+          <option value="{{ t.name }}" {% if t.name in include_tags %}selected{% endif %}>
+            {{ t.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group col-md-4">
+      <label>Exclude tags</label>
+      <select name="exclude_tag" class="form-control" multiple>
+        {% for t in all_tags %}
+          <option value="{{ t.name }}" {% if t.name in exclude_tags %}selected{% endif %}>
+            {{ t.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group col-md-2 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary">Apply filters</button>
+    </div>
+  </div>
+</form>
+
+<form id="release-form" method="post" action="{% url 'release_queue_apply' %}">
+  {% csrf_token %}
+  <div class="mb-2">
+    <button class="btn btn-sm btn-success" name="action" value="mark" type="submit">Mark released</button>
+    <button class="btn btn-sm btn-warning" name="action" value="unmark" type="submit">Unmark released</button>
+  </div>
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="select-all"></th>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Auto class</th>
+        <th>Auto prob</th>
+        <th>Tags</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in targets %}
+        <tr>
+          <td>
+            <input type="checkbox" name="target_id" value="{{ t.id }}">
+          </td>
+          <td>{{ t.tides_id }}</td>
+          <td><a href="{% url 'target_detail' t.id %}">{{ t.name }}</a></td>
+          <td>{{ t.auto_tidesclass }}</td>
+          <td>{{ t.auto_tidesclass_prob|floatformat:3 }}</td>
+          <td>
+            {% for tag in t.tags.all %}
+              <span class="badge badge-info">{{ tag.name }}</span>
+            {% empty %}
+              <i>None</i>
+            {% endfor %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6"><i>No unreleased targets match your filters.</i></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+
+<script>
+document.getElementById('select-all')?.addEventListener('change', function(e) {
+  document.querySelectorAll('input[name="target_id"]').forEach(cb => {
+    cb.checked = e.target.checked;
+  });
+});
+</script>
+{% endblock %}

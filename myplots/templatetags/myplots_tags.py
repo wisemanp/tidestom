@@ -6,6 +6,7 @@ from datetime import datetime
 from astropy.time import Time
 from django import template
 import glob
+import numpy as np
 
 from .spectroscopy_settings import add_snid_templates, add_ngsf_templates, load_spectra
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
@@ -43,6 +44,8 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     ]
 
     fig = go.Figure(data=plot_data)
+    fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value, 0.1),
+                            np.nanpercentile(spectrum.flux.value,99.9)])
 
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”

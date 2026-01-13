@@ -386,7 +386,7 @@ AUTH_STRATEGY = 'READ_ONLY'
 # objects to be seen by everyone. Setting it to False will allow users to
 # specify which groups can access `ObservationRecord`, `DataProduct`, and
 # `ReducedDatum` objects.
-TARGET_PERMISSIONS_ONLY = True
+TARGET_PERMISSIONS_ONLY = False
 
 # URLs that should be allowed access even with AUTH_STRATEGY = LOCKED
 # for example: OPEN_URLS = ['/', '/about']

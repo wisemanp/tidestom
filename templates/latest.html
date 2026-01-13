@@ -3,51 +3,111 @@
 {% block title %}Latest Targets{% endblock %}
 {% block content %}
 <div class="row">
-  <div class="col-md-10">
+  <div class="col-md-12">
     <h2>Latest Targets</h2>
-	
-	{% if request.user.is_authenticated %}
-    <form method="get" action="{% url 'latest' %}" class="mb-4">
-		<div class="d-flex align-items-center gap-2">
-           <label class="form-label mb-0" for="days_range">Show targets observed in the last:</label>
-           <div class="input-group w-auto">
-           <input type="number" name="days_range" id="days_range" value="{{ default_days_range }}" min="1" class="form-control">
-			<span class="input-group-text">days</span>
-           </div>
-		<button type="submit" class="btn btn-primary">Update</button>
-		</div>
-	</form>
 
-    <div class="row">
-      {% for spec in targets %}
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4 mb-4">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">
-                {% if spec.target %}
-                  <a href="{% url 'target_detail' spec.target.id %}">
-                    {{ spec.target.id }}
-                  </a>
-                     {% if spec.target.additional_info and spec.target.additional_info.THUMBNAIL %}
-                     <img src="{{ spec.target.additional_info.THUMBNAIL }}"
-                       alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
-                     {% else %}
-                     <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
-                       alt="Spectrum for {{ spec.target.id }}" class="img-fluid mt-2">
-                     {% endif %}
-                  {% target_classifications spec.target %}
-                {% else %}
-                  <p>No linked target</p>
-                {% endif %}
-              </h5>
+    {% if request.user.is_authenticated %}
+      <form method="get" action="{% url 'latest' %}" class="mb-4 border p-3 rounded bg-light">
+        <div class="row g-3">
+          
+          <!-- Days Range -->
+          <div class="col-md-3">
+            <label class="form-label" for="days_range">Observed in last (days)</label>
+            <input type="number" name="days_range" id="days_range" 
+                   value="{{ default_days_range }}" min="1" class="form-control">
+          </div>
+
+          <!-- Tag Filter (Multi-select) -->
+          <div class="col-md-3">
+            <label class="form-label" for="tag">Tags (hold Ctrl/Cmd to select multiple)</label>
+            <select name="tag" id="tag" class="form-select form-control" multiple size="4">
+              {% for t in all_tags %}
+                <option value="{{ t.name }}" {% if t.name in filter_tags %}selected{% endif %}>
+                  {{ t.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Class Filter (Multi-select) -->
+          <div class="col-md-3">
+            <label class="form-label" for="class">TiDES Class (hold Ctrl/Cmd)</label>
+            <select name="class" id="class" class="form-select form-control" multiple size="4">
+              {% for c in all_classes %}
+                <option value="{{ c }}" {% if c in filter_classes %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Redshift Filter -->
+          <div class="col-md-3">
+            <label class="form-label">Redshift (Pipeline)</label>
+            <div class="input-group">
+              <span class="input-group-text">z ≥</span>
+              <input type="number" step="0.001" name="z_min" class="form-control" value="{{ filter_z_min }}">
+              <span class="input-group-text">z ≤</span>
+              <input type="number" step="0.001" name="z_max" class="form-control" value="{{ filter_z_max }}">
             </div>
           </div>
+
+          <div class="col-12 mt-2">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a href="{% url 'latest' %}" class="btn btn-outline-secondary">Clear filters</a>
+          </div>
         </div>
-      {% endfor %}
-    </div>
-	{% else %}
-	Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
-	{% endif %}
+      </form>
+
+      <div class="row">
+        {% for spec in targets %}
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+            <div class="card h-100">
+              <div class="card-body">
+                <h5 class="card-title text-truncate">
+                  {% if spec.target %}
+                    <a href="{% url 'target_detail' spec.target.id %}" title="{{ spec.target.id }}">
+                      {{ spec.target.id }}
+                    </a>
+                  {% else %}
+                    <span class="text-muted">No Target</span>
+                  {% endif %}
+                </h5>
+                
+                {% if spec.target %}
+                  <div class="text-center mb-2" style="min-height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                    {% if spec.target.additional_info and spec.target.additional_info.THUMBNAIL %}
+                      <img src="{{ spec.target.additional_info.THUMBNAIL }}"
+                           alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;">
+                    {% else %}
+                      <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
+                           alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;"
+                           onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\'text-muted\'>No Image</span>'">
+                    {% endif %}
+                  </div>
+
+                  <!-- Use the existing template tag to show classifications -->
+                  {% target_classifications spec.target %}
+                  
+                  <div class="mt-2">
+                    <small class="text-muted">Obs: {{ spec.obs_date|date:"Y-m-d" }}</small>
+                  </div>
+                {% else %}
+                  <p class="text-muted">No linked target data.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="col-12">
+            <div class="alert alert-info">No spectra match your filters.</div>
+          </div>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div class="alert alert-warning">
+        Please <a href="{% url 'login' %}?next={% url 'latest' %}">login</a> to view or create targets.
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
