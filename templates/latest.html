@@ -74,6 +74,8 @@
                 
                 {% if spec.target %}
 				<pre>
+				spec.id = {{ spec.id }}
+				target.id = {{ spec.target.id }}
 				additional_info = {{ spec.target.additional_info|default:"NONE" }}
 				THUMBNAIL = {{ spec.target.additional_info.THUMBNAIL|default:"NONE" }}
 				</pre>
