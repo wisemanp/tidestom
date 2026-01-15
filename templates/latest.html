@@ -73,12 +73,6 @@
                 </h5>
                 
                 {% if spec.target %}
-				<pre>
-				spec.id = {{ spec.id }}
-				target.id = {{ spec.target.id }}
-				additional_info = {{ spec.additional_info|default:"NONE" }}
-				THUMBNAIL = {{ spec.additional_info.THUMBNAIL|default:"NONE" }}
-				</pre>
                   <div class="text-center mb-2" style="min-height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
                     {% if spec.additional_info and spec.additional_info.THUMBNAIL %}
                       <img src="http://192.41.122.149{{ spec.additional_info.THUMBNAIL }}"
