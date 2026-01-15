@@ -75,11 +75,12 @@
                 {% if spec.target %}
                   <div class="text-center mb-2" style="min-height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
                     {% if spec.target.additional_info and spec.target.additional_info.THUMBNAIL %}
-                      <img src="192.41.122.149/{{ spec.target.additional_info.THUMBNAIL }}"
+                      <img src="http://192.41.122.149/{{ spec.target.additional_info.THUMBNAIL }}"
                            alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;">
                     {% else %}
-					<img src="192.41.122.149/{{ spec.target.additional_info.THUMBNAIL }}"
-						 alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;">
+                      <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
+                           alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;"
+                           onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\'text-muted\'>No Image</span>'">
                     {% endif %}
                   </div>
 
