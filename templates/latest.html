@@ -74,8 +74,8 @@
                 
                 {% if spec.target %}
                   <div class="text-center mb-2" style="min-height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-                    {% if spec.target.additional_info and spec.target.additional_info.THUMBNAIL %}
-                      <img src="{{ spec.target.additional_info.THUMBNAIL }}"
+                    {% if spec.additional_info and spec.additional_info.THUMBNAIL %}
+					<img src={{ media_url }}{{ spec.additional_info.THUMBNAIL }}
                            alt="Spectrum for {{ spec.target.id }}" class="img-fluid" style="max-height: 200px;">
                     {% else %}
                       <img src="{% static 'plots' %}/{{ spec.target.id }}_thumbnail.png"
