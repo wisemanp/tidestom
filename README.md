@@ -5,9 +5,13 @@
 This repository contains the Tides TOM (Target and Observation Manager) project, built using the [TOM Toolkit](https://tom-toolkit.readthedocs.io/en/stable/). Follow the instructions below to set up the project, contribute to its development, and run the server.
 
 ---
-## Docker Intallation
+## Local Docker Intallation for Development
 
 These instructions relate to building and deploying a local version of the Dockerised version of the TiDES TOM, this is the most feature full version and is closest to the version which will be deployed.
+
+**Note currently this version does not have API support**
+
+SNID and NGSF will not run on this version. Attempting to run them may lead to unexpected results
 
 ### Prerequsists
 
@@ -15,7 +19,7 @@ Make sure you have Docker installed on your machine, you can download it [here](
 
 ### Installation
 
-To build and deploy the TiDES TOM with APIs, follow these steps:
+To build and deploy the TiDES TOM follow these steps:
 
 1. **Make sure Docker is running**
 
@@ -26,27 +30,22 @@ To build and deploy the TiDES TOM with APIs, follow these steps:
 3. **Clone your fork**:  
    Clone your forked repository to your local machine:
     ```bash
-    git clone https://github.com/TiDES-4MOST/tidestom.git
+    git clone https://github.com/YOUR-USER/tidestom.git
     cd tidestom
     ```
-4. **Create Enviroment varibles**:
-   Create a `.env` file in the top level directory containing the following fields (complete with the correct information)
-   ```yaml
-        db_host= 
-        db_port=5432
-        db_user= 
-        db_pass= 
-        db_url=
-   ```
-   These are the settings to access the remote database for the TOM, please ensure that the database has been configured correctly before proceeding 
-   
-5. **Download the test data**:  
+4. **Download the test data**:  
    Download the test data from the following link and save it in the top level directory of the repository (ensure that it's correctly covered by `.gitignore`):  
    [Test Data](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing)
 
-6. **Build the Docker images and start the server**
+5. **Build the Docker images and start the server**
    ```bash
-   docker compose up --build -d
+   docker compose up -f docker-compose-local.yml --build -d
+   ```
+   It is very important that you build using the -local file version, the other files are for deployment building or for intgration and deployment tests
+
+6. **Finish setting up the databse**
+   ```bash
+   docker exec -it tidestom-web-1 python manage.py migrate
    ```
 
 7. **Open your browser and navigate to:**
