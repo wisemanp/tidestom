@@ -3,6 +3,11 @@ version: "3.9"
 services:
   init-gatekeeper:
     image: alpine:3.19
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      database:
+        condition: service_started
     command: >
       sh -c "
         echo 'Checking and creating API workspace directories' &&
@@ -22,13 +27,14 @@ services:
 
         sleep 10 &&
 
-        echo "Preparing database init script' &&
-        apk add --no-cache git &&
+        echo 'Preparing database init script' &&
+        apk add --no-cache postgresql-client git &&
 
-        if [ ! -f /db_init/01-shema.sql ]; then
+        if [ ! -f /db_init/.applied ]; then
           echo 'Cloning DB scripts'
           git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
-          cp /tmp/tides-db-scripts/tides_merged_schema.sql /db_init/01-schema.sql
+          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
+          touch /db_init/.applied 
           echo 'Database schema prepared'
         else
           echo 'Schema already present, skipping'
@@ -53,8 +59,7 @@ services:
       "
 
     environment:
-      - API_1_HEALTH='http:192.168.10.117:8000/health'
-      - API_2_HEALTH='http:192.168.10.117:8001/health'
+      PGPASSWORD: example
     volumes:
       - snid_api_runs:/snid_api_runs
       - ngsf_api_runs:/ngsf_api_runs
@@ -62,7 +67,6 @@ services:
       - spectra:/spectra_volume
       #- deliveries_volume:/deliveries
       - static_volume:/static
-      - db_init:/db_init
       #- ../test_data/sims:/test_data_src:ro #only for testing
       #- ../test_data/plots:/test_plots_src:ro #only for testing
     healthcheck:
@@ -81,6 +85,8 @@ services:
       - "8000:8000"
     depends_on:
       init-gatekeeper:
+        condition: service_completed_successfully
+      migrate:
         condition: service_completed_successfully
       database:
         condition: service_started
@@ -143,9 +149,9 @@ services:
   database:
     image: postgres:17
     restart: always
-    depends_on:
-      init-gatekeeper:
-        condition: service_completed_successfully
+    #depends_on:
+    #  init-gatekeeper:
+    #    condition: service_completed_successfully
     environment:
       POSTGRES_PASSWORD: example
       POSTGRES_USER: tides
@@ -153,14 +159,43 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db_init:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
 
+  migrate:
+    build: .
+    entrypoint: []
+    depends_on:
+      database:
+        condition: service_started
+    command: >
+      sh -c "
+        until pg_isready -h database -U tides; do
+          echo 'Waiting for DB...'
+          sleep 2
+        done && \
+        python manage.py migrate
+      "
+    environment:
+      TIDES_TEST_DIR: '/data/spectra/test_data/'
+      #DB_PASS: ${DB_PASS}
+      #DATABASE_URL: ${DATABASE_URL}
+      DB_HOST: database
+      DB_USER: tides
+      PGPASSWORD: example
+      DB_PORT: 5432
+      DB_NAME: tidestom
+      #PGSSLMODE: require
+      LOCAL_MODE: 'True'
+
+      # Django settings
+      DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
+      DJANGO_SETTINGS_MODULE: tidestom.settings
 volumes:
   static_volume:
   media_volume:
   snid_api_runs:
   spectra:
-  db_init:
+  pgdata:
   #  external: true
   ngsf_api_runs:
   #  external: true
