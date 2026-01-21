@@ -154,6 +154,65 @@ class TidesTarget(TomTarget):
         )
         return best.probability if best else None
 
+    @property
+    def tags(self):
+        # Returns a queryset so templates can call .all
+        return Tag.objects.filter(target_tags__tides_id=self.pk, is_active=True)
+
+# ----------------------------
+# Tags (managed locally)
+# ----------------------------
+class Tag(models.Model):
+    name = models.CharField(max_length=64, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['name']
+        db_table = 'tides_tag'
+
+    def __str__(self):
+        return self.name
+
+class TargetTag(models.Model):
+    tides = models.ForeignKey(
+        TomTarget,                    # IMPORTANT: reference the class, not 'tom_targets.target'
+        on_delete=models.CASCADE,
+        db_column='tides_id',
+        related_name='target_tags',
+    )
+    tag = models.ForeignKey('custom_code.Tag', on_delete=models.CASCADE, related_name='target_tags')
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tides_target_tag'
+        ordering = ['-created']
+        constraints = [
+            models.UniqueConstraint(fields=('tides', 'tag'), name='unique_tides_tag'),
+        ]
+
+    def __str__(self):
+        return f'{self.tides_id} - {self.tag.name}'
+
+class TagProposal(models.Model):
+    name = models.CharField(max_length=64)
+    justification = models.TextField()
+    proposed_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(
+        max_length=16,
+        choices=[('open', 'Open'), ('accepted', 'Accepted'), ('rejected', 'Rejected')],
+        default='open'
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created']
+        db_table = 'tides_tag_proposal'
+
+    def __str__(self):
+        return f'{self.name} ({self.status})'
 
 # ----------------------------
 # Human classifications (remote)

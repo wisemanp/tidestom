@@ -34,14 +34,15 @@ SECRET_KEY = 'u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cyf'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", '192.41.122.49', 'tides.lsst.ac.uk']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", '192.41.122.49', 'tides.lsst.ac.uk', '192.41.122.149']
 FORCE_SCRIPT_NAME = '/marshal'
-USE_X_FORWARD_HOST = True
+USE_X_FORWARDED_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
         "http://localhost:8080",
         'http://tides.lsst.ac.uk',
         'http://192.41.122.49',
+        'http://192.41.112.149',
         ]
 #Activate on HTTPS
 #SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -223,8 +224,8 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),
                     os.path.join(TEST_DIR, 'sims'),]
+MEDIA_URL = '/data/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'data')
-MEDIA_URL = '/media/'
 
 LOGGING = {
     'version': 1,
@@ -385,7 +386,7 @@ AUTH_STRATEGY = 'READ_ONLY'
 # objects to be seen by everyone. Setting it to False will allow users to
 # specify which groups can access `ObservationRecord`, `DataProduct`, and
 # `ReducedDatum` objects.
-TARGET_PERMISSIONS_ONLY = True
+TARGET_PERMISSIONS_ONLY = False
 
 # URLs that should be allowed access even with AUTH_STRATEGY = LOCKED
 # for example: OPEN_URLS = ['/', '/about']

@@ -5,6 +5,8 @@ import plotly.graph_objs as go
 from datetime import datetime
 from astropy.time import Time
 from django import template
+import glob
+import numpy as np
 
 from .spectroscopy_settings import add_snid_templates, add_ngsf_templates, load_spectra
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
@@ -42,6 +44,8 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     ]
 
     fig = go.Figure(data=plot_data)
+    fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value, 0.1),
+                            np.nanpercentile(spectrum.flux.value,99.9)])
 
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
@@ -80,6 +84,24 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
         except Exception as exc:
             print(exc)
             pass
+    else:
+        tar = f"{target}"
+        paths= glob.glob(f'/snid_api_runs/pipeline_out/*/{tar[6:]}/*h5')
+        try:
+            auto_snid = f'{paths[0]}'
+            try:
+                fig = add_snid_templates(auto_snid,
+                                spectrum.spectral_axis.value,
+                                spectrum.flux.value,
+                                fig,
+                                n=3
+                                )
+            except Exception as exc:
+                print(exc)
+                pass
+        except IndexError:
+            warnings.warn(f"{target}", UserWarning)
+            pass
 
     if ngsf_path is not None:
         try:
@@ -98,7 +120,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
                       yaxis_title='Flux (erg/s/cm²/Å)',
                       xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      legend_title="Best Templates",
+                      legend_title="Best Matches",
                       showlegend=True,
                       font_family="P052",
                       font_size=16,

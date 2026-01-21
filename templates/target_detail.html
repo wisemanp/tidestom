@@ -280,82 +280,248 @@ fetch("{% static 'json/line_data.json' %}")
     toggleSpectroscopyElements();  // Run once on page load
 });
 </script>
-
 {% if request.user.is_authenticated %}
 <div class="row">
 
   <div class="col-md-3">
-		<div id="target-info">
+    <div id="target-info">
 
-			{% target_feature object %}
+      {% target_feature object %}
 
-			{% if object.future_observations %}
-				<div class="alert alert-success">
-					{{ object.future_observations|length }} upcoming observation{{ object.future_observations|pluralize }}
-				</div>
-			{% endif %}
+      {% if object.future_observations %}
+        <div class="alert alert-success">
+          {{ object.future_observations|length }} upcoming observation{{ object.future_observations|pluralize }}
+        </div>
+      {% endif %}
 
-			{% target_unknown_statuses object %}
-			{% target_buttons object %}
-			{% tides_target_data object %}
-      
-      <h3>Classifications</h3>
+      {% target_unknown_statuses object %}
+      <div class='btn-group' role='group' aria-label='Slack button'>
+        {% if request.user.is_authenticated %}
+        <button id="slackButton" class="btn btn-slack">
+		<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 122.8 122.8"
+    width="18"
+    height="18"
+    aria-hidden="true"
+  >
+    <path fill="#E01E5A" d="M30.3 77.3c0 8.4-6.8 15.3-15.3 15.3S-.3 85.7-.3 77.3s6.8-15.3 15.3-15.3h15.3v15.3z"/>
+    <path fill="#E01E5A" d="M38 77.3c0-8.4 6.8-15.3 15.3-15.3s15.3 6.8 15.3 15.3v38.2c0 8.4-6.8 15.3-15.3 15.3S38 123.9 38 115.5V77.3z"/>
+    <path fill="#36C5F0" d="M45.3 30.3c-8.4 0-15.3-6.8-15.3-15.3S36.9-.3 45.3-.3s15.3 6.8 15.3 15.3v15.3H45.3z"/>
+    <path fill="#36C5F0" d="M45.3 38c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3H7.1c-8.4 0-15.3-6.8-15.3-15.3S-1.3 38 7.1 38h38.2z"/>
+    <path fill="#2EB67D" d="M92.5 45.3c0-8.4 6.8-15.3 15.3-15.3s15.3 6.8 15.3 15.3-6.8 15.3-15.3 15.3H92.5V45.3z"/>
+    <path fill="#2EB67D" d="M84.8 45.3c0 8.4-6.8 15.3-15.3 15.3s-15.3-6.8-15.3-15.3V7.1c0-8.4 6.8-15.3 15.3-15.3s15.3 6.8 15.3 15.3v38.2z"/>
+    <path fill="#ECB22E" d="M77.5 92.5c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3-15.3-6.8-15.3-15.3V92.5h15.3z"/>
+    <path fill="#ECB22E" d="M77.5 84.8c-8.4 0-15.3-6.8-15.3-15.3s6.8-15.3 15.3-15.3h38.2c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3H77.5z"/>
+  </svg>
+			<span> Send to Slack</span>
+        </button>
 
-			<p>
-				<u><strong>Auto Classification</strong></u>&emsp;
-				{% if object.auto_tidesclass %}
-					<br><strong>Class:</strong> {{ object.auto_tidesclass }}
-					{% if object.auto_tidesclass_subclass %}
-						<br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
-					{% endif %}
-          {% if object.auto_tidesclass_z %}
-						<br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
-					{% endif %}
-					{% if object.auto_tidesclass_prob %}
-						<br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
-					{% endif %}
-				{% else %}
-					<br>No Auto Classification
-				{% endif %}
-			</p>
-
-			<p>
-				<u><strong>Human Classification:</strong></u>
-				{% if aggregated_human_class %}
-					<br><strong>Most Common:</strong> {{ aggregated_human_class.most_common_class }}
-					<br><strong>Total Submissions:</strong> {{ aggregated_human_class.total_submissions }}
-					<br><strong>No. of Most Common:</strong> {{ aggregated_human_class.count }}
-                    <br><strong>Agreement:</strong> {% with ratio=aggregated_human_class.count|divide:aggregated_human_class.total_submissions %}{{ ratio|floatformat:3 }}{% endwith %}
-				{% else %}
-					<br><i>No human classifications submitted yet.</i>
-				{% endif %}
-			</p>
-
-			<p>
-				<u><strong>All Human Classifications:</strong></u>
-				{% if human_classifications %}
-                    {% for submission in human_classifications %}
-                        <strong>{{ submission.user.username }}</strong> submitted
-                        <strong>{{ submission.sn_type }}</strong>
-                        {% if submission.sn_subtype %}(Subclass: {{ submission.sn_subtype }}){% endif %}
-                        {% if submission.sn_z %}(z: {{ submission.sn_z|floatformat:4 }}){% endif %}
-                        {% if submission.host_z %}(host z: {{ submission.host_z|floatformat:4 }}){% endif %}
-                        {% if submission.phase %}(phase: {{ submission.phase|floatformat:1 }} d){% endif %}
-                        {% if submission.comments %}(Comments: {{ submission.comments }}){% endif %}
-                        on {{ submission.created|date:"Y-m-d H:i" }}<br>
-                    {% endfor %}
-                {% else %}
-                    <br><i>No human classifications submitted yet.</i>
-                {% endif %}
-            </p>
-
-			{% classification_form target.id %}
-			<!--{% recent_photometry object limit=3 %}
-			{# {% recent_photometry object num_points=3 %} #}-->
-
+        {% endif %}
 		</div>
-	</div>
 
+<style>
+.btn-slack {
+    background-color: #4A154B; /* Slack dark purple */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem; /* space between icon and text */
+    transition: background-color 0.2s;
+}
+
+.btn-slack svg {
+  margin-right: 0.5rem;
+}
+
+.btn-slack:hover {
+    background-color: #611f69; /* Slightly lighter on hover */
+    color: white;
+}
+
+.btn-slack:active {
+    background-color: #3a0f38;
+}
+
+.btn-slack i {
+    font-size: 1rem; /* Adjust icon size if using Font Awesome */
+}
+</style>
+
+      {% tides_target_data object %}
+      <!-- TAGS: LEFT COLUMN -->
+      <h3>Tags</h3>
+      <div class="mb-2" id="current-tags">
+        {% if object.tags.all %}
+          {% for t in object.tags.all %}
+            <span class="badge badge-info me-1" data-tag-id="{{ t.id }}">{{ t.name }}</span>
+          {% endfor %}
+        {% else %}
+          <i id="no-tags-label">No tags</i>
+        {% endif %}
+      </div>
+
+      {% if request.user.is_authenticated %}
+        <form id="tag-toggle-form" class="d-flex flex-wrap gap-2">
+          {% for t in tags %}
+            <button type="button"
+                    class="btn btn-sm {% if t in object.tags.all %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                    data-tag-id="{{ t.id }}"
+                    data-url="{% url 'toggle_tag' object.id t.id %}">
+              {{ t.name }}
+            </button>
+          {% endfor %}
+        </form>
+        <script>
+          // Define getCookie/csrftoken only once globally
+          if (typeof window.getCookie === 'undefined') {
+            window.getCookie = function(name) {
+              const value = `; ${document.cookie}`;
+              const parts = value.split(`; ${name}=`);
+              if (parts.length === 2) return parts.pop().split(';').shift();
+              return '';
+            };
+          }
+          if (typeof window.csrftoken === 'undefined') {
+            window.csrftoken = window.getCookie('csrftoken');
+          }
+
+          function updateCurrentTags(tagId, tagName, action) {
+            const container = document.getElementById('current-tags');
+            if (!container) return;
+
+            const noLabel = document.getElementById('no-tags-label');
+            if (noLabel) noLabel.remove();
+
+            const sel = '[data-tag-id="' + tagId + '"]';
+            const existing = container.querySelector(sel);
+
+            if (action === 'added') {
+              if (!existing) {
+                const span = document.createElement('span');
+                span.className = 'badge badge-info me-1';
+                span.dataset.tagId = tagId;
+                span.textContent = tagName;
+                container.appendChild(span);
+              }
+            } else if (action === 'removed') {
+              if (existing) existing.remove();
+              if (!container.querySelector('[data-tag-id]')) {
+                const i = document.createElement('i');
+                i.id = 'no-tags-label';
+                i.textContent = 'No tags';
+                container.appendChild(i);
+              }
+            }
+          }
+
+          document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const el = e.currentTarget;
+              const url = el.dataset.url;
+              const tagId = el.dataset.tagId;
+              const tagName = el.textContent.trim();
+              if (!url || !tagId) return;
+
+              try {
+                el.disabled = true;
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: {
+                    'X-CSRFToken': window.csrftoken,
+                    'Accept': 'application/json'
+                  },
+                });
+                if (!res.ok) {
+                  console.error('Tag toggle failed', res.status, await res.text());
+                  el.disabled = false;
+                  return;
+                }
+                const data = await res.json(); // {toggled: "added"/"removed", tag: "..."}
+                const toggled = data.toggled;
+
+                // Toggle button style
+                if (toggled === 'added') {
+                  el.classList.remove('btn-outline-secondary');
+                  el.classList.add('btn-success');
+                } else if (toggled === 'removed') {
+                  el.classList.remove('btn-success');
+                  el.classList.add('btn-outline-secondary');
+                }
+
+                // Update visible tag list
+                updateCurrentTags(tagId, tagName, toggled);
+                el.disabled = false;
+              } catch (err) {
+                console.error('Tag toggle error', err);
+                el.disabled = false;
+              }
+            });
+          });
+        </script>
+      {% endif %}
+      <!-- END TAGS -->
+
+      <h3>Classifications</h3>
+      <p>
+        <u><strong>Auto Classification</strong></u>&emsp;
+        {% if object.auto_tidesclass %}
+          <br><strong>Class:</strong> {{ object.auto_tidesclass }}
+          {% if object.auto_tidesclass_subclass %}
+            <br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
+          {% endif %}
+          {% if object.auto_tidesclass_z %}
+            <br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
+          {% endif %}
+          {% if object.auto_tidesclass_prob %}
+            <br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
+          {% endif %}
+        {% else %}
+          <br>No Auto Classification
+        {% endif %}
+      </p>
+
+      <p>
+        <u><strong>Human Classification:</strong></u>
+        {% if aggregated_human_class %}
+          <br><strong>Most Common:</strong> {{ aggregated_human_class.most_common_class }}
+          <br><strong>Total Submissions:</strong> {{ aggregated_human_class.total_submissions }}
+          <br><strong>No. of Most Common:</strong> {{ aggregated_human_class.count }}
+          <br><strong>Agreement:</strong>
+          {% with ratio=aggregated_human_class.count|divide:aggregated_human_class.total_submissions %}
+            {{ ratio|floatformat:3 }}
+          {% endwith %}
+        {% else %}
+          <br><i>No human classifications submitted yet.</i>
+        {% endif %}
+      </p>
+
+      <p>
+        <u><strong>All Human Classifications:</strong></u>
+        {% if human_classifications %}
+          {% for submission in human_classifications %}
+            <strong>{{ submission.user.username }}</strong> submitted
+            <strong>{{ submission.sn_type }}</strong>
+            {% if submission.sn_subtype %}(Subclass: {{ submission.sn_subtype }}){% endif %}
+            {% if submission.sn_z %}(z: {{ submission.sn_z|floatformat:4 }}){% endif %}
+            {% if submission.host_z %}(host z: {{ submission.host_z|floatformat:4 }}){% endif %}
+            {% if submission.phase %}(phase: {{ submission.phase|floatformat:1 }} d){% endif %}
+            {% if submission.comments %}(Comments: {{ submission.comments }}){% endif %}
+            on {{ submission.created|date:"Y-m-d H:i" }}<br>
+          {% endfor %}
+        {% else %}
+          <br><i>No human classifications submitted yet.</i>
+        {% endif %}
+      </p>
+	  {% if request.user.is_authenticated %}
+      {% classification_form target.id %}
+	  {% endif %}
+    </div>
+  </div>
 
   <div class="col-md-8">
     <ul class="nav nav-tabs" role="tablist" id="tabs">
@@ -490,7 +656,8 @@ fetch("{% static 'json/line_data.json' %}")
       <input type="range" id="velocitySlider" min="-25000" max="25000" step="100" value="0" style="width: 300px">
         <label for="velocityInput"></label><input type="number" id="velocityInput" min="-25000" max="25000" step="100" value="0" style="width: 80px; text-align: center;">
     </div>
-    
+
+{% if request.user.is_authenticated %}
 <div class="spectroscopy-only" style="width:300px;">
   Fitting Programs:
   <!-- Inner Tabs Navigation -->
@@ -512,26 +679,20 @@ fetch("{% static 'json/line_data.json' %}")
     </div>
   </div>
 </div>
+{% endif %}
 
 <script>
 $(document).ready(function() {
-    
-    // Debug what's available
-    console.log('jQuery version:', $.fn.jquery);
-    console.log('Bootstrap loaded:', typeof $.fn.modal !== 'undefined');
-    console.log('Multiselect available:', typeof $.fn.multiselect !== 'undefined');
-    console.log('Multiselect function:', $.fn.multiselect);
-    
-    // Function to manually load multiselect if it's not available
+  // Function to manually load multiselect if it's not available
     function ensureMultiselect(callback) {
         if (typeof $.fn.multiselect !== 'undefined') {
             console.log('Multiselect is available');
             callback();
             return;
         }
-        
+
         console.log('Multiselect not available, attempting to reload...');
-        
+
         // Try to reload the multiselect script
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js';
@@ -554,7 +715,7 @@ $(document).ready(function() {
         };
         document.head.appendChild(script);
     }
-    
+
     // Fallback function to style regular selects
     function fallbackToRegularSelects() {
         console.log('Using fallback styling for regular selects');
@@ -565,13 +726,13 @@ $(document).ready(function() {
                     'height': 'auto',
                     'min-height': '38px'
                 });
-                
+
                 // Add "Select All" functionality manually
                 const selectAllId = selector.replace('#', '') + '-select-all';
                 const $selectAllBtn = $('<button type="button" class="btn btn-sm btn-secondary mb-2" id="' + selectAllId + '">Select All</button>');
-                
+
                 $select.before($selectAllBtn);
-                
+
                 $selectAllBtn.on('click', function() {
                     if ($select.find('option:selected').length === $select.find('option').length) {
                         // Deselect all
@@ -586,11 +747,11 @@ $(document).ready(function() {
             }
         });
     }
-    
+
     // Function to initialize multiselects (same as before but with better error handling)
     function initializeMultiselects() {
         console.log('Attempting to initialize multiselects...');
-        
+
         // Destroy existing multiselects safely
         ['#use', '#usesub', '#avoid', '#avoidsub'].forEach(function(selector) {
             try {
@@ -603,7 +764,7 @@ $(document).ready(function() {
                 console.log('Error destroying multiselect for', selector, ':', e);
             }
         });
-        
+
         setTimeout(function() {
             try {
                 const multiselectOptions = {
@@ -614,30 +775,30 @@ $(document).ready(function() {
                     nonSelectedText: 'Select options',
                     maxHeight: 200
                 };
-                
+
                 // Initialize each multiselect
                 if ($('#use').length) {
                     $('#use').multiselect(multiselectOptions);
                     $('#use').multiselect('selectAll', false);
                     $('#use').multiselect('updateButtonText');
                 }
-                
+
                 if ($('#usesub').length) {
                     $('#usesub').multiselect(multiselectOptions);
                     $('#usesub').multiselect('selectAll', false);
                     $('#usesub').multiselect('updateButtonText');
                 }
-                
+
                 if ($('#avoid').length) {
                     $('#avoid').multiselect(multiselectOptions);
                 }
-                
+
                 if ($('#avoidsub').length) {
                     $('#avoidsub').multiselect(multiselectOptions);
                 }
-                
+
                 console.log('All multiselects initialized successfully');
-                
+
             } catch (error) {
                 console.error('Error during multiselect initialization:', error);
                 console.log('Falling back to regular selects...');
@@ -645,21 +806,21 @@ $(document).ready(function() {
             }
         }, 100);
     }
-    
+
     // Tab switching function (simplified)
     function switchTab(activeTabId, targetPaneId) {
         console.log('Switching to tab:', activeTabId, 'pane:', targetPaneId);
-        
+
         // Remove active from all tabs
         $('#fittingTabs .nav-link').removeClass('active');
-        
+
         // Hide all panes
         $('#fittingTabsContent .tab-pane').removeClass('show active').hide();
-        
+
         // Activate target
         $('#' + activeTabId).addClass('active');
         $('#' + targetPaneId).addClass('show active').show();
-        
+
         // Initialize multiselects for SNID tab
         if (targetPaneId === 'snid-pane') {
             setTimeout(function() {
@@ -667,29 +828,29 @@ $(document).ready(function() {
             }, 200);
         }
     }
-    
+
     function initInnerTabs() {
         if (!$('.spectroscopy-only').is(':visible')) {
             return;
         }
-        
+
         console.log('Initializing inner tabs...');
-        
+
         // Remove existing handlers
         $('#fittingTabs a[data-toggle="tab"]').off('click.inner-tabs');
-        
+
         // Add click handlers
         $('#fittingTabs a[data-toggle="tab"]').on('click.inner-tabs', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const tabId = $(this).attr('id');
             const href = $(this).attr('href');
             const targetPaneId = href.substring(1);
-            
+
             switchTab(tabId, targetPaneId);
         });
-        
+
         // Initialize default tab
         if (!$('#fittingTabs .nav-link.active').length) {
             switchTab('snid-tab', 'snid-pane');
@@ -699,88 +860,31 @@ $(document).ready(function() {
             }, 200);
         }
     }
-    
+
     // Initialize when spectroscopy tab becomes active
     $(document).on('shown.bs.tab', 'a#spectroscopy-tab', function () {
         console.log('Spectroscopy tab shown');
         setTimeout(initInnerTabs, 200);
     });
-    
+
     // Initialize on page load
     setTimeout(function() {
         if ($('.spectroscopy-only').is(':visible')) {
             console.log('Initializing on page load...');
-            initInnerTabs();
+             initInnerTabs();
+
+
         }
     }, 1000);
 });
 </script>
-
-<!-- 
-<script>
-$(document).ready(function() {
-    $(document).off("submit.snidForm", "#snid-form").on("submit.snidForm", "#snid-form", function(e) {
-    console.log("Submit handler triggered");
-    console.trace();
-        e.preventDefault();
-
-        $.ajax({
-          url: $(this).attr("action"),
-          type: "POST",
-          data: $(this).serialize(),
-          success: function(response) {
-            if (response.success) {
-              const filePath = response.data.data.file_path;
-              const container = document.getElementById('spectroscopy');
-              const targetId = container.dataset.targetId;
-
-              htmx.ajax('GET',
-                `/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
-                { target: '#spectroscopy' }
-              );
-            } else {
-              $("#snid-result").text("Error: " + response.error);
-            }
-          }
-        });
-    });
-});
-</script>
-
-<script>
-  $(document).off("submit", "#ngsf-form").on("submit", "#ngsf-form", function(e) {
-	e.preventDefault();
-
-    $.ajax({
-      url: $(this).attr("action"),
-      type: "POST",
-      data: $(this).serialize(),
-      success: function(response) {
-        if (response.success) {
-          const filePath = response.data.data.file_path;
-          const container = document.getElementById('spectroscopy');
-          const targetId = container.dataset.targetId;
-          console.log(`variable = ${targetId}`);
-
-          // Ask HTMX to reload the spectroscopy block
-          htmx.ajax('GET',
-            `/target_spectroscopy/${targetId}/?ngsf_path=${encodeURIComponent(filePath)}`,
-            { target: '#spectroscopy' }
-          );
-        } else {
-          $("#ngsf-result").text("Error: " + response.error);
-        }
-      }
-    });
-  });
-</script>  
- -->
-
-
 </div>
   </div>
   {% else %}
-		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
+ 		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
+
+
   {% endif %}
 </div>
+
 {% endblock %}

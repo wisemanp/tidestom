@@ -17,9 +17,22 @@ Including another URLconf
 from django.urls import path, include
 from django.views.generic import TemplateView
 from .views import (
-    LatestView, SubmitClassificationView, get_subclasses, MyTargetDetailView
+    SubmitClassificationView, get_subclasses, MyTargetDetailView
 )
-from custom_code.views import SnidFormAjaxView, NGSFFormAJAXView, PreviousSNIDRunsView
+from custom_code.views import (
+    LatestView,
+    SnidFormAjaxView,
+    NGSFFormAJAXView,
+    PreviousSNIDRunsView,
+    ToggleTagView,
+    TagSearchView,
+    ReleaseQueueView,
+    ReleaseQueueActionView,
+    PublicClassificationsView,
+    PublicClassificationsDownloadView,
+    StrictTargetUpdateView,
+    StrictTargetDeleteView,
+)
 from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
 
 urlpatterns = [
@@ -48,6 +61,16 @@ urlpatterns = [
         'api/get_subclasses/', get_subclasses, name='get_subclasses'
     ),
     path(
+        'targets/<int:pk>/update/',
+        StrictTargetUpdateView.as_view(),
+        name='target_update'
+    ),
+    path(
+        'targets/<int:pk>/delete/',
+        StrictTargetDeleteView.as_view(),
+        name='delete_target'
+    ),
+    path(
         '', include('tom_common.urls')
     ),
     path(
@@ -67,5 +90,27 @@ urlpatterns = [
     path(
         "api/previous_snid_runs/", PreviousSNIDRunsView.as_view(),
         name="previous_snid_runs"
+    ),
+    path('targets/<int:target_id>/tags/toggle/<int:tag_id>/', ToggleTagView.as_view(), name='toggle_tag'),
+    path('tags/search/', TagSearchView.as_view(), name='tags_search'),
+    path(
+        'release-queue/',
+        ReleaseQueueView.as_view(),
+        name='release_queue',
+    ),
+    path(
+        'release-queue/apply/',
+        ReleaseQueueActionView.as_view(),
+        name='release_queue_apply',
+    ),
+    path(
+        'public/classifications/',
+        PublicClassificationsView.as_view(),
+        name='public_classifications',
+    ),
+    path(
+        'public/classifications/download/',
+        PublicClassificationsDownloadView.as_view(),
+        name='public_classifications_download',
     ),
 ]
