@@ -34,6 +34,7 @@ services:
           echo 'Cloning DB scripts'
           git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
           psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
+          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tidestom_schema.sql
           touch /db_init/.applied 
           echo 'Database schema prepared'
         else
@@ -169,10 +170,12 @@ services:
         condition: service_started
     command: >
       sh -c "
-        until pg_isready -h database -U tides; do
+        until pg_isready -h database -U tides -d tidestom; do
           echo 'Waiting for DB...'
           sleep 2
         done && \
+        python manage.py migrate && \
+        python manage.py makemigrations && \
         python manage.py migrate
       "
     environment:
@@ -181,6 +184,7 @@ services:
       #DATABASE_URL: ${DATABASE_URL}
       DB_HOST: database
       DB_USER: tides
+      DB_PASS: example
       PGPASSWORD: example
       DB_PORT: 5432
       DB_NAME: tidestom
