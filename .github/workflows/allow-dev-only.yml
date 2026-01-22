@@ -1,0 +1,16 @@
+name: allow-dev-only
+on:
+  pull_request:
+    branches:
+      - prod
+
+jobs:
+  validate-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure PR comes from dev
+        run: |
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "Only dev may be merged into prod"
+            exit 1
+          fi
