@@ -8,9 +8,9 @@ jobs:
   validate-source-branch:
     runs-on: ubuntu-latest
     steps:
-      - name: Ensure PR comes from dev
+      - name: Ensure PR comes from dev-deploy
         run: |
-          if [ "${{ github.head_ref }}" != "dev" ]; then
-            echo "Only dev may be merged into prod"
+          if [ "${{ github.head_ref }}" != "dev-deploy" ]; then
+            echo "Only dev-deploy may be merged into prod"
             exit 1
           fi
