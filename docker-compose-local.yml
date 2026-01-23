@@ -22,6 +22,7 @@ services:
         mkdir -pv /static/plots &&
         echo 'Copying test data if available' &&
         cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true &&
+        cp -ru /test_data/mock_DB.csv /spectra_volume/test_data/ 2>/dev/null || true && 
         cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true &&
         echo 'Directories Ready' &&
 
@@ -35,6 +36,11 @@ services:
           git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
           psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
           psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tidestom_schema.sql
+          psql -h database -U tides -d tidestom -c "ALTER TABLE pipeline_classification_global add z double precision;"
+          psql -h database -U tides -d tidestom -c "ALTER TABLE pipeline_classification_global add zerr double precision;"
+          psql -h database -U tides -d tidestom -c "ALTER TABLE pipeline_classification_global add phase double precision;"
+          psql -h database -U tides -d tidestom -c "ALTER TABLE human_classifications add phase double precision;"
+          psql -h database -U tides -d tidestom -c "ALTER TABLE human_classifications add host_z double precision;"
           touch /db_init/.applied 
           echo 'Database schema prepared'
         else
@@ -68,8 +74,9 @@ services:
       - spectra:/spectra_volume
       #- deliveries_volume:/deliveries
       - static_volume:/static
-      #- ../test_data/sims:/test_data_src:ro #only for testing
-      #- ../test_data/plots:/test_plots_src:ro #only for testing
+      - ../test_data/:/test_data:ro #only for testing
+      - ../test_data/sims:/test_data_src:ro #only for testing
+      - ../test_data/plots:/test_plots_src:ro #only for testing
     healthcheck:
       test: ["CMD-SHELL", "[ -d /static/plots ] && [ -d /spectra_volume/test_data ]"]
       interval: 10s
@@ -80,7 +87,13 @@ services:
   web:
     build: .
     entrypoint: []
-    command: ['gunicorn', 'tidestom.wsgi:application', '--bind', '0.0.0.0:8000', '--workers', '4', '--worker-class', 'gevent','--log-level', 'debug', '--capture-output', '--enable-stdio-inheritance']
+    command: >
+      sh -c "
+        python manage.py populate_tidesclasses && \
+        python manage.py add_targets && \
+        python manage.py add_spectra_to_db --mock &&\
+        exec gunicorn tidestom.wsgi:application --bind 0.0.0.0:8000 --workers 4 --worker-class gevent --log-level debug --capture-output --enable-stdio-inheritance
+        "
     cpus: 2
     ports:
       - "8000:8000"
