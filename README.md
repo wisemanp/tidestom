@@ -80,11 +80,10 @@ If you want to contribute to the development of this project, follow these steps
     ```bash
     git checkout -b $your-branch-name prod
     ```
-    ```$your-branch-name``` should take the format of feature-username, eg. authentication-joeBlogs1
+    ```$your-branch-name``` should take the format of bugfix/feature-item-username, eg. ```feature-authentication-joeBlogs1``` or ```bugfix-UI-joeBlogs1```
 
 2. **Make your changes**:  
    Make the necessary changes to the codebase.
-
 
 3. **Edit `.gitignore`**:  
    Make sure that any data directories or .DS_store etc. are not going to be committed by checking ```git status``` or GitHub Desktop. If they are then add them to `.gitignore` so they are not tracked by Git.
@@ -101,7 +100,7 @@ If you want to contribute to the development of this project, follow these steps
 6. **Push your branch**:  
    Push your branch to your forked repository:
     ```bash
-    git push origin <your-branch-name>
+    git push origin $your-branch-name
     ```
     Or use GitHub Desktop
 
