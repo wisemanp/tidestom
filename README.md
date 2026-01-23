@@ -11,7 +11,7 @@ These instructions relate to building and deploying a local version of the Docke
 
 **Note currently this version does not have API support**
 
-SNID and NGSF will not run on this version. Attempting to run them may lead to unexpected results
+SNID and NGSF will not run on this version. Attempting to run them may lead to unexpected results.
 
 ### Prerequsists
 
@@ -27,23 +27,29 @@ To build and deploy the TiDES TOM follow these steps:
    Go to the [Tides TOM GitHub repository](https://github.com/TiDES-4MOST/tidestom.git) and click the "Code" button and the follow the instructions to Clone the repository
 
 3. **Download the test data**:  
-   Download the test data from the following link and save it in the top level directory of the repository (ensure that it's correctly covered by `.gitignore`):  
-   [Test Data](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing)
+   Download the test data from the following [link](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing) and save it in the same directory as the repository directory, eg.
+   ```bash
+   Documents
+   |
+   |tidestom
+   |test_data
+   ```
 
-4. **Build the Docker images and start the server**
+5. **Build the Docker images and start the server**:
+   This will take a few minutes the first time you run it, it should be faster on subsquent runs
    ```bash
    docker compose up -f docker-compose-local.yml --build -d
    ```
-   It is very important that you build using the -local file version, the other files are for deployment building or for intgration and deployment tests
+   It is very important that you build using the -local file version, the other files are for deployment building or for intgration and deployment tests. 
 
-5. **Create a superuser**
+7. **Create a superuser**:   
    This creates a superuser for you to test everything on your local installation; this is necessary because the deployed user list is managed on the live database.
    ```bash
    docker exec -it tidestom-web-1 python manage.py createsuperuser
    ```
    Follow the prompts to create a superuser. If that fails see common issues below.
 
-6. **Open your browser and navigate to:**
+8. **Open your browser and navigate to:**
    ```
    localhost:8080
    ```
@@ -53,13 +59,13 @@ To build and deploy the TiDES TOM follow these steps:
 
 1. I wasn't able to create a superuser account, I can't log in to anything beyond the home page!
  
-   This is probably because you didn't run the ```createsuperuser``` command in the correct container, it might not be called ```tidestom-web-1```
+   This is probably because you didn't run the ```createsuperuser``` command earlier. If you did it might not have been in the correct container, it might not be called ```tidestom-web-1```
    1. Having completed at least to step 5 above run:
       ```bash
       docker ps
       ```
       This will show you created containers. Find the name of the container created from the image called ```tidestom-web``` 
-   2. Substitute this name into the command in step 6 and run
+   2. Substitute this name into the command in step 5 and run
      
 2. I just get a 504 error when I try to go to the webpage.
 
@@ -86,7 +92,7 @@ If you want to contribute to the development of this project, follow these steps
    Make the necessary changes to the codebase.
 
 3. **Edit `.gitignore`**:  
-   Make sure that any data directories or .DS_store etc. are not going to be committed by checking ```git status``` or GitHub Desktop. If they are then add them to `.gitignore` so they are not tracked by Git.
+   Make sure that any files you don't want to commit such as .DS_store etc. are not going to be committed by checking ```git status``` or GitHub Desktop. If they are then add them to `.gitignore` so they are not tracked by Git.
 
 
 5. **Commit your changes**:  
@@ -111,7 +117,7 @@ If you want to contribute to the development of this project, follow these steps
 
 ## Legacy Instructions
 
-These instructions are to deploy only the TiDES TOM without the supporting API which engages with a local instance of the database. These instructions are *highly* unlikely to work with the current architecture and are provided purely for reference
+These instructions are to deploy only the TiDESTOM without the supporting API which engages with a local instance of the database and runs in a python `venv`. These instructions are *highly* unlikely to work with the current architecture and are provided purely for reference.
 
 ### Installation
 
