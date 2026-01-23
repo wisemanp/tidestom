@@ -23,115 +23,96 @@ To build and deploy the TiDES TOM follow these steps:
 
 1. **Make sure Docker is running**
 
-2. **Fork the repository**:  
-   Go to the [Tides TOM GitHub repository](https://github.com/TiDES-4MOST/tidestom.git) and click the "Fork" button in the top-right corner to create your own copy of the repository.
-   **Make sure it is a branch updated with Docker support**
+2. **Clone the repository**:  
+   Go to the [Tides TOM GitHub repository](https://github.com/TiDES-4MOST/tidestom.git) and click the "Code" button and the follow the instructions to Clone the repository
 
-3. **Clone your fork**:  
-   Clone your forked repository to your local machine:
-    ```bash
-    git clone https://github.com/YOUR-USER/tidestom.git
-    cd tidestom
-    ```
-4. **Download the test data**:  
+3. **Download the test data**:  
    Download the test data from the following link and save it in the top level directory of the repository (ensure that it's correctly covered by `.gitignore`):  
    [Test Data](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing)
 
-5. **Build the Docker images and start the server**
+4. **Build the Docker images and start the server**
    ```bash
    docker compose up -f docker-compose-local.yml --build -d
    ```
    It is very important that you build using the -local file version, the other files are for deployment building or for intgration and deployment tests
 
-6. **Finish setting up the databse**
+5. **Create a superuser**
+   This creates a superuser for you to test everything on your local installation; this is necessary because the deployed user list is managed on the live database.
    ```bash
-   docker exec -it tidestom-web-1 python manage.py migrate
+   docker exec -it tidestom-web-1 python manage.py createsuperuser
    ```
+   Follow the prompts to create a superuser. If that fails see common issues below.
 
-7. **Open your browser and navigate to:**
+6. **Open your browser and navigate to:**
    ```
    localhost:8080
    ```
-   You should now see the Tides TOM application running locally, connected to the remote databse.
+   You should now see the Tides TOM application running locally, connected to a local databse. You can login in using the superuser credentials you've just created.
 
 ### Common Issues
 
-1. I don't have an account on the TOM, I can't log in to anything beyond the home page!
+1. I wasn't able to create a superuser account, I can't log in to anything beyond the home page!
  
-   Right now we don't have the ability to add accounts on the web interface. You need to use a CLI command inside the TOM.
-   1. Open Docker desktop and find the Containers tab in the sidebar.
-   2. Select tidestom. You will then see a number of different containers which repressent different services within the TOM. Find the one one called "web" or some variation of that eg. "web-1"
-   3. Select 3 horizontal stacked dots menu assocated with this service and then select "Open Terminal", this will give you a bash terminal within the TOM container
-   4. Run the following command:
+   This is probably because you didn't run the ```createsuperuser``` command in the correct container, it might not be called ```tidestom-web-1```
+   1. Having completed at least to step 5 above run:
       ```bash
-       python manage.py createsuperuser
+      docker ps
       ```
-   5. Follow the instructions to create a user account in the CLI. Once complete you can close the terminal and log in from the web interface
+      This will show you created containers. Find the name of the container created from the image called ```tidestom-web``` 
+   2. Substitute this name into the command in step 6 and run
      
-3. I just get debug messages when I try to go to the webpage.
+2. I just get a 504 error when I try to go to the webpage.
 
-   This probably means that Django doesn't know how to understand the databse and needs told about the structure
-   1. Follow the steps above to open a terminal for the TOM
-   2. Run the following command:
-      ```bash
-      python manage.py migrate
-      ```
-   3. Reload the page
+   This probably means that nginx, the load manager, is a little confused about the web service and needs restarted
+   1. Open a Docker Desktop window
+   2. In the side bar select ```Containers```
+   3. Expand the ```tidestom``` container to see the images contained within it
+   4. Locate the ```nginx``` container and on the far right of the page under actions, between the stop button and the delete button open the menu with the 3 stacked dots and select *Restart*
+   5. Reload the page
   
-   If this doesn't work then it could be an issue with the load manager which can sometimes get confused if there have been changes and needs restarted.
-   1. Navigate to the list of services under the tidestom container, you should see one called nginx.
-   2. Select the 3 horizonal stacked dots menu associated with nginx and select restart.
-   3. Reload the page
-
-3. The page looks werid, there's images missing and text out of allignment.
-   This happens when the static files haven't been passed over to the load balancer to handle.
-   1. Follow the steps abpve to open a terminal for the TOM
-   2. Run the following commend:
-      ```bash
-      python manage.py collectstatic
-      ```
-   3. Follow any prompts associated with this, answering all in the affirmative
-   4. Relaod the page
 ---
 ## Contributing to Development
 
 If you want to contribute to the development of this project, follow these steps:
 
 1. **Create a new branch**:  
-   Create a branch for your changes:
+   Create a branch for your changes from the ```prod``` branch:
     ```bash
-    git checkout -b <your-branch-name>
+    git checkout -b $your-branch-name prod
     ```
+    ```$your-branch-name``` should take the format of feature-username, eg. authentication-joeBlogs1
 
 2. **Make your changes**:  
    Make the necessary changes to the codebase.
 
 
 3. **Edit `.gitignore`**:  
-   Make sure that any data directories and the database (e.g., `db.sqlite`) are added to `.gitignore` so they are not tracked by Git.
+   Make sure that any data directories or .DS_store etc. are not going to be committed by checking ```git status``` or GitHub Desktop. If they are then add them to `.gitignore` so they are not tracked by Git.
 
 
-4. **Commit your changes**:  
+5. **Commit your changes**:  
    Stage and commit your changes:
     ```bash
-    git add .
+    git add changed_filename
     git commit -m "Description of your changes"
     ```
+    Or use GitHub Desktop
 
-5. **Push your branch**:  
+6. **Push your branch**:  
    Push your branch to your forked repository:
     ```bash
     git push origin <your-branch-name>
     ```
+    Or use GitHub Desktop
 
-6. **Open a pull request**:  
-   Go to the original repository on GitHub and open a pull request to merge your changes into the main branch.
+7. **Open a pull request**:  
+   Return to the respositiory and open a Pull Request to request to merge your branch into the ```dev-deploy``` branch. Here it will be subject to code review and/or CI/CD tests. You may be asked to make changes to your submitted code at this point. When it is approved it will be merged into ```dev-deploy``` where admins will evaluate your changes on a live system to make sure they are stable before merging them into ```prod```. You do not need to be involved after your changes are merged into ```dev-deploy``` 
 
 ---
 
 ## Legacy Instructions
 
-These instructions are to deploy only the TiDES TOM without the supporting API which engages with a local instance of the database
+These instructions are to deploy only the TiDES TOM without the supporting API which engages with a local instance of the database. These instructions are *highly* unlikely to work with the current architecture and are provided purely for reference
 
 ### Installation
 
@@ -196,11 +177,8 @@ You should now see the Tides TOM application running locally.
 To use the Tides TOM with test data, follow these steps:
 
 1. **Download the test data**:  
-   Download the test data from the following link:  
-   [Test Data](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing)
+   Download the test data from the following link: [Test Data](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing)
    
-
-    ```
 
 4. **Add the following line to the end of the file**:
     ```bash
