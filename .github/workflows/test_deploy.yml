@@ -3,12 +3,10 @@ name: Test & Deploy TOM Toolkit
 on:
   push:
     branches:
-      - hack-dev
-      - main
+      - prod
   pull_request:
     branches:
-      - hack-dev
-      - main
+      - prod
 
 jobs:
   build-test-deploy:
