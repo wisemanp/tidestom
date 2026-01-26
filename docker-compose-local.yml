@@ -36,11 +36,11 @@ services:
           git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
           psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
           psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tidestom_schema.sql
-          psql -h database -U tides -d tidestom -c "ALTER TABLE pipeline_classification_global add z double precision;"
-          psql -h database -U tides -d tidestom -c "ALTER TABLE pipeline_classification_global add zerr double precision;"
-          psql -h database -U tides -d tidestom -c "ALTER TABLE pipeline_classification_global add phase double precision;"
-          psql -h database -U tides -d tidestom -c "ALTER TABLE human_classifications add phase double precision;"
-          psql -h database -U tides -d tidestom -c "ALTER TABLE human_classifications add host_z double precision;"
+          psql -h database -U tides -d tidestom -c 'ALTER TABLE pipeline_classification_global add z double precision;'
+          psql -h database -U tides -d tidestom -c 'ALTER TABLE pipeline_classification_global add zerr double precision;'
+          psql -h database -U tides -d tidestom -c 'ALTER TABLE pipeline_classification_global add phase double precision;'
+          psql -h database -U tides -d tidestom -c 'ALTER TABLE human_classifications add phase double precision;'
+          psql -h database -U tides -d tidestom -c 'ALTER TABLE human_classifications add host_z double precision;'
           touch /db_init/.applied 
           echo 'Database schema prepared'
         else

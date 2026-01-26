@@ -182,6 +182,9 @@ LOGIN_URL = '/accounts/login/'
 if not LOCAL_MODE:
     LOGIN_REDIRECT_URL = '/marshal'
     LOGOUT_REDIRECT_URL = '/marshal'
+else:
+    LOGIN_REDIRECT_URL = '/'
+    LOGOUT_REDIRECT_URL = '/'
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
