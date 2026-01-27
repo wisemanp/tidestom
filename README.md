@@ -27,7 +27,7 @@ To build and deploy the TiDES TOM follow these steps:
    Go to the [Tides TOM GitHub repository](https://github.com/TiDES-4MOST/tidestom.git) and click the "Code" button and the follow the instructions to Clone the repository
 
 3. **Download the test data**:  
-   Download the test data from the following [link](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing) and save it in the same directory as the repository directory, eg.
+   Download the test data from the following [link](https://drive.google.com/file/d/1HxkHGde8RTyMZWAeSsQjQqdPiWQTlu3s/view?usp=sharing) and save it in the same directory as the repository directory, eg.
    ```bash
    Documents
    |
@@ -182,7 +182,7 @@ You should now see the Tides TOM application running locally.
 To use the Tides TOM with test data, follow these steps:
 
 1. **Download the test data**:  
-   Download the test data from the following link: [Test Data](https://drive.google.com/file/d/1H_7whYmBWRzPRep8oYmlWWhUJhY2x18Z/view?usp=sharing)
+   Download the test data from the following link: [Test Data](https://drive.google.com/file/d/1HxkHGde8RTyMZWAeSsQjQqdPiWQTlu3s/view?usp=sharing)
    
 
 4. **Add the following line to the end of the file**:
