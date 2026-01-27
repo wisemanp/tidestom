@@ -24,6 +24,7 @@ USER = os.environ.get('DB_USER')
 DB_HOST = os.environ.get('DB_HOST')
 DB_PORT = os.environ.get('DB_PORT')
 DB_NAME = os.environ.get('DB_NAME')
+LOCAL_MODE = os.environ.get('LOCAL_MODE')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -35,7 +36,8 @@ SECRET_KEY = 'u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cyf'
 DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", '192.41.122.49', 'tides.lsst.ac.uk', '192.41.122.149']
-FORCE_SCRIPT_NAME = '/marshal'
+if not LOCAL_MODE:
+    FORCE_SCRIPT_NAME = '/marshal'
 USE_X_FORWARDED_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
@@ -177,8 +179,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/marshal'
-LOGOUT_REDIRECT_URL = '/marshal'
+if not LOCAL_MODE:
+    LOGIN_REDIRECT_URL = '/marshal'
+    LOGOUT_REDIRECT_URL = '/marshal'
+else:
+    LOGIN_REDIRECT_URL = '/'
+    LOGOUT_REDIRECT_URL = '/'
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
