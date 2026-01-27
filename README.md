@@ -38,18 +38,18 @@ To build and deploy the TiDES TOM follow these steps:
 5. **Build the Docker images and start the server**:
    This will take a few minutes the first time you run it, it should be faster on subsquent runs
    ```bash
-   docker compose up -f docker-compose-local.yml --build -d
+   docker compose -f docker-compose-local.yml up --build -d
    ```
    It is very important that you build using the -local file version, the other files are for deployment building or for intgration and deployment tests. 
 
-7. **Create a superuser**:   
+6. **Create a superuser**:   
    This creates a superuser for you to test everything on your local installation; this is necessary because the deployed user list is managed on the live database.
    ```bash
    docker exec -it tidestom-web-1 python manage.py createsuperuser
    ```
    Follow the prompts to create a superuser. If that fails see common issues below.
 
-8. **Open your browser and navigate to:**
+7. **Open your browser and navigate to:**
    ```
    localhost:8080
    ```
@@ -89,7 +89,7 @@ If you want to contribute to the development of this project, follow these steps
     ```$your-branch-name``` should take the format of bugfix/feature-item-username, eg. ```feature-authentication-joeBlogs1``` or ```bugfix-UI-joeBlogs1```
 
 2. **Make your changes**:  
-   Make the necessary changes to the codebase.
+   Make the necessary changes to the codebase. Anytime you want to test a change on your local version just run the command from step 5 of the installation instructions.
 
 3. **Edit `.gitignore`**:  
    Make sure that any files you don't want to commit such as .DS_store etc. are not going to be committed by checking ```git status``` or GitHub Desktop. If they are then add them to `.gitignore` so they are not tracked by Git.
