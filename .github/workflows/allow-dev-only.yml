@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - prod
+  merge_group:
 
 jobs:
   validate-source-branch:
@@ -10,7 +11,13 @@ jobs:
     steps:
       - name: Ensure PR comes from dev-deploy
         run: |
-          if [ "${{ github.head_ref }}" != "dev-deploy" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SRC="${{ github.head_ref }}"
+          else
+            #Already Validated
+            exit 0
+          fi
+          if [ "$SRC" != "dev-deploy" ]; then
             echo "Only dev-deploy may be merged into prod"
             exit 1
           fi
