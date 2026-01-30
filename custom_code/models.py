@@ -112,8 +112,10 @@ class TidesTarget(TomTarget):
             [
                 self.pipeline_classifications_superfit.order_by('-probability').only('z', 'probability').first(),
                 self.pipeline_classifications_snid.order_by('-probability').only('z', 'probability').first(),
-                self.pipeline_classifications_dash.order_by('-probability').only('z', 'probability').first(),
-                self.pipeline_classifications_ed.order_by('-probability').only('z', 'probability').first(),
+                #self.pipeline_classifications_dash.order_by('-probability').only('z', 'probability').first(),
+                self.pipeline_classifications_dash.order_by('-probability').only('probability').first(),
+                #self.pipeline_classifications_ed.order_by('-probability').only('z', 'probability').first(),
+                self.pipeline_classifications_ed.order_by('-probability').only('probability').first(),
             ],
             key=lambda r: (r.probability if r else -1.0),
             default=None,
