@@ -307,6 +307,7 @@ class PipelineClassificationDash(models.Model):
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
+    z = models.FloatField(null=True, blank=True)
 
     class Meta:
         managed = False
