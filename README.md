@@ -94,8 +94,7 @@ If you want to contribute to the development of this project, follow these steps
 3. **Edit `.gitignore`**:  
    Make sure that any files you don't want to commit such as .DS_store etc. are not going to be committed by checking ```git status``` or GitHub Desktop. If they are then add them to `.gitignore` so they are not tracked by Git.
 
-
-5. **Commit your changes**:  
+4. **Commit your changes**:  
    Stage and commit your changes:
     ```bash
     git add changed_filename
@@ -103,14 +102,14 @@ If you want to contribute to the development of this project, follow these steps
     ```
     Or use GitHub Desktop
 
-6. **Push your branch**:  
-   Push your branch to your forked repository:
+5. **Push your branch**:  
+   Push your branch to your cloned repository:
     ```bash
     git push origin $your-branch-name
     ```
     Or use GitHub Desktop
 
-7. **Open a pull request**:  
+6. **Open a pull request**:  
    Return to the respositiory and open a Pull Request to request to merge your branch into the ```dev-deploy``` branch. Here it will be subject to code review and/or CI/CD tests. You may be asked to make changes to your submitted code at this point. When it is approved it will be merged into ```dev-deploy``` where admins will evaluate your changes on a live system to make sure they are stable before merging them into ```prod```. You do not need to be involved after your changes are merged into ```dev-deploy``` 
 
 ---
