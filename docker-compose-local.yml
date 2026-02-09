@@ -166,6 +166,8 @@ services:
     depends_on:
       database:
         condition: service_started
+    volumes:
+      - static_volume:/app/staticfiles
     command: >
       sh -c "
         until pg_isready -h database -U tides -d tidestom; do
@@ -174,7 +176,8 @@ services:
         done && \
         python manage.py migrate && \
         python manage.py makemigrations && \
-        python manage.py migrate
+        python manage.py migrate && \
+        python manage.py collectstatic --no-input \
       "
     environment:
       TIDES_TEST_DIR: '/data/spectra/test_data/'
