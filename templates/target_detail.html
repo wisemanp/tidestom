@@ -45,12 +45,11 @@ fetch("{% static 'json/line_data.json' %}")
 	.then(data => {
 		lines = data;
 
-		// Separate containers
 		const commonContainer = document.getElementById("common-lines");
 		const absorptionContainer = document.getElementById("absorption-lines");
 		const transientSpecificContainer = document.getElementById("transient-specific-lines");
 
-		// Build checkboxes dynamically from the .json file
+		// Build checkboxes
 		Object.entries(lines).forEach(([id, { color, label, type }]) => {
 			const wrapper = document.createElement("label");
 			wrapper.innerHTML = `
@@ -58,44 +57,147 @@ fetch("{% static 'json/line_data.json' %}")
 				<span style="color:${color};">${label}</span>
 			`;
 
-			if (type === "common") {
-				commonContainer.appendChild(wrapper);
-			} else if (type === "absorption") {
-				absorptionContainer.appendChild(wrapper);
-			} else if (type === "transient-specific") {
-				transientSpecificContainer.appendChild(wrapper);
-			}
+			if (type === "common") commonContainer.appendChild(wrapper);
+			else if (type === "absorption") absorptionContainer.appendChild(wrapper);
+			else if (type === "transient-specific") transientSpecificContainer.appendChild(wrapper);
 		});
 
-		// Add event listeners after building checkboxes
+		// Attach listeners
 		Object.keys(lines).forEach(id => {
-			const checkbox = document.getElementById(id);
-			if (checkbox) {
-				checkbox.addEventListener("change", updateRedshiftVelocity);
-			}
+			document.getElementById(id)?.addEventListener("change", updateRedshiftVelocity);
 		});
+
+		// Initial draw to ensure sync between the checkboxes and line drawing
+		updateRedshiftVelocity();
 	})
 	.catch(error => console.error("Error loading line data:", error));
 
-    function updateLines(z, v) {
-        const newShapes = Object.entries(lines)
-            .filter(([id]) => document.getElementById(id)?.checked)
-            .flatMap(([_, { x, color }]) => x.map(value => ({
-                type: "line",
-                x0: value * ( (1 + z) + (v/299792.458)),
-                x1: value * ( (1 + z) + (v/299792.458)),
-                y0: 0,
-                y1: 1,
-                xref: "x",
-                yref: "paper",
-                line: { color, width: 2},
-                layer: "below"
-            })));
-        // Combine vrects (tellurics) with the new line shapes
-        const vrects = getFigDiv().layout.shapes?.filter(s => s.type === 'rect') || [];
-        const allShapes = vrects.concat(newShapes);
-        Plotly.relayout(getFigDiv(), { shapes: allShapes });
-    }
+  let updateTimeout = null; // global throttle timer
+
+  function updateLines(z, v) {
+	  const figDiv = getFigDiv();
+
+	// --- Throttle redundant redraws ---
+	if (updateTimeout) clearTimeout(updateTimeout);
+	updateTimeout = setTimeout(() => {
+		updateTimeout = null;
+
+		// --- Build line shapes ---
+		function buildShapes() {
+			return Object.entries(lines)
+				.filter(([id]) => document.getElementById(id)?.checked)
+				.flatMap(([_, { lines: lineList, color }]) =>
+					lineList.map(({ x }) => {
+						const xpos = x * ((1 + z) + (v / 299792.458));
+						return {
+							type: "line",
+							x0: xpos,
+							x1: xpos,
+							y0: 0,
+							y1: 1,
+							xref: "x",
+							yref: "paper",
+							line: { color, width: 2 },
+							layer: "below"
+						};
+					})
+				);
+		}
+
+		// --- Build text annotations ---
+		function buildAnnotations() {
+			return Object.entries(lines)
+				.filter(([id]) => document.getElementById(id)?.checked)
+				.flatMap(([_, { lines: lineList, color }]) =>
+					lineList.map(({ x, label }) => {
+						const xpos = x * ((1 + z) + (v / 299792.458));
+						return {
+							x: xpos,
+							y: 0.90,
+							xref: "x",
+							yref: "paper",
+							text: `${label}`,
+							showarrow: false,
+							textangle: -90,
+							font: { color, size: 8 },
+							xanchor: "center",
+							yanchor: "middle",
+							bgcolor: "white",
+							layer: "above",
+							opacity: 0.9,
+							cliponaxis: true
+						};
+					})
+				);
+		}
+
+		// --- Combine with telluric rectangles (if any) ---
+		function applyShapesAndAnnotations() {
+			const vrects = figDiv.layout.shapes?.filter(s => s.type === "rect") || [];
+			const allShapes = vrects.concat(buildShapes());
+
+			const currentXRange = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
+			const currentYRange = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
+
+			Plotly.relayout(figDiv, {
+				shapes: allShapes,
+				annotations: buildAnnotations(),
+				"xaxis.autorange": false,
+				"yaxis.autorange": false,
+				...(currentXRange && { "xaxis.range": currentXRange }),
+				...(currentYRange && { "yaxis.range": currentYRange })
+			});
+		}
+
+		// --- Handle autoscale safely ---
+		function safelyReapplyAfterAutoscale() {
+			if (figDiv._isRescaling) return;
+			figDiv._isRescaling = true;
+
+			// Temporarily remove overlays, autorange, then reapply
+			Plotly.relayout(figDiv, { shapes: [], annotations: [] })
+				.then(() =>
+					Plotly.relayout(figDiv, {
+						"xaxis.autorange": true,
+						"yaxis.autorange": true
+					})
+				)
+				.then(() => {
+					const { xaxis, yaxis } = figDiv.layout;
+					return Plotly.relayout(figDiv, {
+						"xaxis.autorange": false,
+						"yaxis.autorange": false,
+						"xaxis.range": xaxis.range,
+						"yaxis.range": yaxis.range
+					});
+				})
+				.then(() => {
+					applyShapesAndAnnotations();
+				})
+				.finally(() => {
+					figDiv._isRescaling = false;
+				});
+		}
+
+		// --- Initial draw ---
+		applyShapesAndAnnotations();
+
+		// --- Attach event handlers once ---
+		if (!figDiv._ignoreOverlaysHandlerAdded) {
+			figDiv.on("plotly_doubleclick", safelyReapplyAfterAutoscale);
+			figDiv.on("plotly_relayout", ev => {
+				if (
+					ev["xaxis.autorange"] === true ||
+					ev["yaxis.autorange"] === true ||
+					ev["scene.autorange"] === true
+				) {
+					safelyReapplyAfterAutoscale();
+				}
+			});
+			figDiv._ignoreOverlaysHandlerAdded = true;
+		}
+	}, 1); // <-- redraw throttle (ms)
+  }
 
     function updateRedshiftVelocity() {
         // Always pull from the current slider values (force numbers)
@@ -103,11 +205,11 @@ fetch("{% static 'json/line_data.json' %}")
         const v = Number(velocitySlider.value);
 
         // Update paired inputs
-        redshiftInput.value = isFinite(z) ? z.toFixed(4) : "";
+        redshiftInput.value = isFinite(z) ? z.toFixed(3) : "";
         velocityInput.value = isFinite(v) ? v.toFixed(0) : "";
 
         // Only call updateLines if both are valid
-        if (!isNaN(z) && z >= 0 && z <= 2 && !isNaN(v) && v >= -25000 && v <= 25000) {
+        if (!isNaN(z) && z >= 0 && z <= 2 && !isNaN(v) && v >= -50000 && v <= 50000) {
             updateLines(z, v);
         }
     }
@@ -468,7 +570,7 @@ fetch("{% static 'json/line_data.json' %}")
 
       <h3>Classifications</h3>
       <p>
-        <u><strong>Auto Classification</strong></u>&emsp;
+        <u><strong>Auto Classification:</strong></u>&emsp;
         {% if object.auto_tidesclass %}
           <br><strong>Class:</strong> {{ object.auto_tidesclass }}
           {% if object.auto_tidesclass_subclass %}
@@ -476,12 +578,14 @@ fetch("{% static 'json/line_data.json' %}")
           {% endif %}
           {% if object.auto_tidesclass_z %}
             <br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
+          {% else %}
+            <br><strong>Redshift:</strong> <span style="color: red;">Not Recorded</span>
           {% endif %}
           {% if object.auto_tidesclass_prob %}
             <br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
           {% endif %}
         {% else %}
-          <br>No Auto Classification
+          <br><span style="color: red;">No Auto Classification</span>
         {% endif %}
       </p>
 
