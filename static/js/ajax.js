@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function() {
   function renderTable(rows) {
     if (!rows.length) return "<p>No data</p>";
 
-    let html = "<div class='table-responsive'>";
+    let html = "<div class='table-responsive table-scroll'>";
     html += "<table class='table table-hover table-sm table-bordered'>";
     const keys = Object.keys(rows[0]);
 
