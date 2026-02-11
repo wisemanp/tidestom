@@ -63,8 +63,12 @@
       { "x": 6578, "label": "C II 6578" },
       { "x": 7231, "label": "C II 7231" },
       { "x": 7236, "label": "C II 7236" },
+      { "x": 9230, "label": "C II 9230" },
       { "x": 9234, "label": "C II 9234" },
-      { "x": 9891, "label": "C II 9891" }
+      { "x": 9891, "label": "C II 9891" },
+      { "x": 9903, "label": "C II 9903" },
+      { "x": 17846, "label": "C II 17846" },
+      { "x": 18905, "label": "C II 18905" }
     ],
     "color": "#cccc00",
     "type": "common"
@@ -74,10 +78,15 @@
     "label": "C III",
     "lines": [
       { "x": 977, "label": "C III 977" },
-      { "x": 1907, "label": "[C III] 1907" },
-      { "x": 1909, "label": "[C III] 1909" },
+      { "x": 1907, "label": "C III 1907" },
+      { "x": 1909, "label": "C III 1909" },
+      { "x": 4647, "label": "C III 4647" },
       { "x": 4650, "label": "C III 4650" },
-      { "x": 5696, "label": "C III 5696" }
+      { "x": 5696, "label": "C III 5696" },
+      { "x": 6742, "label": "C III 6742" },
+      { "x": 8500, "label": "C III 8500" },
+      { "x": 8665, "label": "C III 8665" },
+      { "x": 9711, "label": "C III 9711" }
     ],
     "color": "#4c9900",
     "type": "common"
@@ -87,8 +96,12 @@
     "label": "C IV",
     "lines": [
       { "x": 1550, "label": "C IV 1550" },
+      { "x": 4658, "label": "C IV 4658" },
       { "x": 5801, "label": "C IV 5801" },
-      { "x": 5812, "label": "C IV 5812" }
+      { "x": 5812, "label": "C IV 5812" },
+      { "x": 7061, "label": "C IV 7061" },
+      { "x": 7726, "label": "C IV 7726" },
+      { "x": 8859, "label": "C IV 8859" }
     ],
     "color": "#0066cc",
     "type": "common"
@@ -98,7 +111,10 @@
     "label": "N II",
     "lines": [
       { "x": 3995, "label": "N II 3995" },
+      { "x": 4631, "label": "N II 4631" },
       { "x": 5005, "label": "N II 5005" },
+      { "x": 5680, "label": "N II 5680" },
+      { "x": 5942, "label": "N II 5942" },
       { "x": 6482, "label": "N II 6482" },
       { "x": 6611, "label": "N II 6611" }
     ],
@@ -109,9 +125,14 @@
   "NitrogenIIICheckbox": {
     "label": "N III",
     "lines": [
+      { "x": 990, "label": "N III 990" },
       { "x": 1750, "label": "N III 1750" },
-      { "x": 4640, "label": "N III 4640" },
-      { "x": 5320, "label": "N III 5320" }
+      { "x": 4634, "label": "N III 4634" },
+      { "x": 4641, "label": "N III 4641" },
+      { "x": 4687, "label": "N III 4687" },
+      { "x": 5321, "label": "N III 5321" },
+      { "x": 5327, "label": "N III 5327" },
+      { "x": 6467, "label": "N III 6467" }
     ],
     "color": "#4c9900",
     "type": "common"
@@ -121,8 +142,11 @@
     "label": "N IV",
     "lines": [
       { "x": 3479, "label": "N IV 3479" },
+      { "x": 3483, "label": "N IV 3483" },
+      { "x": 3485, "label": "N IV 3485" },
       { "x": 4058, "label": "N IV 4058" },
-      { "x": 6381, "label": "N IV 6381" }
+      { "x": 6381, "label": "N IV 6381" },
+      { "x": 7115, "label": "N IV 7115" }
     ],
     "color": "#0066cc",
     "type": "common"
@@ -132,7 +156,8 @@
     "label": "N V",
     "lines": [
       { "x": 4604, "label": "N V 4604" },
-      { "x": 4620, "label": "N V 4620" }
+      { "x": 4620, "label": "N V 4620" },
+      { "x": 4945, "label": "N V 4945" }
     ],
     "color": "#6600cc",
     "type": "common"
@@ -141,8 +166,11 @@
   "OICheckbox": {
     "label": "O I",
     "lines": [
+      { "x": 1356, "label": "O I 1356" },
+      { "x": 6158, "label": "O I 6158" },
       { "x": 7772, "label": "O I 7772" },
       { "x": 7774, "label": "O I 7774" },
+      { "x": 7775, "label": "O I 7775" },
       { "x": 8446, "label": "O I 8446" },
       { "x": 9263, "label": "O I 9263" },
       { "x": 11290, "label": "O I 11290" },
@@ -152,9 +180,40 @@
     "type": "common"
   },
 
+  "OIForbiddenCheckbox": {
+    "label": "[O I]",
+    "lines": [
+      { "x": 5577, "label": "[O I] 5577" },
+      { "x": 6300, "label": "[O I] 6300" },
+      { "x": 6363, "label": "[O I] 6363" }
+    ],
+    "color": "#cc0000",
+    "type": "common"
+  },
+
+  "OIICheckbox": {
+    "label": "O II",
+    "lines": [
+      { "x": 3390, "label": "O II 3390" },
+      { "x": 3377, "label": "O II 3377" },
+      { "x": 4416, "label": "O II 4416" },
+      { "x": 6641, "label": "O II 6641" },
+      { "x": 6721, "label": "O II 6721" },
+      { "x": 11667, "label": "O II 11667" },
+      { "x": 12500, "label": "O II 12500" },
+      { "x": 13029, "label": "O II 13029" },
+      { "x": 13811, "label": "O II 13811" },
+      { "x": 14008, "label": "O II 14008" },
+      { "x": 21085, "label": "O II 21085" }
+    ],
+    "color": "#cccc00",
+    "type": "common"
+  },
+
   "OIIForbiddenCheckbox": {
     "label": "[O II]",
     "lines": [
+      { "x": 2470, "label": "[O II] 2470" },
       { "x": 3726, "label": "[O II] 3726" },
       { "x": 3729, "label": "[O II] 3729" }
     ],
@@ -165,6 +224,8 @@
   "OIIIForbiddenCheckbox": {
     "label": "[O III]",
     "lines": [
+      { "x": 2321, "label": "[O III] 2321" },
+      { "x": 2331, "label": "[O III] 2331" },
       { "x": 4364.44, "label": "[O III] 4364" },
       { "x": 4960.30, "label": "[O III] 4960" },
       { "x": 5008.24, "label": "[O III] 5008" }
@@ -173,12 +234,60 @@
     "type": "common"
   },
 
+  "OVCheckbox": {
+    "label": "O V",
+    "lines": [
+      { "x": 1371, "label": "O V 1371" },
+      { "x": 3145, "label": "O V 3145" },
+      { "x": 4124, "label": "O V 4124" },
+      { "x": 4930, "label": "O V 4930" },
+      { "x": 5598, "label": "O V 5598" },
+      { "x": 6500, "label": "O V 6500" }
+    ],
+    "color": "#4c9900",
+    "type": "common"
+  },
+
+  "OVICheckbox": {
+    "label": "O VI",
+    "lines": [
+      { "x": 3811, "label": "O VI 3811" },
+      { "x": 3834, "label": "O VI 3834" }
+    ],
+    "color": "#4c9900",
+    "type": "common"
+  },
+
+  "NaICheckbox": {
+    "label": "Na I",
+    "lines": [
+      { "x": 5890, "label": "Na I 5890" },
+      { "x": 5896, "label": "Na I 5896" },
+      { "x": 8183, "label": "Na I 8183" },
+      { "x": 8195, "label": "Na I 8195" }
+    ],
+    "color": "#666600",
+    "type": "common"
+  },
+
   "MgICheckbox": {
     "label": "Mg I",
     "lines": [
-      { "x": 5167, "label": "Mg I b1" },
-      { "x": 5173, "label": "Mg I b2" },
-      { "x": 5184, "label": "Mg I b3" }
+      { "x": 3829, "label": "Mg I 3829" },
+      { "x": 3832, "label": "Mg I 3832" },
+      { "x": 3838, "label": "Mg I 3838" },
+      { "x": 4571, "label": "Mg I 4571" },
+      { "x": 4703, "label": "Mg I 4703" },
+      { "x": 5167, "label": "Mg I 5167" },
+      { "x": 5173, "label": "Mg I 5173" },
+      { "x": 5184, "label": "Mg I 5184" },
+      { "x": 5528, "label": "Mg I 5528" },
+      { "x": 8807, "label": "Mg I 8807" },
+      { "x": 11828, "label": "Mg I 11828" },
+      { "x": 12083, "label": "Mg I 12083" },
+      { "x": 14878, "label": "Mg I 14878" },
+      { "x": 15033, "label": "Mg I 15033" },
+      { "x": 17109, "label": "Mg I 17109" }
     ],
     "color": "#cc0000",
     "type": "common"
@@ -188,7 +297,20 @@
     "label": "Mg II",
     "lines": [
       { "x": 2796, "label": "Mg II 2796" },
-      { "x": 2803, "label": "Mg II 2803" }
+      { "x": 2798, "label": "Mg II 2798" },
+      { "x": 2803, "label": "Mg II 2803" },
+      { "x": 4481, "label": "Mg II 4481" },
+      { "x": 7877, "label": "Mg II 7877" },
+      { "x": 7896, "label": "Mg II 7896" },
+      { "x": 8214, "label": "Mg II 8214" },
+      { "x": 8235, "label": "Mg II 8235" },
+      { "x": 9218, "label": "Mg II 9218" },
+      { "x": 9244, "label": "Mg II 9244" },
+      { "x": 9632, "label": "Mg II 9632" },
+      { "x": 10092, "label": "Mg II 10092" },
+      { "x": 10927, "label": "Mg II 10927" },
+      { "x": 16787, "label": "Mg II 16787" },
+      { "x": 21369, "label": "Mg II 21369" }
     ],
     "color": "#cccc00",
     "type": "common"
@@ -197,8 +319,20 @@
   "SiIICheckbox": {
     "label": "Si II",
     "lines": [
+      { "x": 2329, "label": "Si II 2329" },
+      { "x": 2334, "label": "Si II 2334" },
+      { "x": 4128, "label": "Si II 4128" },
+      { "x": 4131, "label": "Si II 4131" },
+      { "x": 5958, "label": "Si II 5958" },
+      { "x": 5979, "label": "Si II 5979" },
       { "x": 6347, "label": "Si II 6347" },
-      { "x": 6371, "label": "Si II 6371" }
+      { "x": 6371, "label": "Si II 6371" },
+      { "x": 9413, "label": "Si II 9413" },
+      { "x": 11311, "label": "Si II 11311" },
+      { "x": 11737, "label": "Si II 11737" },
+      { "x": 13681, "label": "Si II 13681" },
+      { "x": 16930, "label": "Si II 16930" },
+      { "x": 17183, "label": "Si II 17183" }
     ],
     "color": "#006666",
     "type": "common"
@@ -207,8 +341,16 @@
   "SIICheckbox": {
     "label": "S II",
     "lines": [
+      { "x": 5433, "label": "S II 5433" },
+      { "x": 5454, "label": "S II 5454" },
+      { "x": 5606, "label": "S II 5606" },
+      { "x": 5640, "label": "S II 5640" },
+      { "x": 5647, "label": "S II 5647" },
       { "x": 6715, "label": "S II 6715" },
-      { "x": 6731, "label": "S II 6731" }
+      { "x": 8315, "label": "S II 8315" },
+      { "x": 8855, "label": "S II 8855" },
+      { "x": 13529, "label": "S II 13529" },
+      { "x": 14501, "label": "S II 14501" }
     ],
     "color": "#003366",
     "type": "common"
@@ -217,11 +359,31 @@
   "CaIICheckbox": {
     "label": "Ca II",
     "lines": [
+      { "x": 3159, "label": "Ca II 3159" },
+      { "x": 3180, "label": "Ca II 3180" },
+      { "x": 3706, "label": "Ca II 3706" },
+      { "x": 3737, "label": "Ca II 3737" },
       { "x": 3934, "label": "Ca II K" },
       { "x": 3969, "label": "Ca II H" },
       { "x": 8498, "label": "Ca II 8498" },
       { "x": 8542, "label": "Ca II 8542" },
-      { "x": 8662, "label": "Ca II 8662" }
+      { "x": 8662, "label": "Ca II 8662" },
+      { "x": 8202, "label": "Ca II 8202" },
+      { "x": 8249, "label": "Ca II 8249" },
+      { "x": 8921, "label": "Ca II 8921" },
+      { "x": 9931, "label": "Ca II 9931" },
+      { "x": 11839, "label": "Ca II 11839" },
+      { "x": 11950, "label": "Ca II 11950" }
+    ],
+    "color": "#660066",
+    "type": "common"
+  },
+
+  "CaIIForbiddenCheckbox": {
+    "label": "[Ca II]",
+    "lines": [
+      { "x": 7292, "label": "[Ca II] 7292" },
+      { "x": 7324, "label": "[Ca II] 7324" }
     ],
     "color": "#660066",
     "type": "common"
@@ -230,29 +392,59 @@
   "FeIICheckbox": {
     "label": "Fe II",
     "lines": [
+      { "x": 2343, "label": "Fe II 2343" },
+      { "x": 2382, "label": "Fe II 2382" },
+      { "x": 2586, "label": "Fe II 2586" },
+      { "x": 2600, "label": "Fe II 2600" },
+      { "x": 4303, "label": "Fe II 4303" },
+      { "x": 4352, "label": "Fe II 4352" },
+      { "x": 4515, "label": "Fe II 4515" },
+      { "x": 4549, "label": "Fe II 4549" },
       { "x": 4924, "label": "Fe II 4924" },
       { "x": 5018, "label": "Fe II 5018" },
-      { "x": 5169, "label": "Fe II 5169" }
+      { "x": 5169, "label": "Fe II 5169" },
+      { "x": 5198, "label": "Fe II 5198" },
+      { "x": 5235, "label": "Fe II 5235" },
+      { "x": 5363, "label": "Fe II 5363" },
+      { "x": 9550, "label": "Fe II 9550" },
+      { "x": 9998, "label": "Fe II 9998" },
+      { "x": 10500, "label": "Fe II 10500" },
+      { "x": 10863, "label": "Fe II 10863" },
+      { "x": 11126, "label": "Fe II 11126" }
     ],
     "color": "#660033",
     "type": "common"
   },
 
+  "FeIIICheckbox": {
+    "label": "Fe III",
+    "lines": [
+      { "x": 4397, "label": "Fe III 4397" },
+      { "x": 4421, "label": "Fe III 4421" },
+      { "x": 4432, "label": "Fe III 4432" },
+      { "x": 5129, "label": "Fe III 5129" },
+      { "x": 5158, "label": "Fe III 5158" },
+      { "x": 9124, "label": "Fe III 9124" },
+      { "x": 12039, "label": "Fe III 12039" },
+      { "x": 12786, "label": "Fe III 12786" },
+      { "x": 16672, "label": "Fe III 16672" },
+      { "x": 16722, "label": "Fe III 16722" }
+    ],
+    "color": "#99004C",
+    "type": "common"
+  },
+
   "NeIIICheckbox": {
     "label": "Ne III",
-    "lines": [
-      { "x": 3869.81, "label": "Ne III 3869" }
-    ],
+    "lines": [{ "x": 3869.81, "label": "Ne III 3870" }],
     "color": "lawngreen",
     "type": "common"
   },
 
   "CHCheckboxAbs": {
     "label": "CH",
-    "lines": [
-      { "x": 4300.00, "label": "CH 4300" }
-    ],
-    "color": "rgb(31,31,43)",
+    "lines": [{ "x": 4300.0, "label": "CH 4300" }],
+    "color": "rgb(31, 31, 43)",
     "type": "absorption"
   },
 
@@ -260,10 +452,20 @@
     "label": "C I",
     "lines": [
       { "x": 9061.44, "label": "C I 9061" },
-      { "x": 9088.51, "label": "C I 9088" },
-      { "x": 9111.80, "label": "C I 9111" }
+      { "x": 9088.51, "label": "C I 9089" },
+      { "x": 9111.8, "label": "C I 9112" }
     ],
     "color": "brown",
+    "type": "absorption"
+  },
+
+  "CIICheckboxAbs": {
+    "label": "C II",
+    "lines": [
+      { "x": 6578.05, "label": "C II 6578" },
+      { "x": 6582.88, "label": "C II 6582" }
+    ],
+    "color": "black",
     "type": "absorption"
   },
 
@@ -277,8 +479,19 @@
     "type": "absorption"
   },
 
+  "MgICheckboxAbs": {
+    "label": "Mg I",
+    "lines": [
+      { "x": 5167.33, "label": "Mg I 5167" },
+      { "x": 5172.68, "label": "Mg I 5172" },
+      { "x": 5183.6, "label": "Mg I 5183" }
+    ],
+    "color": "gray",
+    "type": "absorption"
+  },
+
   "CaIIH&KCheckbox": {
-    "label": "Ca H&K",
+    "label": "Ca II H&K",
     "lines": [
       { "x": 3934, "label": "Ca II K" },
       { "x": 3969, "label": "Ca II H" }
@@ -303,7 +516,7 @@
   },
 
   "NeVCheckbox": {
-    "label": "NeV",
+    "label": "Ne V",
     "lines": [
       { "x": 1006, "label": "Ne V 1006" },
       { "x": 1575, "label": "Ne V 1575" },
@@ -315,7 +528,7 @@
   },
 
   "OIISLSNOICheckbox": {
-    "label": "SLSN OII Blends",
+    "label": "SLSN-I Blends",
     "lines": [
       { "x": 3738, "label": "SLSN-I 3738" },
       { "x": 3960, "label": "SLSN-I 3960" },
