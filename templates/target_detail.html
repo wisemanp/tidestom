@@ -466,6 +466,29 @@ fetch("{% static 'json/line_data.json' %}")
       {% endif %}
       <!-- END TAGS -->
 
+      {% if spectra %}
+      <div class="card mt-3">
+        <div class="card-header">Available Spectra</div>
+        <div class="card-body p-2">
+          <ul class="list-unstyled mb-0">
+            {% for spec in spectra %}
+              <li class="mb-2">
+                <span class="badge bg-secondary">{{ spec.obs_date|date:"Y-m-d H:i" }}</span>
+                {% if spec.additional_info.EXPOSURE_TIME_S %}
+                  <span class="ms-2">Exp: {{ spec.additional_info.EXPOSURE_TIME_S }} s</span>
+                {% endif %}
+                {% if spec.filepath %}
+                  <div class="text-muted small">{{ spec.filepath }}</div>
+                {% endif %}
+              </li>
+            {% empty %}
+              <li class="text-muted">No spectra available</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
       <h3>Classifications</h3>
       <p>
         <u><strong>Auto Classification</strong></u>&emsp;

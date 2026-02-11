@@ -162,6 +162,18 @@ class MyTargetDetailView(DetailView):
         # Individual submissions (ordered by remote 'created' column)
         context['human_classifications'] = submissions.order_by('-created')
         context['tags'] = Tag.objects.filter(is_active=True).order_by('name')  # NEW
+
+        # Include all spectra for this target (for multi-spectrum display)
+        try:
+            spectra_qs = (
+                TidesSpec.objects
+                .filter(tides_id=target.pk)
+                .order_by('-obs_date')
+            )
+            context['spectra'] = spectra_qs
+        except Exception as e:
+            logger.warning(f"Failed to load spectra for target {target.pk}: {e}")
+            context['spectra'] = []
         return context
 
 
