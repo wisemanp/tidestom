@@ -77,25 +77,126 @@ fetch("{% static 'json/line_data.json' %}")
 	})
 	.catch(error => console.error("Error loading line data:", error));
 
-    function updateLines(z, v) {
-        const newShapes = Object.entries(lines)
-            .filter(([id]) => document.getElementById(id)?.checked)
-            .flatMap(([_, { x, color }]) => x.map(value => ({
-                type: "line",
-                x0: value * ( (1 + z) + (v/299792.458)),
-                x1: value * ( (1 + z) + (v/299792.458)),
-                y0: 0,
-                y1: 1,
-                xref: "x",
-                yref: "paper",
-                line: { color, width: 2},
-                layer: "below"
-            })));
-        // Combine vrects (tellurics) with the new line shapes
-        const vrects = getFigDiv().layout.shapes?.filter(s => s.type === 'rect') || [];
-        const allShapes = vrects.concat(newShapes);
-        Plotly.relayout(getFigDiv(), { shapes: allShapes });
-    }
+  function updateLines(z, v) {
+	const figDiv = getFigDiv();
+
+	function buildShapes() {
+		return Object.entries(lines)
+			.filter(([id]) => document.getElementById(id)?.checked)
+			.flatMap(([_, { x, color }]) =>
+				x.map(value => {
+					const xpos = value * ((1 + z) + (v / 299792.458));
+					return {
+						type: "line",
+						x0: xpos,
+						x1: xpos,
+						y0: 0,
+						y1: 1,
+						xref: "x",
+						yref: "paper",
+						line: { color, width: 2 },
+						layer: "below"
+					};
+				})
+			);
+	}
+
+	function buildAnnotations() {
+		return Object.entries(lines)
+			.filter(([id]) => document.getElementById(id)?.checked)
+			.flatMap(([_, { x, color, label }]) =>
+				x.map(value => {
+					const xpos = value * ((1 + z) + (v / 299792.458));
+					return {
+						x: xpos,
+						y: 0.90,
+						xref: "x",
+						yref: "paper",
+						text: `${label} ${value}`,
+						showarrow: false,
+						textangle: -90,
+						font: { color, size: 8 },
+						xanchor: "center",
+						yanchor: "middle",
+						bgcolor: "white",
+						layer: "above",
+						opacity: 0.9,
+						cliponaxis: true
+					};
+				})
+			);
+	}
+
+	function applyShapesAndAnnotations() {
+		const vrects = figDiv.layout.shapes?.filter(s => s.type === "rect") || [];
+		const allShapes = vrects.concat(buildShapes());
+
+		const currentXRange = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
+		const currentYRange = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
+
+		Plotly.relayout(figDiv, {
+			shapes: allShapes,
+			annotations: buildAnnotations(),
+			"xaxis.autorange": false,
+			"yaxis.autorange": false,
+			...(currentXRange && { "xaxis.range": currentXRange }),
+			...(currentYRange && { "yaxis.range": currentYRange })
+		});
+	}
+
+	function safelyReapplyAfterAutoscale() {
+		// Prevent recursive triggering
+		if (figDiv._isRescaling) return;
+		figDiv._isRescaling = true;
+
+		// Remove overlays before autorange
+		Plotly.relayout(figDiv, { shapes: [], annotations: [] })
+			.then(() =>
+				Plotly.relayout(figDiv, {
+					"xaxis.autorange": true,
+					"yaxis.autorange": true
+				})
+			)
+			.then(() => {
+				// Lock new ranges and reapply overlays
+				const { xaxis, yaxis } = figDiv.layout;
+				return Plotly.relayout(figDiv, {
+					"xaxis.autorange": false,
+					"yaxis.autorange": false,
+					"xaxis.range": xaxis.range,
+					"yaxis.range": yaxis.range
+				});
+			})
+			.then(() => {
+				applyShapesAndAnnotations();
+			})
+			.finally(() => {
+				figDiv._isRescaling = false; // release lock
+			});
+	}
+
+	// --- Initial draw ---
+	applyShapesAndAnnotations();
+
+	// --- Hook events only once ---
+	if (!figDiv._ignoreOverlaysHandlerAdded) {
+		figDiv.on("plotly_doubleclick", () => {
+			safelyReapplyAfterAutoscale();
+		});
+
+		figDiv.on("plotly_relayout", ev => {
+			if (
+				ev["xaxis.autorange"] === true ||
+				ev["yaxis.autorange"] === true ||
+				ev["scene.autorange"] === true
+			) {
+				safelyReapplyAfterAutoscale();
+			}
+		});
+
+		figDiv._ignoreOverlaysHandlerAdded = true;
+	}
+  }
 
     function updateRedshiftVelocity() {
         // Always pull from the current slider values (force numbers)
@@ -468,7 +569,7 @@ fetch("{% static 'json/line_data.json' %}")
 
       <h3>Classifications</h3>
       <p>
-        <u><strong>Auto Classification</strong></u>&emsp;
+        <u><strong>Auto Classification:</strong></u>&emsp;
         {% if object.auto_tidesclass %}
           <br><strong>Class:</strong> {{ object.auto_tidesclass }}
           {% if object.auto_tidesclass_subclass %}
@@ -476,12 +577,14 @@ fetch("{% static 'json/line_data.json' %}")
           {% endif %}
           {% if object.auto_tidesclass_z %}
             <br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
+          {% else %}
+            <br><strong>Redshift:</strong> <span style="color: red;">Not Recorded</span>
           {% endif %}
           {% if object.auto_tidesclass_prob %}
             <br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
           {% endif %}
         {% else %}
-          <br>No Auto Classification
+          <br><span style="color: red;">No Auto Classification</span>
         {% endif %}
       </p>
 
