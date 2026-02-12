@@ -1,9 +1,49 @@
 document.addEventListener("DOMContentLoaded", function() {
 
-  function renderTable(rows) {
+  function renderSNIDTable(rows, targetId, filePath) {
     if (!rows.length) return "<p>No data</p>";
 
-    let html = "<div class='table-responsive'>";
+    let html = "<div class='table-responsive table-scroll'>";
+    html += "<table class='table table-hover table-sm table-bordered'>";
+    const keys = Object.keys(rows[0]);
+
+    // header
+    html += "<thead><tr>";
+    keys.forEach(k => { html += `<th>${k}</th>`; });
+    html += "</tr></thead><tbody>";
+
+    // rows
+    rows.forEach((row, index) => {
+      html += "<tr>";
+      keys.forEach(k => {
+		  if (k === "sn") {
+			  const encodedPath = encodeURIComponent(filePath)
+			  html += `
+				  <td>
+				    <a
+					  hx-get="/marshal/target_spectroscopy/${targetId}/?snid_path=${encodedPath}/?snid_index=${index}"
+					  hx-target="#spectroscopy"
+					  href="#"
+					>
+					  ${row[k]}
+				  </a>
+				</td>
+			  `;
+		   } else {
+				html += `<td>${row[k]}</td>`;
+		   }
+	  });
+      html += "</tr>";
+    });
+
+    html += "</tbody></table></div>";
+    return html;
+  }
+  
+  function renderNGSFTable(rows) {
+    if (!rows.length) return "<p>No data</p>";
+
+    let html = "<div class='table-responsive table-scroll'>";
     html += "<table class='table table-hover table-sm table-bordered'>";
     const keys = Object.keys(rows[0]);
 
@@ -15,7 +55,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // rows
     rows.forEach(row => {
       html += "<tr>";
-      keys.forEach(k => { html += `<td>${row[k]}</td>`; });
+      keys.forEach(k => {html += `<td>${row[k]}</td>`; });
       html += "</tr>";
     });
 
@@ -59,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (json.success) {
           // Render table
           if (json.data?.data?.table) {
-            resultDiv.innerHTML = renderTable(json.data.data.table);
+            resultDiv.innerHTML = renderTable(json.data.data.table, ${targetId}, filePath);
           }
 
           // SNID-specific HTMX
@@ -68,7 +108,10 @@ document.addEventListener("DOMContentLoaded", function() {
             const filePath = json.data.data.file_path;
             const container = document.getElementById('spectroscopy');
             const targetId = container.dataset.targetId;
-
+			if (json.data?.data?.table) {
+              resultDiv.innerHTML = renderSNIDTable(json.data.data.table, ${targetId}, filePath);
+            }
+            
             htmx.ajax('GET',
               `/marshal/target_spectroscopy/${targetId}/?snid_path=${encodeURIComponent(filePath)}`,
               { target: '#spectroscopy' }
@@ -80,6 +123,9 @@ document.addEventListener("DOMContentLoaded", function() {
             const filePath = json.data.data.file_path;
             const container = document.getElementById('spectroscopy');
             const targetId = container.dataset.targetId;
+            if (json.data?.data?.table) {
+              resultDiv.innerHTML = renderNGSFTable(json.data.data.table);
+            }
 
             htmx.ajax('GET',
               `/marshal/target_spectroscopy/${targetId}/?ngsf_path=${encodeURIComponent(filePath)}`,

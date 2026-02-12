@@ -8,7 +8,12 @@ from django import template
 import glob
 import numpy as np
 
-from .spectroscopy_settings import add_snid_templates, add_ngsf_templates, load_spectra
+from .spectroscopy_settings import (
+        add_snid_templates,
+        add_snid_select_template,
+        add_ngsf_templates,
+        load_spectra
+)
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
 from tidestom.settings import BROKERS
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
@@ -17,7 +22,7 @@ lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
 register = template.Library()
 
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
-def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_path=None):
+def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_index=None, ngsf_path=None):
     """
     Render a spectroscopic plot for a Target.
     Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
@@ -30,7 +35,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     if not specs:
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
     spectrum, spec = spectra[0], specs[0]
-    
+
     plot_data = [
         go.Scatter(
             x=spectrum.spectral_axis.value,
@@ -95,17 +100,30 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
 
     ### templates ###
     if snid_path is not None:
-        try:
-            pysnid_file = snid_path
-            fig = add_snid_templates(pysnid_file,
-                             spectrum.spectral_axis.value,
-                             spectrum.flux.value,
-                             fig,
-                             n=3
-                             )
-        except Exception as exc:
-            print(exc)
-            pass
+        if snid_index is None:
+            try:
+                pysnid_file = snid_path
+                fig = add_snid_templates(pysnid_file,
+                                 spectrum.spectral_axis.value,
+                                 spectrum.flux.value,
+                                 fig,
+                                 n=3
+                                )
+            except Exception as exc:
+                print(exc)
+                pass
+        elif snid_index is not None:
+            try:
+                pysnid_file = snid_path
+                fig = add_snid_select_template(pysnid_file,
+                                         spectrum.spectral_axis.value,
+                                         spectrum.flux.value,
+                                         fig,
+                                         idx=snid_index
+                                         )
+            except Exception as exc:
+                print(exc)
+                pass
     else:
         tar = f"{target}"
         paths= glob.glob(f'/snid_api_runs/pipeline_out/*/{tar[6:]}/*h5')
