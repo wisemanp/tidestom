@@ -125,7 +125,8 @@ fetch("{% static 'json/line_data.json' %}")
 							bgcolor: "white",
 							layer: "above",
 							opacity: 0.9,
-							cliponaxis: true
+							cliponaxis: true,
+                            customdata: ["line_label"]
 						};
 					})
 				);
@@ -139,14 +140,18 @@ fetch("{% static 'json/line_data.json' %}")
 			const currentXRange = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
 			const currentYRange = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
 
-			Plotly.relayout(figDiv, {
-				shapes: allShapes,
-				annotations: buildAnnotations(),
-				"xaxis.autorange": false,
-				"yaxis.autorange": false,
-				...(currentXRange && { "xaxis.range": currentXRange }),
-				...(currentYRange && { "yaxis.range": currentYRange })
-			});
+			// Preserve existing annotations (e.g., vrect labels)
+            const existingAnnots = figDiv.layout.annotations?.filter(a => !a.customdata?.includes("line_label")) || [];
+            const combinedAnnots = existingAnnots.concat(buildAnnotations());
+
+            Plotly.relayout(figDiv, {
+                shapes: allShapes,
+                annotations: combinedAnnots,
+                "xaxis.autorange": false,
+                "yaxis.autorange": false,
+                ...(currentXRange && { "xaxis.range": currentXRange }),
+                ...(currentYRange && { "yaxis.range": currentYRange })
+            });
 		}
 
 		// --- Handle autoscale safely ---
