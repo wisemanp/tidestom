@@ -67,6 +67,19 @@ fetch("{% static 'json/line_data.json' %}")
 			document.getElementById(id)?.addEventListener("change", updateRedshiftVelocity);
 		});
 
+        document.getElementById("resetVelocity").addEventListener("click", () => {
+          velocitySlider.value = 0;
+          velocityInput.value = 0;
+          updateRedshiftVelocity();
+	    });
+
+        document.getElementById("resetRedshift").addEventListener("click", () => {
+            const resetValue = "{{ object.auto_tidesclass_z|default_if_none:0 }}";
+            redshiftSlider.value = resetValue;
+            redshiftInput.value = resetValue;
+            updateRedshiftVelocity();
+        });
+
 		// Initial draw to ensure sync between the checkboxes and line drawing
 		updateRedshiftVelocity();
 	})
@@ -214,7 +227,7 @@ fetch("{% static 'json/line_data.json' %}")
         velocityInput.value = isFinite(v) ? v.toFixed(0) : "";
 
         // Only call updateLines if both are valid
-        if (!isNaN(z) && z >= 0 && z <= 2 && !isNaN(v) && v >= -50000 && v <= 50000) {
+        if (!isNaN(z) && z >= 0 && z <= 3 && !isNaN(v) && v >= -50000 && v <= 50000) {
             updateLines(z, v);
         }
     }
@@ -753,17 +766,93 @@ fetch("{% static 'json/line_data.json' %}")
       <label for="redshiftSlider" style="display:block; width:250px;">
           Redshift (z):
       </label>
-    <input type="range" id="redshiftSlider" min="0" max="3" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 300px">
-      <label for="redshiftInput"></label><input type="number" id="redshiftInput" min="0" max="2" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 80px; text-align: center;">
-  
-    </div>
-      <!-- Velocity Slider -->
+
+      <!-- Slider (on its own line) -->
+      <input
+          type="range"
+          id="redshiftSlider"
+          min="0"
+          max="3"
+          step="0.0001"
+          value="{{ object.auto_tidesclass_z|default_if_none:0 }}"
+          style="width: 300px"
+      >
+
+      <!-- Input + Reset button (below slider, same line) -->
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+          <button
+              id="resetRedshift"
+              style="
+                  padding: 3px 8px;
+                  background-color: #f0f0f0;
+                  border: 1px solid #ccc;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  transition: background-color 0.2s, border-color 0.2s;
+              "
+              onmouseover="this.style.backgroundColor='#e0e0e0'; this.style.borderColor='#bbb';"
+              onmouseout="this.style.backgroundColor='#f0f0f0'; this.style.borderColor='#ccc';"
+          >
+              Reset
+          </button>
+
+          <input
+              type="number"
+              id="redshiftInput"
+              min="0"
+              max="3"
+              step="0.0001"
+              value="{{ object.auto_tidesclass_z|default_if_none:0 }}"
+              style="width: 80px; text-align: center;"
+          >
+      </div>
+   </div>
+
+    <!-- Velocity Slider -->
     <div class="spectroscopy-only">
-        <label for="velocitySlider" style="display:block; width:250px;">
-          Additional line velocity (km\s):
-        </label>
-      <input type="range" id="velocitySlider" min="-50000" max="50000" step="100" value="0" style="width: 300px">
-        <label for="velocityInput"></label><input type="number" id="velocityInput" min="-50000" max="50000" step="100" value="0" style="width: 80px; text-align: center;">
+	<label for="velocitySlider" style="display:block; width:250px;">
+		Additional line velocity (km/s):
+	</label>
+
+	<!-- Slider (on its own line) -->
+	<input
+		type="range"
+		id="velocitySlider"
+		min="-50000"
+		max="50000"
+		step="100"
+		value="0"
+		style="width: 300px"
+	>
+
+	<!-- Input + Reset button (below slider, same line) -->
+	<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+		<button
+			id="resetVelocity"
+			style="
+				padding: 3px 8px;
+				background-color: #f0f0f0;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				cursor: pointer;
+				transition: background-color 0.2s, border-color 0.2s;
+			"
+			onmouseover="this.style.backgroundColor='#e0e0e0'; this.style.borderColor='#bbb';"
+			onmouseout="this.style.backgroundColor='#f0f0f0'; this.style.borderColor='#ccc';"
+		>
+			Reset
+		</button>
+
+		<input
+			type="number"
+			id="velocityInput"
+			min="-50000"
+			max="50000"
+			step="100"
+			value="0"
+			style="width: 80px; text-align: center;"
+		>
+	</div>
     </div>
 
 {% if request.user.is_authenticated %}
