@@ -142,8 +142,8 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
         model_wave = model_df.wavelength.values
         model_flux = model_df.flux.values
         # normalise back
-        model_flux /= 1.05
-        model_flux *= mean
+        model_flux = model_flux / 1.05
+        model_flux = model_flux * mean
         # match observed grid
         model_wave, model_flux = match_grid(obs_wave, model_wave, model_flux)
 
@@ -183,8 +183,8 @@ def add_snid_select_template(pysnid_file: str, obs_wave: np.ndarray, obs_flux: n
         model_wave = model_df.wavelength.values
         model_flux = model_df.flux.values
         # normalise back
-        model_flux /= 1.05
-        model_flux *= mean
+        model_flux = model_flux / 1.05
+        model_flux = model_flux * mean
         # match observed grid
         model_wave, model_flux = match_grid(obs_wave, model_wave, model_flux)
 
