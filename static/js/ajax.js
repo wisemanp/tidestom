@@ -18,17 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
       keys.forEach(k => {
 		  if (k === "sn") {
 			  const encodedPath = encodeURIComponent(filePath)
-			  html += `
-				  <td>
-				    <a
-					  hx-get="/marshal/target_spectroscopy/${targetId}/?snid_path=${encodedPath}/?snid_index=${index}"
-					  hx-target="#spectroscopy"
-					  href="#"
-					>
-					  ${row[k]}
-				  </a>
-				</td>
-			  `;
+			  html += `<td><a hx-get="/marshal/target_spectroscopy/${targetId}/?snid_path=${encodedPath}&snid_index=${index}" hx-target="#spectroscopy" hx-trigger="click">${row[k]}</a></td>`;
 		   } else {
 				html += `<td>${row[k]}</td>`;
 		   }
@@ -99,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (json.success) {
           // Render table
           if (json.data?.data?.table) {
-            resultDiv.innerHTML = renderTable(json.data.data.table, ${targetId}, filePath);
+            console.log("Success!!");
           }
 
           // SNID-specific HTMX
@@ -108,8 +98,9 @@ document.addEventListener("DOMContentLoaded", function() {
             const filePath = json.data.data.file_path;
             const container = document.getElementById('spectroscopy');
             const targetId = container.dataset.targetId;
-			if (json.data?.data?.table) {
-              resultDiv.innerHTML = renderSNIDTable(json.data.data.table, ${targetId}, filePath);
+	    if (json.data?.data?.table) {
+              resultDiv.innerHTML = renderSNIDTable(json.data.data.table, targetId, filePath);
+              htmx.process(resultDiv);
             }
             
             htmx.ajax('GET',
@@ -152,3 +143,4 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
 });
+
