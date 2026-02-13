@@ -31,10 +31,12 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
     spectrum, spec = spectra[0], specs[0]
     
+    scale_factor = 1e-17
+
     plot_data = [
         go.Scatter(
             x=spectrum.spectral_axis.value,
-            y=spectrum.flux.value,
+            y=spectrum.flux.value/scale_factor,
             name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
                     else datetime.now().strftime('%Y%m%d-%H:%M:%S')),
             marker=dict(color='darkslategray'),
@@ -44,8 +46,8 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     ]
 
     fig = go.Figure(data=plot_data)
-    fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value, 0.1),
-                            np.nanpercentile(spectrum.flux.value,99.9)])
+    fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value/scale_factor, 0.1),
+                            np.nanpercentile(spectrum.flux.value/scale_factor,99.9)])
 
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
@@ -77,7 +79,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             pysnid_file = snid_path
             fig = add_snid_templates(pysnid_file,
                              spectrum.spectral_axis.value,
-                             spectrum.flux.value,
+                             spectrum.flux.value/scale_factor,
                              fig,
                              n=3
                              )
@@ -92,7 +94,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             try:
                 fig = add_snid_templates(auto_snid,
                                 spectrum.spectral_axis.value,
-                                spectrum.flux.value,
+                                spectrum.flux.value/scale_factor,
                                 fig,
                                 n=3
                                 )
@@ -108,7 +110,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             ngsf_file = ngsf_path
             fig = add_ngsf_templates(ngsf_file,
                              spectrum.spectral_axis.value,
-                             spectrum.flux.value,
+                             spectrum.flux.value/scale_factor,
                              fig,
                              n=3
                              )
@@ -116,11 +118,14 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
 
     fig.update_layout(autosize=True,
+                      height=650,
                       xaxis_title='Observed Wavelength (Å)',
-                      yaxis_title='Flux (erg/s/cm²/Å)',
+                      yaxis_title='Flux (10<sup>-17</sup> erg/s/cm²/Å)',
                       xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       legend_title="Best Matches",
+                      margin=dict(t=150),
+                      legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
                       showlegend=True,
                       font_family="P052",
                       font_size=16,
