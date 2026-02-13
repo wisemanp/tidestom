@@ -36,7 +36,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
     spectrum, spec = spectra[0], specs[0]
     
-    scale_factor = 1e-17
+    scale_factor = 1 #setting 1 currently as SNID plots wrongly right now with this
 
     plot_data = [
         go.Scatter(
