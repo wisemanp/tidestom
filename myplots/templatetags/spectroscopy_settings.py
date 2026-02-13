@@ -177,9 +177,9 @@ def add_snid_select_template(pysnid_file: str, obs_wave: np.ndarray, obs_flux: n
     mean = np.nanmean(obs_flux)
     snidres = get_pysnid_results(pysnid_file)
     if type(idx) is not list:
-        idx = list(idx)
+        idx = [idx]
     for i in idx:
-        model_df = snidres.get_modeldata(i, fluxcorr=True)
+        model_df = snidres.get_modeldata(int(i), fluxcorr=True)
         model_wave = model_df.wavelength.values
         model_flux = model_df.flux.values
         # normalise back
@@ -188,7 +188,7 @@ def add_snid_select_template(pysnid_file: str, obs_wave: np.ndarray, obs_flux: n
         # match observed grid
         model_wave, model_flux = match_grid(obs_wave, model_wave, model_flux)
 
-        temp_info = snidres.results.iloc[i-1]
+        temp_info = snidres.results.iloc[int(i)]
         fig.add_trace(go.Scatter(
             x=model_wave,
             y=model_flux,
