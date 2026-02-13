@@ -82,7 +82,7 @@ services:
       PGPASSWORD: ${DB_PASS}
       PGPORT: ${DB_PORT}
       PGDATABSE: ${DB_NAME}
-      #PGSSLMODE: require
+      LASAIR_ZTF_KEY: ${LASAIR_ZTF_API_TOKEN}
 
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"

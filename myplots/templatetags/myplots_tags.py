@@ -8,7 +8,12 @@ from django import template
 import glob
 import numpy as np
 
-from .spectroscopy_settings import add_snid_templates, add_ngsf_templates, load_spectra
+from .spectroscopy_settings import (
+        add_snid_templates,
+        add_snid_select_template,
+        add_ngsf_templates,
+        load_spectra
+)
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
 from tidestom.settings import BROKERS
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
@@ -17,7 +22,7 @@ lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
 register = template.Library()
 
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
-def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_path=None):
+def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_index=None, ngsf_path=None):
     """
     Render a spectroscopic plot for a Target.
     Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
@@ -73,19 +78,54 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             annotation_font=dict(size=12, color="black")
         )
 
+    ### arm joins ###
+    # Inclusion of the 4MOST (low res) spectrograph arm overlap arm regions
+    # Taken from the 4MOST manual : https://www.4most.eu/cms/files/VIS-MAN-4MOST-47110-9800-0001_2_00-4MOST-User-Manual.pdf
+
+    overlap_bands = {
+        'blue-green' : (5240,5540),
+        'green-red': (6910,7210)
+    }
+
+    for label, (start, end) in overlap_bands.items():
+        fig.add_vrect(
+            x0=start, x1=end,
+            fillcolor="brown",
+            opacity=0.2,
+            layer="below",
+            line_width=0,
+            annotation_text="AJ",
+            annotation_position="top",
+            annotation_font=dict(size=12, color="black")
+        )
+
+
     ### templates ###
     if snid_path is not None:
-        try:
-            pysnid_file = snid_path
-            fig = add_snid_templates(pysnid_file,
-                             spectrum.spectral_axis.value,
-                             spectrum.flux.value/scale_factor,
-                             fig,
-                             n=3
-                             )
-        except Exception as exc:
-            print(exc)
-            pass
+        if snid_index is None:
+            try:
+                pysnid_file = snid_path
+                fig = add_snid_templates(pysnid_file,
+                                 spectrum.spectral_axis.value,
+                                 spectrum.flux.value,
+                                 fig,
+                                 n=3
+                                )
+            except Exception as exc:
+                print(exc)
+                pass
+        elif snid_index is not None:
+            try:
+                pysnid_file = snid_path
+                fig = add_snid_select_template(pysnid_file,
+                                         spectrum.spectral_axis.value,
+                                         spectrum.flux.value,
+                                         fig,
+                                         idx=snid_index
+                                         )
+            except Exception as exc:
+                print(exc)
+                pass
     else:
         tar = f"{target}"
         paths= glob.glob(f'/snid_api_runs/pipeline_out/*/{tar[6:]}/*h5')
