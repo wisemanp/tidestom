@@ -160,7 +160,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
     fig.update_layout(autosize=True,
                       height=650,
                       xaxis_title='Observed Wavelength (Å)',
-                      yaxis_title='Flux (10<sup>-17</sup> erg/s/cm²/Å)',
+                      yaxis_title='Flux (erg/s/cm²/Å)',
                       xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       legend_title="Best Matches",
