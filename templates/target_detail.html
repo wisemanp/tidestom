@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Main spectroscopy plot
-    const plotDiv = document.querySelector("#spectroscopyPlot .js-plotly-plot");
+    const figDiv = document.querySelector("#spectroscopyPlot .js-plotly-plot");
 
     // Redshift handling and plot updates.
     const redshiftSlider = document.querySelector("#redshiftSlider");
@@ -86,136 +86,226 @@ fetch("{% static 'json/line_data.json' %}")
 	.catch(error => console.error("Error loading line data:", error));
 
   let updateTimeout = null; // global throttle timer
+  
+	// --- Overlay toggle configuration ---
+    const overlayButtons = [
+        { id: "telluric_display", overlay: "telluric", active: true },
+        { id: "arm_join_display", overlay: "armJoin", active: true },
+        { id: "skyline_display", overlay: "skyline", active: false }
+    ];
+    
+    // Track overlay state
+    const overlayState = {};
+    overlayButtons.forEach(btn => {
+        overlayState[btn.overlay] = btn.active;
 
-  function updateLines(z, v) {
-	  const figDiv = getFigDiv();
+	// Style buttons: green when active, white when off, remove focus outline & highlight
+        const element = document.getElementById(btn.id);
+        if (element) {
+            element.style.backgroundColor = btn.active ? "green" : "white";
+            element.style.color = "black";
+            element.style.border = "1px solid #ccc";
+            element.style.outline = "none";
+            element.style.transition = "background-color 0.2s";
+            element.addEventListener("mousedown", e => e.preventDefault()); // remove blue click highlight
 
-	// --- Throttle redundant redraws ---
-	if (updateTimeout) clearTimeout(updateTimeout);
-	updateTimeout = setTimeout(() => {
-		updateTimeout = null;
-
-		// --- Build line shapes ---
-		function buildShapes() {
-			return Object.entries(lines)
-				.filter(([id]) => document.getElementById(id)?.checked)
-				.flatMap(([_, { lines: lineList, color }]) =>
-					lineList.map(({ x }) => {
-						const xpos = x * ((1 + z) + (v / 299792.458));
-						return {
-							type: "line",
-							x0: xpos,
-							x1: xpos,
-							y0: 0,
-							y1: 1,
-							xref: "x",
-							yref: "paper",
-							line: { color, width: 2 },
-							layer: "below"
-						};
-					})
-				);
-		}
-
-		// --- Build text annotations ---
-		function buildAnnotations() {
-			return Object.entries(lines)
-				.filter(([id]) => document.getElementById(id)?.checked)
-				.flatMap(([_, { lines: lineList, color }]) =>
-					lineList.map(({ x, label }) => {
-						const xpos = x * ((1 + z) + (v / 299792.458));
-						return {
-							x: xpos,
-							y: 0.90,
-							xref: "x",
-							yref: "paper",
-							text: `${label}`,
-							showarrow: false,
-							textangle: -90,
-							font: { color, size: 8 },
-							xanchor: "center",
-							yanchor: "middle",
-							bgcolor: "white",
-							layer: "above",
-							opacity: 0.9,
-							cliponaxis: true,
-                            customdata: ["line_label"]
-						};
-					})
-				);
-		}
-
-		// --- Combine with telluric rectangles (if any) ---
-		function applyShapesAndAnnotations() {
-			const vrects = figDiv.layout.shapes?.filter(s => s.type === "rect") || [];
-			const allShapes = vrects.concat(buildShapes());
-
-			const currentXRange = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
-			const currentYRange = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
-
-			// Preserve existing annotations (e.g., vrect labels)
-            const existingAnnots = figDiv.layout.annotations?.filter(a => !a.customdata?.includes("line_label")) || [];
-            const combinedAnnots = existingAnnots.concat(buildAnnotations());
-
-            Plotly.relayout(figDiv, {
-                shapes: allShapes,
-                annotations: combinedAnnots,
-                "xaxis.autorange": false,
-                "yaxis.autorange": false,
-                ...(currentXRange && { "xaxis.range": currentXRange }),
-                ...(currentYRange && { "yaxis.range": currentYRange })
+            // Toggle on click
+            element.addEventListener("click", () => {
+                overlayState[btn.overlay] = !overlayState[btn.overlay];
+                element.style.backgroundColor = overlayState[btn.overlay] ? "green" : "white";
+                updateLines(Number(redshiftSlider.value), Number(velocitySlider.value));
             });
-		}
+        }
+    });
+	
+ 	// --- Main updateLines function ---
+  function updateLines(z, v) {
+        const figDiv = getFigDiv();
+        if (!figDiv) return;
 
-		// --- Handle autoscale safely ---
-		function safelyReapplyAfterAutoscale() {
-			if (figDiv._isRescaling) return;
-			figDiv._isRescaling = true;
+        // --- Throttle redundant redraws ---
+        if (updateTimeout) clearTimeout(updateTimeout);
+        updateTimeout = setTimeout(() => {
+            updateTimeout = null;
 
-			// Temporarily remove overlays, autorange, then reapply
-			Plotly.relayout(figDiv, { shapes: [], annotations: [] })
-				.then(() =>
-					Plotly.relayout(figDiv, {
-						"xaxis.autorange": true,
-						"yaxis.autorange": true
-					})
-				)
-				.then(() => {
-					const { xaxis, yaxis } = figDiv.layout;
-					return Plotly.relayout(figDiv, {
-						"xaxis.autorange": false,
-						"yaxis.autorange": false,
-						"xaxis.range": xaxis.range,
-						"yaxis.range": yaxis.range
-					});
-				})
-				.then(() => {
-					applyShapesAndAnnotations();
-				})
-				.finally(() => {
-					figDiv._isRescaling = false;
-				});
-		}
+            // --- Build line shapes ---
+            function buildLineShapes() {
+                return Object.entries(lines)
+                    .filter(([id]) => document.getElementById(id)?.checked)
+                    .flatMap(([_, { lines: lineList, color }]) =>
+                        lineList.map(({ x }) => {
+                            const xpos = x * ((1 + z) + (v / 299792.458));
+                            return {
+                                type: "line",
+                                x0: xpos,
+                                x1: xpos,
+                                y0: 0,
+                                y1: 1,
+                                xref: "x",
+                                yref: "paper",
+                                line: { color, width: 2 },
+                                layer: "below"
+                            };
+                        })
+                    );
+            }
 
-		// --- Initial draw ---
-		applyShapesAndAnnotations();
+            // --- Build line annotations ---
+            function buildLineAnnotations() {
+              return Object.entries(lines)
+                  .filter(([id]) => document.getElementById(id)?.checked)
+                  .flatMap(([_, { lines: lineList, color }]) =>
+                      lineList.map(({ x, label }) => {
+                          const xpos = x * ((1 + z) + (v / 299792.458));
+                          return {
+                              x: xpos,
+                              y: figDiv.layout.yaxis?.range
+                                  ? figDiv.layout.yaxis.range[1] * 0.95 // position near top of y-axis
+                                  : 0, // fallback
+                              xref: "x",
+                              yref: "y",
+                              text: label,
+                              showarrow: false,
+                              textangle: -90,
+                              font: { color, size: 8 },
+                              xanchor: "center",
+                              yanchor: "bottom",
+                              bgcolor: "white",
+                              borderpad: 1.5,
+                              borderradius: 3,
+                              layer: "above",
+                              opacity: 0.9,
+                              cliponaxis: true,
+                              captureevents: false,
+                              customdata: ["line_label"]
+                          };
+                      })
+                  );
+          }
 
-		// --- Attach event handlers once ---
-		if (!figDiv._ignoreOverlaysHandlerAdded) {
-			figDiv.on("plotly_doubleclick", safelyReapplyAfterAutoscale);
-			figDiv.on("plotly_relayout", ev => {
-				if (
-					ev["xaxis.autorange"] === true ||
-					ev["yaxis.autorange"] === true ||
-					ev["scene.autorange"] === true
-				) {
-					safelyReapplyAfterAutoscale();
-				}
-			});
-			figDiv._ignoreOverlaysHandlerAdded = true;
-		}
-	}, 1); // <-- redraw throttle (ms)
-  }
+            // --- Build overlay shapes & annotations ---
+            function buildOverlayShapes() {
+                const shapes = [];
+                const annotations = [];
+
+                // --- Tellurics ---
+                if (overlayState.telluric) {
+                    const bands = { "O2 A-band": [7590, 7700], "H2O band1": [7150, 7350], "H2O band2": [8100, 8400] };
+                    Object.entries(bands).forEach(([label, [start, end]]) => {
+                        shapes.push({
+                            type: "rect",
+                            x0: start, x1: end, y0: 0, y1: 1,
+                            xref: "x", yref: "paper",
+                            fillcolor: "grey", opacity: 0.2, layer: "below", line: { width: 0 }
+                        });
+                        annotations.push({
+                            x: (start + end) / 2,
+                            y: 1.0,
+                            xref: "x", yref: "paper",
+                            text: "⊕", showarrow: false,
+                            font: { color: "black", size: 12 },
+                            layer: "above",
+                            opacity: 0.9,
+                            xanchor: "center",
+                            yanchor: "bottom"
+                        });
+                    });
+                }
+
+                // --- Arm Joins ---
+                if (overlayState.armJoin) {
+                    const bands = { "blue-green": [5240, 5540], "green-red": [6910, 7210] };
+                    Object.entries(bands).forEach(([label, [start, end]]) => {
+                        shapes.push({
+                            type: "rect",
+                            x0: start, x1: end, y0: 0, y1: 1,
+                            xref: "x", yref: "paper",
+                            fillcolor: "brown", opacity: 0.2, layer: "below", line: { width: 0 }
+                        });
+                        annotations.push({
+                            x: (start + end) / 2, y: 1.00,
+                            xref: "x", yref: "paper",
+                            text: "AJ", showarrow: false,
+                            font: { color: "black", size: 12 },
+                            layer: "above",
+                            opacity: 0.9,
+                            xanchor: "center",
+                            yanchor: "bottom"
+                        });
+                    });
+                }
+
+                // --- Skylines ---
+                if (overlayState.skyline) {
+                    const bands = { "6300": [6290, 6310], "5577": [5575, 5580] };
+                    Object.entries(bands).forEach(([label, [start, end]]) => {
+                        shapes.push({
+                            type: "rect",
+                            x0: start, x1: end, y0: 0, y1: 1,
+                            xref: "x", yref: "paper",
+                            fillcolor: "black", opacity: 0.3, layer: "below", line: { width: 0 }
+                        });
+                        annotations.push({
+                            x: (start + end) / 2, y: 1.0,
+                            xref: "x", yref: "paper",
+                            text: "Sky-Sub", showarrow: false,
+                            font: { color: "black", size: 12 },
+                            layer: "above",
+                            opacity: 0.9,
+                            xanchor: "center",
+                            yanchor: "bottom"
+                        });
+                    });
+                }
+
+                return { shapes, annotations };
+            }
+
+            // --- Apply shapes & annotations ---
+            function applyAll() {
+	const { shapes: overlayShapes, annotations: overlayAnnots } = buildOverlayShapes();
+	const lineShapes = buildLineShapes();
+	const lineAnnots = buildLineAnnotations();
+
+	// 1️⃣ Temporarily remove all annotations and lines before autoscale
+	const currentXRange = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
+	const currentYRange = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
+
+	Plotly.relayout(figDiv, {
+		shapes: overlayShapes,         // only background overlays
+		annotations: overlayAnnots,    // overlay annotations only
+		"xaxis.autorange": false,
+		"yaxis.autorange": false,
+		...(currentXRange && { "xaxis.range": currentXRange }),
+		...(currentYRange && { "yaxis.range": currentYRange })
+	}).then(() => {
+		// 2️⃣ Lock the axes in place
+		const lockedX = figDiv.layout.xaxis.range;
+		const lockedY = figDiv.layout.yaxis.range;
+
+		// 3️⃣ Add line shapes + labels, forcing range back to locked state
+		return Plotly.relayout(figDiv, {
+			shapes: overlayShapes.concat(lineShapes),
+			annotations: overlayAnnots.concat(lineAnnots),
+			"xaxis.autorange": false,
+			"yaxis.autorange": false,
+			"xaxis.range": lockedX,
+			"yaxis.range": lockedY
+		});
+	});
+}
+
+            applyAll();
+        }, 1);
+    }
+
+    // --- Ensure initial draw respects overlays ---
+    const initialFigDiv = getFigDiv();
+    if (initialFigDiv) {
+        initialFigDiv.on("plotly_afterplot", () => {
+            updateLines(Number(redshiftSlider.value), Number(velocitySlider.value));
+        });
+    }
 
     function updateRedshiftVelocity() {
         // Always pull from the current slider values (force numbers)
@@ -586,6 +676,14 @@ fetch("{% static 'json/line_data.json' %}")
       {% endif %}
       <!-- END TAGS -->
 
+      <h3>Download</h3>
+      <div class="mb-2">
+        <a href="{% url 'download_spectrum' target.id %}"
+           class="btn btn-sm btn-outline-secondary">
+          Download spectrum (ASCII)
+        </a>
+      </div>
+
       <h3>Classifications</h3>
       <p>
         <u><strong>Auto Classification:</strong></u>&emsp;
@@ -666,6 +764,7 @@ fetch("{% static 'json/line_data.json' %}")
         <a class="nav-link" id="manage-groups-tab" href="#manage-groups" role="tab" data-toggle="tab">Manage Groups</a>
       </li>-->
     </ul>
+    
     <div class="tab-content">
       <div class="tab-pane" id="observe">
         <h4>Observe</h4>
@@ -681,12 +780,14 @@ fetch("{% static 'json/line_data.json' %}")
           <p>Airmass plotting for non-sidereal targets is not currently supported. If you would like to add this functionality, please check out the <a href="https://github.com/TOMToolkit/tom_nonsidereal_airmass" target="_blank">non-sidereal airmass plugin.</a></p>
         {% endif %}
       </div>
+      
       <div class="tab-pane" id="observations">
         {% existing_observation_form object %}
         <h4>Observations</h4>
         <a href="{% url 'targets:detail' pk=target.id %}?update_status=True" title="Update status of observations for target" class="btn btn-primary">Update Observations Status</a>
         {% observation_list object %}
       </div>
+      
       <div class="tab-pane" id="manage-data">
         {% if user.is_authenticated %}
           {% upload_dataproduct object %}
@@ -698,35 +799,42 @@ fetch("{% static 'json/line_data.json' %}")
         {% endif %}
         {% dataproduct_list_for_target object %}
       </div>
+      
       <div class="tab-pane" id="manage-groups">
         {% target_groups target %}
       </div>
+      
       <div class="tab-pane" id="photometry">
         {% target_photometry target %}
         {% get_photometry_data object %}
-        </div>
+    </div>
+      
       <div class="tab-pane active" id="spectroscopy" data-target-id="{{ target.id }}">
         {% target_spectroscopy target %}
       </div>
-	  <div>
-        <!-- Bin/Overplot controls -->
-        <div class="d-flex align-items-center gap-2 mb-4 spectroscopy-only">
-          <input class="form-check-input" type="checkbox" id="toggle-binned" checked>
-          <label class="form-check-label me-3" for="toggle-binned">Binned (Å): </label>
-            <label for="bin-size"></label><input id="bin-size" class="form-control form-control-sm me-2" style="width:4rem"
-                                                 type="number" min="5" step="10" value="15">
+
+      <div class="d-flex flex-column gap-3 spectroscopy-only">
+
+        <!-- Bin/Overplot + Control buttons aligned as a single row -->
+        <div class="d-flex align-items-center gap-3">
+          <!-- Bin checkbox + input -->
+          <div class="d-flex align-items-center gap-1" style="min-width: 200px;">
+            <input class="form-check-input" type="checkbox" id="toggle-binned" checked>
+            <label class="form-check-label mb-0" for="toggle-binned">Binned (Å):</label>
+            <input id="bin-size" class="form-control form-control-sm" type="number" min="5" step="10" value="15" style="width:4rem;">
+          </div>
+
+          <!-- Spacer between bin input and buttons -->
+          <div style="width:1rem;"></div>
+
+          <!-- Vertical feature buttons -->
+          <button id="telluric_display" class="btn btn-sm toggle-btn">Telluric Regions</button>
+          <button id="arm_join_display" class="btn btn-sm toggle-btn">Arm Joins</button>
+          <button id="skyline_display" class="btn btn-sm toggle-btn">Skylines</button>
         </div>
-        <!-- Bin/Overplot controls -->
 
-      <!-- Download spectrum (ASCII) -->
-      <a href="{% url 'download_spectrum' target.id %}"
-         class="btn btn-sm btn-outline-secondary spectroscopy-only mb-3">
-        Download spectrum (ASCII)
-      </a>
-
-      </div>
-      <!-- Checkboxes -->
-      <div class="checkbox-container spectroscopy-only">
+        <!-- Checkboxes -->
+        <div class="checkbox-container spectroscopy-only">
 
           <div class="checkbox-group">
               <h5>Common Lines</h5>
@@ -743,7 +851,8 @@ fetch("{% static 'json/line_data.json' %}")
               <div class="checkbox-grid" id="transient-specific-lines"></div>
           </div>
 
-    </div>
+        </div>
+      </div>
       
       <!--{% comments_enabled as comments_are_enabled %}
       <hr/>
@@ -773,7 +882,7 @@ fetch("{% static 'json/line_data.json' %}")
           id="redshiftSlider"
           min="0"
           max="3"
-          step="0.0001"
+          step="0.001"
           value="{{ object.auto_tidesclass_z|default_if_none:0 }}"
           style="width: 300px"
       >
@@ -801,7 +910,7 @@ fetch("{% static 'json/line_data.json' %}")
               id="redshiftInput"
               min="0"
               max="3"
-              step="0.0001"
+              step="0.001"
               value="{{ object.auto_tidesclass_z|default_if_none:0 }}"
               style="width: 80px; text-align: center;"
           >
