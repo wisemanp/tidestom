@@ -119,21 +119,34 @@ fetch("{% static 'json/line_data.json' %}")
     });
 	
  	// --- Main updateLines function ---
-  function updateLines(z, v) {
+    function updateLines(z, v) {
         const figDiv = getFigDiv();
         if (!figDiv) return;
 
-        // --- Throttle redundant redraws ---
-        if (updateTimeout) clearTimeout(updateTimeout);
-        updateTimeout = setTimeout(() => {
-            updateTimeout = null;
-
-            // --- Build line shapes ---
-            function buildLineShapes() {
-                return Object.entries(lines)
-                    .filter(([id]) => document.getElementById(id)?.checked)
-                    .flatMap(([_, { lines: lineList, color }]) =>
-                        lineList.map(({ x }) => {
+        // --- Build line shapes (per-checkbox -> many lines) ---
+        function buildShapes() {
+            return Object.entries(lines)
+                .filter(([id]) => document.getElementById(id)?.checked)
+                .flatMap(([_, entry]) => {
+                    // older JSON variants used entry.x array; newer use entry.lines array of {x,label}
+                    if (Array.isArray(entry.x)) {
+                        // simple numeric list
+                        return entry.x.map(value => {
+                            const xpos = value * ((1 + z) + (v / 299792.458));
+                            return {
+                                type: "line",
+                                x0: xpos,
+                                x1: xpos,
+                                y0: 0,
+                                y1: 1,
+                                xref: "x",
+                                yref: "paper",
+                                line: { color: entry.color, width: 2 },
+                                layer: "below"
+                            };
+                        });
+                    } else if (Array.isArray(entry.lines)) {
+                        return entry.lines.map(({ x }) => {
                             const xpos = x * ((1 + z) + (v / 299792.458));
                             return {
                                 type: "line",
@@ -143,160 +156,230 @@ fetch("{% static 'json/line_data.json' %}")
                                 y1: 1,
                                 xref: "x",
                                 yref: "paper",
-                                line: { color, width: 2 },
+                                line: { color: entry.color, width: 2 },
                                 layer: "below"
                             };
-                        })
-                    );
+                        });
+                    }
+                    return [];
+                });
+        }
+
+        // --- Build plotly annotations for line labels (matches older working version) ---
+        function buildAnnotations() {
+            return Object.entries(lines)
+                .filter(([id]) => document.getElementById(id)?.checked)
+                .flatMap(([_, entry]) => {
+                    if (Array.isArray(entry.x)) {
+                        return entry.x.map(value => {
+                            const xpos = value * ((1 + z) + (v / 299792.458));
+                            return {
+                                x: xpos,
+                                y: 0.90,
+                                xref: "x",
+                                yref: "paper",
+                                text: `${entry.label} ${value}`,
+                                showarrow: false,
+                                textangle: -90,
+                                font: { color: entry.color, size: 8 },
+                                xanchor: "center",
+                                yanchor: "middle",
+                                bgcolor: "white",
+                                layer: "above",
+                                opacity: 0.95,
+                                cliponaxis: true,
+                                // marker to identify these annotations later:
+                                customdata: ["line_label"]
+                            };
+                        });
+                    } else if (Array.isArray(entry.lines)) {
+                        return entry.lines.map(({ x, label }) => {
+                            const xpos = x * ((1 + z) + (v / 299792.458));
+                            return {
+                                x: xpos,
+                                y: 0.90,
+                                xref: "x",
+                                yref: "paper",
+                                text: `${label}`,
+                                showarrow: false,
+                                textangle: -90,
+                                font: { color: entry.color, size: 8 },
+                                xanchor: "center",
+                                yanchor: "middle",
+                                bgcolor: "white",
+                                layer: "above",
+                                opacity: 0.95,
+                                cliponaxis: true,
+                                customdata: ["line_label"]
+                            };
+                        });
+                    }
+                    return [];
+                });
+        }
+
+        // --- Build overlay rectangles + overlay annotations (observed-frame, independent of z/v) ---
+        function buildOverlays() {
+            const shapes = [];
+            const annots = [];
+
+            if (overlayState.telluric) {
+                const telluricBands = { 'O2 A-band': [7590, 7700], 'H2O band1': [7150,7350], 'H2O band2': [8100,8400] };
+                Object.entries(telluricBands).forEach(([label, [start,end]]) => {
+                    shapes.push({
+                        type: "rect",
+                        x0: start, x1: end,
+                        y0: 0, y1: 1,
+                        xref: "x", yref: "paper",
+                        fillcolor: "grey", opacity: 0.2, layer: "below", line: { width: 0 }
+                    });
+                    annots.push({
+                        x: (start + end) / 2, y: 1.0,
+                        xref: "x", yref: "paper",
+                        text: "⊕", showarrow: false,
+                        font: { size: 12, color: "black" },
+                        xanchor: "center", yanchor: "bottom",
+                        opacity: 0.95
+                    });
+                });
             }
 
-            // --- Build line annotations ---
-            function buildLineAnnotations() {
-              return Object.entries(lines)
-                  .filter(([id]) => document.getElementById(id)?.checked)
-                  .flatMap(([_, { lines: lineList, color }]) =>
-                      lineList.map(({ x, label }) => {
-                          const xpos = x * ((1 + z) + (v / 299792.458));
-                          return {
-                              x: xpos,
-                              y: figDiv.layout.yaxis?.range
-                                  ? figDiv.layout.yaxis.range[1] * 0.8 // position near top of y-axis
-                                  : 0, // fallback
-                              xref: "x",
-                              yref: "y",
-                              text: label,
-                              showarrow: false,
-                              textangle: -90,
-                              font: { color, size: 8 },
-                              xanchor: "center",
-                              yanchor: "bottom",
-                              bgcolor: "white",
-                              borderpad: 1.5,
-                              borderradius: 3,
-                              layer: "above",
-                              opacity: 0.9,
-                              cliponaxis: true,
-                              captureevents: false,
-                              customdata: ["line_label"]
-                          };
-                      })
-                  );
-          }
-
-            // --- Build overlay shapes & annotations ---
-            function buildOverlayShapes() {
-                const shapes = [];
-                const annotations = [];
-
-                // --- Tellurics ---
-                if (overlayState.telluric) {
-                    const bands = { "O2 A-band": [7590, 7700], "H2O band1": [7150, 7350], "H2O band2": [8100, 8400] };
-                    Object.entries(bands).forEach(([label, [start, end]]) => {
-                        shapes.push({
-                            type: "rect",
-                            x0: start, x1: end, y0: 0, y1: 1,
-                            xref: "x", yref: "paper",
-                            fillcolor: "grey", opacity: 0.2, layer: "below", line: { width: 0 }
-                        });
-                        annotations.push({
-                            x: (start + end) / 2,
-                            y: 1.0,
-                            xref: "x", yref: "paper",
-                            text: "⊕", showarrow: false,
-                            font: { color: "black", size: 12 },
-                            layer: "above",
-                            opacity: 0.9,
-                            xanchor: "center",
-                            yanchor: "bottom"
-                        });
+            if (overlayState.armJoin) {
+                const overlapBands = { 'blue-green': [5240,5540], 'green-red': [6910,7210] };
+                Object.entries(overlapBands).forEach(([label, [start,end]]) => {
+                    shapes.push({
+                        type: "rect",
+                        x0: start, x1: end,
+                        y0: 0, y1: 1,
+                        xref: "x", yref: "paper",
+                        fillcolor: "brown", opacity: 0.2, layer: "below", line: { width: 0 }
                     });
-                }
-
-                // --- Arm Joins ---
-                if (overlayState.armJoin) {
-                    const bands = { "blue-green": [5240, 5540], "green-red": [6910, 7210] };
-                    Object.entries(bands).forEach(([label, [start, end]]) => {
-                        shapes.push({
-                            type: "rect",
-                            x0: start, x1: end, y0: 0, y1: 1,
-                            xref: "x", yref: "paper",
-                            fillcolor: "brown", opacity: 0.2, layer: "below", line: { width: 0 }
-                        });
-                        annotations.push({
-                            x: (start + end) / 2, y: 1.00,
-                            xref: "x", yref: "paper",
-                            text: "AJ", showarrow: false,
-                            font: { color: "black", size: 12 },
-                            layer: "above",
-                            opacity: 0.9,
-                            xanchor: "center",
-                            yanchor: "bottom"
-                        });
+                    annots.push({
+                        x: (start + end) / 2, y: 1.0,
+                        xref: "x", yref: "paper",
+                        text: "AJ", showarrow: false,
+                        font: { size: 12, color: "black" },
+                        xanchor: "center", yanchor: "bottom",
+                        opacity: 0.95
                     });
-                }
-
-                // --- Skylines ---
-                if (overlayState.skyline) {
-                    const bands = { "6300": [6290, 6310], "5577": [5575, 5580] };
-                    Object.entries(bands).forEach(([label, [start, end]]) => {
-                        shapes.push({
-                            type: "rect",
-                            x0: start, x1: end, y0: 0, y1: 1,
-                            xref: "x", yref: "paper",
-                            fillcolor: "black", opacity: 0.3, layer: "below", line: { width: 0 }
-                        });
-                        annotations.push({
-                            x: (start + end) / 2, y: 1.0,
-                            xref: "x", yref: "paper",
-                            text: "Sky-Sub", showarrow: false,
-                            font: { color: "black", size: 12 },
-                            layer: "above",
-                            opacity: 0.9,
-                            xanchor: "center",
-                            yanchor: "bottom"
-                        });
-                    });
-                }
-
-                return { shapes, annotations };
+                });
             }
 
-            // --- Apply shapes & annotations ---
-            function applyAll() {
-	const { shapes: overlayShapes, annotations: overlayAnnots } = buildOverlayShapes();
-	const lineShapes = buildLineShapes();
-	const lineAnnots = buildLineAnnotations();
+            if (overlayState.skyline) {
+                const skylineBands = { '6300': [6290,6310], '5577': [5575,5580] };
+                Object.entries(skylineBands).forEach(([label, [start,end]]) => {
+                    shapes.push({
+                        type: "rect",
+                        x0: start, x1: end,
+                        y0: 0, y1: 1,
+                        xref: "x", yref: "paper",
+                        fillcolor: "black", opacity: 0.3, layer: "below", line: { width: 0 }
+                    });
+                    annots.push({
+                        x: (start + end) / 2, y: 1.0,
+                        xref: "x", yref: "paper",
+                        text: "Sky-Sub", showarrow: false,
+                        font: { size: 12, color: "black" },
+                        xanchor: "center", yanchor: "bottom",
+                        opacity: 0.95
+                    });
+                });
+            }
 
-	// 1️⃣ Temporarily remove all annotations and lines before autoscale
-	const currentXRange = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
-	const currentYRange = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
+            return { shapes, annots };
+        }
 
-	Plotly.relayout(figDiv, {
-		shapes: overlayShapes,         // only background overlays
-		annotations: overlayAnnots,    // overlay annotations only
-		"xaxis.autorange": false,
-		"yaxis.autorange": false,
-		...(currentXRange && { "xaxis.range": currentXRange }),
-		...(currentYRange && { "yaxis.range": currentYRange })
-	}).then(() => {
-		// 2️⃣ Lock the axes in place
-		const lockedX = figDiv.layout.xaxis.range;
-		const lockedY = figDiv.layout.yaxis.range;
+        // --- Apply shapes & annotations with ranges preserved ---
+        async function applyShapesAndAnnotations() {
+            // --- Gather overlays, line shapes, and annotations ---
+            const { shapes: overlayShapes, annots: overlayAnnots } = buildOverlays();
+            const lineShapes = buildShapes();
+            const lineAnnots = buildAnnotations();
 
-		// 3️⃣ Add line shapes + labels, forcing range back to locked state
-		return Plotly.relayout(figDiv, {
-			shapes: overlayShapes.concat(lineShapes),
-			annotations: overlayAnnots.concat(lineAnnots),
-			"xaxis.autorange": false,
-			"yaxis.autorange": false,
-			"xaxis.range": lockedX,
-			"yaxis.range": lockedY
-		});
-	});
-}
+            // --- Ensure shaded regions draw behind traces ---
+            overlayShapes.forEach(s => {
+                if (s.type === "rect") s.layer = "below traces";
+            });
 
-            applyAll();
+            // --- Preserve current view ranges ---
+            const currentX = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
+            const currentY = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
+
+            // --- First relayout: overlays + locked axes (no line annotations yet) ---
+            const relayoutPayload = {
+                shapes: overlayShapes.concat(lineShapes),
+                annotations: overlayAnnots,
+                "xaxis.autorange": false,
+                "yaxis.autorange": false,
+            };
+            if (currentX) relayoutPayload["xaxis.range"] = currentX;
+            if (currentY) relayoutPayload["yaxis.range"] = currentY;
+
+            await Plotly.relayout(figDiv, relayoutPayload);
+
+            // --- Second relayout: add line annotations while preserving shapes ---
+            const mergedAnnots = (figDiv.layout.annotations || []).concat(lineAnnots);
+            const preservedShapes = figDiv.layout.shapes || [];
+
+            await Plotly.relayout(figDiv, {
+                shapes: preservedShapes,
+                annotations: mergedAnnots,
+            });
+
+            // --- Done ---
+            return;
+        }
+
+        // --- Autoscale handler: remove overlays, let Plotly autorange, then reapply overlays/labels ---
+        async function safelyReapplyAfterAutoscale() {
+            // prevent reentry
+            if (figDiv._isRescaling) return;
+            figDiv._isRescaling = true;
+
+            try {
+                // remove lines + annotations (keep only overlay rects if you prefer)
+                await Plotly.relayout(figDiv, { shapes: [], annotations: [] });
+
+                // trigger autorange
+                await Plotly.relayout(figDiv, { "xaxis.autorange": true, "yaxis.autorange": true });
+
+                // lock new ranges
+                const xaxis = figDiv.layout.xaxis;
+                const yaxis = figDiv.layout.yaxis;
+                await Plotly.relayout(figDiv, {
+                    "xaxis.autorange": false,
+                    "yaxis.autorange": false,
+                    "xaxis.range": xaxis.range,
+                    "yaxis.range": yaxis.range
+                });
+
+                // reapply shapes & annotations
+                await applyShapesAndAnnotations();
+            } catch (err) {
+                console.error("safelyReapplyAfterAutoscale error:", err);
+            } finally {
+                figDiv._isRescaling = false;
+            }
+        }
+
+        // --- Initial draw ---
+        // throttle and call
+        if (updateTimeout) clearTimeout(updateTimeout);
+        updateTimeout = setTimeout(() => {
+            updateTimeout = null;
+            applyShapesAndAnnotations();
         }, 1);
+
+        // --- Hook events once ---
+        if (!figDiv._ignoreOverlaysHandlerAdded) {
+            figDiv.on("plotly_doubleclick", () => safelyReapplyAfterAutoscale());
+            figDiv.on("plotly_relayout", ev => {
+                if (ev["xaxis.autorange"] === true || ev["yaxis.autorange"] === true || ev["scene.autorange"] === true) {
+                    safelyReapplyAfterAutoscale();
+                }
+            });
+            figDiv._ignoreOverlaysHandlerAdded = true;
+        }
     }
 
     // --- Ensure initial draw respects overlays ---
