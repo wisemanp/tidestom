@@ -32,7 +32,7 @@ def download_spectrum_ascii(request, target_id):
     spec = (
         TidesSpec.objects
         .filter(tides=target)
-        .order_by('-obs_date', '-qmost_id')
+        .order_by('-obs_date', '-tides_specid')
         .first()
     )
     if not spec or not spec.filepath:

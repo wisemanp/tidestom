@@ -20,32 +20,56 @@ register = template.Library()
 def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_path=None):
     """
     Render a spectroscopic plot for a Target.
-    Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
+    Overlays all available spectra from tides_spec (FITS/TXT with WAVE/FLUX columns).
     """
     try:
-        # last spectrum only
-        spectra, specs = load_spectra(target, last=True)
+        spectra, specs = load_spectra(target, last=False)
     except Exception as exc:
         return {'target': target, 'plot': f'<p>Failed to load spectrum: {exc}</p>'}
     if not specs:
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
-    spectrum, spec = spectra[0], specs[0]
-    
-    plot_data = [
-        go.Scatter(
-            x=spectrum.spectral_axis.value,
-            y=spectrum.flux.value,
-            name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
-                    else datetime.now().strftime('%Y%m%d-%H:%M:%S')),
-            marker=dict(color='darkslategray'),
-            opacity=0.5,
-            #visible='legendonly',
-        )
+
+    plot_data = []
+    ymins = []
+    ymaxs = []
+    colors = [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
     ]
+    for i, (spectrum, spec) in enumerate(zip(spectra, specs)):
+        label = (
+            spec.obs_date.strftime('%Y%m%d-%H:%M:%S')
+            if getattr(spec, 'obs_date', None)
+            else datetime.now().strftime('%Y%m%d-%H:%M:%S')
+        )
+        # Include exposure where available
+        try:
+            exp = spec.additional_info.get('EXPOSURE_TIME_S') if spec.additional_info else None
+            if exp:
+                label = f"{label} (exp {float(exp):.0f}s)"
+        except Exception:
+            pass
+
+        c = colors[i % len(colors)]
+        plot_data.append(
+            go.Scatter(
+                x=spectrum.spectral_axis.value,
+                y=spectrum.flux.value,
+                name=label,
+                marker=dict(color=c),
+                opacity=0.6,
+            )
+        )
+        # Track y-axis ranges to set a reasonable global range
+        try:
+            ymins.append(np.nanpercentile(spectrum.flux.value, 0.1))
+            ymaxs.append(np.nanpercentile(spectrum.flux.value, 99.9))
+        except Exception:
+            pass
 
     fig = go.Figure(data=plot_data)
-    fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value, 0.1),
-                            np.nanpercentile(spectrum.flux.value,99.9)])
+    if ymins and ymaxs:
+        fig.update_yaxes(range=[min(ymins), max(ymaxs)])
 
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
@@ -75,12 +99,15 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     if snid_path is not None:
         try:
             pysnid_file = snid_path
-            fig = add_snid_templates(pysnid_file,
-                             spectrum.spectral_axis.value,
-                             spectrum.flux.value,
-                             fig,
-                             n=3
-                             )
+            # Overlay templates against the latest spectrum for alignment
+            spectrum_ref = spectra[-1]
+            fig = add_snid_templates(
+                pysnid_file,
+                spectrum_ref.spectral_axis.value,
+                spectrum_ref.flux.value,
+                fig,
+                n=3,
+            )
         except Exception as exc:
             print(exc)
             pass
@@ -90,12 +117,14 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
         try:
             auto_snid = f'{paths[0]}'
             try:
-                fig = add_snid_templates(auto_snid,
-                                spectrum.spectral_axis.value,
-                                spectrum.flux.value,
-                                fig,
-                                n=3
-                                )
+                spectrum_ref = spectra[-1]
+                fig = add_snid_templates(
+                    auto_snid,
+                    spectrum_ref.spectral_axis.value,
+                    spectrum_ref.flux.value,
+                    fig,
+                    n=3,
+                )
             except Exception as exc:
                 print(exc)
                 pass
@@ -106,12 +135,14 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     if ngsf_path is not None:
         try:
             ngsf_file = ngsf_path
-            fig = add_ngsf_templates(ngsf_file,
-                             spectrum.spectral_axis.value,
-                             spectrum.flux.value,
-                             fig,
-                             n=3
-                             )
+            spectrum_ref = spectra[-1]
+            fig = add_ngsf_templates(
+                ngsf_file,
+                spectrum_ref.spectral_axis.value,
+                spectrum_ref.flux.value,
+                fig,
+                n=3,
+            )
         except Exception as exc:
             return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
 

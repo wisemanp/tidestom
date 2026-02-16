@@ -15,7 +15,13 @@ from astropy.time import Time
 from custom_code.models import TidesTarget as Target
 from custom_code.models import TidesClassSubClass
 from custom_code.models import TidesSpec
-from custom_code.models import PipelineClassificationGlobal
+from custom_code.models import (
+    PipelineClassificationGlobal,
+    PipelineClassificationSnid,
+    PipelineClassificationSuperfit,
+    PipelineClassificationDash,
+    PipelineClassificationEd,
+)
 
 from tidestom.tides_utils.target_utils import (
     generate_spectrum_plot  # removed add_spectrum_to_database
@@ -57,12 +63,21 @@ class Command(BaseCommand):
 
     # ---------------- helpers ----------------
 
-    def _compute_qmost_id(self, target_id: int, filepath: Path) -> int:
+    def _assign_specid_to_all_pipelines(self, target, tides_specid: int):
+        """Ensure all pipeline tables (global, snid, superfit, dash, ed) have tides_specid set for this target."""
+        PipelineClassificationGlobal.objects.filter(tides=target, tides_specid__isnull=True).update(tides_specid=tides_specid)
+        PipelineClassificationSnid.objects.filter(tides=target, tides_specid__isnull=True).update(tides_specid=tides_specid)
+        PipelineClassificationSuperfit.objects.filter(tides=target, tides_specid__isnull=True).update(tides_specid=tides_specid)
+        PipelineClassificationDash.objects.filter(tides=target, tides_specid__isnull=True).update(tides_specid=tides_specid)
+        PipelineClassificationEd.objects.filter(tides=target, tides_specid__isnull=True).update(tides_specid=tides_specid)
+
+    def _compute_tides_specid(self, target_id: int, filepath: Path) -> int:
         """
-        Stable 63-bit integer derived from (target_id|filepath). Fits in BIGINT.
+        Stable 63-bit integer for tides_specid derived from (target_id|filename).
+        Ties the ID to filenames consistently for mock data.
         """
-        h = hashlib.sha1(f"{target_id}|{str(filepath)}".encode('utf-8')).hexdigest()
-        # take 15 hex digits (~60 bits) to stay below 2^63-1
+        fname = filepath.name
+        h = hashlib.sha1(f"{target_id}|{fname}".encode('utf-8')).hexdigest()
         return int(h[:15], 16)
 
     def _extract_obs_times(self, file_path: Path):
@@ -107,7 +122,7 @@ class Command(BaseCommand):
         # Check for existing rows by either path
         existing_qs = TidesSpec.objects.filter(
             tides=target, filepath__in=[str(original), str(symlinked)]
-        ).order_by('-obs_date', '-qmost_id')
+        ).order_by('-obs_date', '-tides_specid')
         if existing_qs.exists():
             count = existing_qs.count()
             if count > 1:
@@ -115,27 +130,34 @@ class Command(BaseCommand):
                       f"Skipping insert to avoid duplicates.")
             else:
                 print(f"tides_spec already exists for target {target.name} and {original.name}; skipping insert.")
-            return
+            # Return existing tides_specid for downstream use
+            return existing_qs.first().tides_specid
 
         obs_date, obs_mjd = self._extract_obs_times(store_path)
-        qmost_id = self._compute_qmost_id(target.id, store_path)
-
+        tides_specid = self._compute_tides_specid(target.id, store_path)
         TidesSpec.objects.create(
-            qmost_id=qmost_id,
+            qmost_id=tides_specid,  # temporary dummy to satisfy NOT NULL/PK
+            tides_specid=tides_specid,
             tides=target,
             filepath=str(store_path),
             obs_date=obs_date,
             obs_mjd=obs_mjd,
         )
-        print(f"Inserted tides_spec for target {target.name} -> {store_path.name}")
+        print(f"Inserted tides_spec for target {target.name} -> {store_path.name} (tides_specid={tides_specid})")
+        return tides_specid
 
-    def _upsert_auto_classification(self, target, sn_type, sn_subtype, probability, source_version):
+    def _upsert_auto_classification(self, target, tides_specid, sn_type, sn_subtype, probability, source_version):
         if not sn_type and probability is None:
             return
         obj, created = PipelineClassificationGlobal.objects.update_or_create(
             tides=target,
             version=source_version,
-            defaults={'sn_type': sn_type, 'probability': probability, 'notes': sn_subtype or ''},
+            defaults={
+                'tides_specid': tides_specid,
+                'sn_type': sn_type,
+                'probability': probability,
+                'notes': sn_subtype or ''
+            },
         )
         if created:
             print(f'Inserted auto classification [{source_version}] for target {target.name}: '
@@ -162,8 +184,12 @@ class Command(BaseCommand):
                 # Update plots (optional; keep this)
                 generate_spectrum_plot(target, spectrum_file_path)
                 print(f'Successfully updated plots for target {target.name}')
-                # Ensure tides_spec exists
-                self._ensure_tides_spec(target, spectrum_file_path)
+                # Ensure tides_spec exists and get tides_specid
+                tides_specid = self._ensure_tides_spec(target, spectrum_file_path)
+                if tides_specid is None:
+                    tides_specid = self._compute_tides_specid(target.id, Path(spectrum_file_path))
+                # assign specid to any pre-existing pipeline rows for this target
+                self._assign_specid_to_all_pipelines(target, tides_specid)
 
                 # Auto classification from mock CSV
                 int_name = int(target.name)
@@ -179,7 +205,7 @@ class Command(BaseCommand):
                             if not exists:
                                 print(f"WARNING: Subclass '{auto_class_subclass}' not found for target {target.name}.")
                         self._upsert_auto_classification(
-                            target, auto_class, auto_class_subclass, auto_class_prob, source_version='mock'
+                            target, tides_specid, auto_class, auto_class_subclass, auto_class_prob, source_version='mock'
                         )
                     else:
                         print(f'WARNING: No auto classification found for target {target.name}.')
@@ -209,7 +235,10 @@ class Command(BaseCommand):
             # Update plot and ensure tides_spec
             generate_spectrum_plot(target, spectrum_file_path)
             print(f'Successfully updated plots for target {target.name}.')
-            self._ensure_tides_spec(target, spectrum_file_path)
+            tides_specid = self._ensure_tides_spec(target, spectrum_file_path)
+            if tides_specid is None:
+                tides_specid = self._compute_tides_specid(target.id, Path(spectrum_file_path))
+            self._assign_specid_to_all_pipelines(target, tides_specid)
 
             # Auto classification
             if auto_class:
@@ -219,7 +248,7 @@ class Command(BaseCommand):
                         print(f"WARNING: Subclass '{auto_class_subclass}' not found in TidesClassSubClass "
                               f"for target {target.name}.")
                 self._upsert_auto_classification(
-                    target, auto_class, auto_class_subclass, auto_class_prob, source_version='pipeline'
+                    target, tides_specid, auto_class, auto_class_subclass, auto_class_prob, source_version='pipeline'
                 )
             else:
                 print(f'WARNING: No auto classification found for target {target.name}')
