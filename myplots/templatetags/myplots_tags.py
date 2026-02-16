@@ -54,76 +54,31 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
     fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value/scale_factor, 0.1),
                             np.nanpercentile(spectrum.flux.value/scale_factor,99.9)])
 
-    ### tellurics ###
-    # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
-    # Wallace et al. 1996 “An Atlas of the Spectrum of the Solar Photosphere from 296 to 1300 nm”
-    telluric_bands = {
-        #'O2 B-band': (6867, 6884),
-        #'O2 gamma-band': (6280, 6310),
-        'O2 A-band': (7590, 7700),
-        'H2O band1': (7150, 7350),
-        'H2O band2': (8100, 8400),
-        #'H2O band3': (8900, 9800)
-    }
-    # add shaded regions for each telluric band
-    for label, (start, end) in telluric_bands.items():
-        fig.add_vrect(
-            x0=start, x1=end,
-            fillcolor="grey",
-            opacity=0.2,
-            layer="below",
-            line_width=0,
-            annotation_text="⊕",
-            annotation_position="top",
-            annotation_font=dict(size=12, color="black")
-        )
-    
-
-    ### arm joins ###
-    # Inclusion of the 4MOST (low res) spectrograph arm overlap arm regions
-    # Taken from the 4MOST manual : https://www.4most.eu/cms/files/VIS-MAN-4MOST-47110-9800-0001_2_00-4MOST-User-Manual.pdf
-
-    overlap_bands = {
-        'blue-green' : (5240,5540),
-        'green-red': (6910,7210)
-    }
-
-    for label, (start, end) in overlap_bands.items():
-        fig.add_vrect(
-            x0=start, x1=end,
-            fillcolor="brown",
-            opacity=0.2,
-            layer="below",
-            line_width=0,
-            annotation_text="AJ",
-            annotation_position="top",
-            annotation_font=dict(size=12, color="black")
-        )
-
-
     ### templates ###
     if snid_path is not None:
         if snid_index is None:
             try:
                 pysnid_file = snid_path
-                fig = add_snid_templates(pysnid_file,
-                                 spectrum.spectral_axis.value,
-                                 spectrum.flux.value,
-                                 fig,
-                                 n=3
-                                )
+                fig = add_snid_templates(
+                	pysnid_file,
+                    spectrum.spectral_axis.value,
+                    spectrum.flux.value,
+                    fig,
+                    n=3
+                )
             except Exception as exc:
                 print(exc)
                 pass
         elif snid_index is not None:
             try:
                 pysnid_file = snid_path
-                fig = add_snid_select_template(pysnid_file,
-                                         spectrum.spectral_axis.value,
-                                         spectrum.flux.value,
-                                         fig,
-                                         idx=snid_index
-                                         )
+                fig = add_snid_select_template(
+                	pysnid_file,
+                    spectrum.spectral_axis.value,
+                    spectrum.flux.value,
+                    fig,
+                    idx=snid_index
+                )
             except Exception as exc:
                 print(exc)
                 pass
@@ -133,12 +88,13 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
         try:
             auto_snid = f'{paths[0]}'
             try:
-                fig = add_snid_templates(auto_snid,
-                                spectrum.spectral_axis.value,
-                                spectrum.flux.value/scale_factor,
-                                fig,
-                                n=3
-                                )
+                fig = add_snid_templates(
+                	auto_snid,
+                    spectrum.spectral_axis.value,
+                    spectrum.flux.value/scale_factor,
+                    fig,
+                    n=3
+                )
             except Exception as exc:
                 print(exc)
                 pass
@@ -149,28 +105,30 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
     if ngsf_path is not None:
         try:
             ngsf_file = ngsf_path
-            fig = add_ngsf_templates(ngsf_file,
-                             spectrum.spectral_axis.value,
-                             spectrum.flux.value/scale_factor,
-                             fig,
-                             n=3
-                             )
+            fig = add_ngsf_templates(
+            	ngsf_file,
+                spectrum.spectral_axis.value,
+                spectrum.flux.value/scale_factor,
+                fig,
+                n=3
+            )
         except Exception as exc:
             return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
-    
-    fig.update_layout(autosize=True,
-                      height=650,
-                      xaxis_title='Observed Wavelength (Å)',
-                      yaxis_title='Flux (erg/s/cm²/Å)',
-                      xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      legend_title="Best Matches",
-                      margin=dict(t=150),
-                      legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
-                      showlegend=True,
-                      font_family="P052",
-                      font_size=16,
-                      )
+
+    fig.update_layout(
+    	autosize=True,
+        height=650,
+        xaxis_title='Observed Wavelength (Å)',
+        yaxis_title='Flux (erg/s/cm²/Å)',
+        xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
+    	  yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
+        legend_title="Best Matches",
+        margin=dict(t=150),
+        legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
+        showlegend=True,
+        font_family="P052",
+        font_size=16
+    )
 
     return {
         'target': target,
