@@ -160,7 +160,7 @@ fetch("{% static 'json/line_data.json' %}")
                           return {
                               x: xpos,
                               y: figDiv.layout.yaxis?.range
-                                  ? figDiv.layout.yaxis.range[1] * 0.95 // position near top of y-axis
+                                  ? figDiv.layout.yaxis.range[1] * 0.8 // position near top of y-axis
                                   : 0, // fallback
                               xref: "x",
                               yref: "y",
