@@ -41,34 +41,39 @@ a:hover {
     margin: 0 auto;   /* Centers the container */
 }
 
+/* Container that holds all the checkbox groups (e.g. common, absorption, transient) */
 .checkbox-container.spectroscopy-only {
-    display: flex;
-    flex-direction: column;  /* Stack groups vertically */
-    gap: 20px;  /* Adds vertical space between the groups */
-    width: 100%;
+	display: flex;
+	flex-direction: column;  /* Stack groups vertically */
+	gap: 20px;               /* Space between the groups */
+	width: 100%;
 }
 
-	.checkbox-group h5 {
-		margin-bottom: 0.25rem; /* tighten gap under heading */
-	}
+/* Tighten the spacing under section headings */
+.checkbox-group h5 {
+	margin-bottom: 0.25rem;
+}
 
-	.checkbox-group .checkbox-grid {
-		margin-top: 0;  /* remove extra gap above the grid */
-	}
+/* Remove top gap between heading and grid */
+.checkbox-group .checkbox-grid {
+	margin-top: 0;
+}
 
-	/* optionally reduce the space between checkboxes inside the grid */
-	.checkbox-group .checkbox-grid label {
-		margin-bottom: 0.25rem;
-	}
-
-    .checkbox-group .checkbox-grid {
+/* Reduce space between individual checkbox rows */
+.checkbox-group .checkbox-grid label {
+	margin-bottom: 0.25rem;
 	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;   /* reduces space between items */
-    }
+	align-items: center;
+	gap: 0.3em;
+	white-space: nowrap;
+}
 
-
-
+.checkbox-group .checkbox-grid {
+	display: grid;
+	grid-template-columns: repeat(10, 1fr); /* 10 equal columns */
+	gap: 0.2em 0.5em; /* Vertical and horizontal spacing */
+	align-items: start;
+}
 
 .d-none {
     display: none !important;  /* Make sure elements are hidden */
