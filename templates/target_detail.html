@@ -45,12 +45,11 @@ fetch("{% static 'json/line_data.json' %}")
 	.then(data => {
 		lines = data;
 
-		// Separate containers
 		const commonContainer = document.getElementById("common-lines");
 		const absorptionContainer = document.getElementById("absorption-lines");
 		const transientSpecificContainer = document.getElementById("transient-specific-lines");
 
-		// Build checkboxes dynamically from the .json file
+		// Build checkboxes
 		Object.entries(lines).forEach(([id, { color, label, type }]) => {
 			const wrapper = document.createElement("label");
 			wrapper.innerHTML = `
@@ -58,44 +57,165 @@ fetch("{% static 'json/line_data.json' %}")
 				<span style="color:${color};">${label}</span>
 			`;
 
-			if (type === "common") {
-				commonContainer.appendChild(wrapper);
-			} else if (type === "absorption") {
-				absorptionContainer.appendChild(wrapper);
-			} else if (type === "transient-specific") {
-				transientSpecificContainer.appendChild(wrapper);
-			}
+			if (type === "common") commonContainer.appendChild(wrapper);
+			else if (type === "absorption") absorptionContainer.appendChild(wrapper);
+			else if (type === "transient-specific") transientSpecificContainer.appendChild(wrapper);
 		});
 
-		// Add event listeners after building checkboxes
+		// Attach listeners
 		Object.keys(lines).forEach(id => {
-			const checkbox = document.getElementById(id);
-			if (checkbox) {
-				checkbox.addEventListener("change", updateRedshiftVelocity);
-			}
+			document.getElementById(id)?.addEventListener("change", updateRedshiftVelocity);
 		});
+
+        document.getElementById("resetVelocity").addEventListener("click", () => {
+          velocitySlider.value = 0;
+          velocityInput.value = 0;
+          updateRedshiftVelocity();
+	    });
+
+        document.getElementById("resetRedshift").addEventListener("click", () => {
+            const resetValue = "{{ object.auto_tidesclass_z|default_if_none:0 }}";
+            redshiftSlider.value = resetValue;
+            redshiftInput.value = resetValue;
+            updateRedshiftVelocity();
+        });
+
+		// Initial draw to ensure sync between the checkboxes and line drawing
+		updateRedshiftVelocity();
 	})
 	.catch(error => console.error("Error loading line data:", error));
 
-    function updateLines(z, v) {
-        const newShapes = Object.entries(lines)
-            .filter(([id]) => document.getElementById(id)?.checked)
-            .flatMap(([_, { x, color }]) => x.map(value => ({
-                type: "line",
-                x0: value * ( (1 + z) + (v/299792.458)),
-                x1: value * ( (1 + z) + (v/299792.458)),
-                y0: 0,
-                y1: 1,
-                xref: "x",
-                yref: "paper",
-                line: { color, width: 2},
-                layer: "below"
-            })));
-        // Combine vrects (tellurics) with the new line shapes
-        const vrects = getFigDiv().layout.shapes?.filter(s => s.type === 'rect') || [];
-        const allShapes = vrects.concat(newShapes);
-        Plotly.relayout(getFigDiv(), { shapes: allShapes });
-    }
+  let updateTimeout = null; // global throttle timer
+
+  function updateLines(z, v) {
+	  const figDiv = getFigDiv();
+
+	// --- Throttle redundant redraws ---
+	if (updateTimeout) clearTimeout(updateTimeout);
+	updateTimeout = setTimeout(() => {
+		updateTimeout = null;
+
+		// --- Build line shapes ---
+		function buildShapes() {
+			return Object.entries(lines)
+				.filter(([id]) => document.getElementById(id)?.checked)
+				.flatMap(([_, { lines: lineList, color }]) =>
+					lineList.map(({ x }) => {
+						const xpos = x * ((1 + z) + (v / 299792.458));
+						return {
+							type: "line",
+							x0: xpos,
+							x1: xpos,
+							y0: 0,
+							y1: 1,
+							xref: "x",
+							yref: "paper",
+							line: { color, width: 2 },
+							layer: "below"
+						};
+					})
+				);
+		}
+
+		// --- Build text annotations ---
+		function buildAnnotations() {
+			return Object.entries(lines)
+				.filter(([id]) => document.getElementById(id)?.checked)
+				.flatMap(([_, { lines: lineList, color }]) =>
+					lineList.map(({ x, label }) => {
+						const xpos = x * ((1 + z) + (v / 299792.458));
+						return {
+							x: xpos,
+							y: 0.90,
+							xref: "x",
+							yref: "paper",
+							text: `${label}`,
+							showarrow: false,
+							textangle: -90,
+							font: { color, size: 8 },
+							xanchor: "center",
+							yanchor: "middle",
+							bgcolor: "white",
+							layer: "above",
+							opacity: 0.9,
+							cliponaxis: true,
+                            customdata: ["line_label"]
+						};
+					})
+				);
+		}
+
+		// --- Combine with telluric rectangles (if any) ---
+		function applyShapesAndAnnotations() {
+			const vrects = figDiv.layout.shapes?.filter(s => s.type === "rect") || [];
+			const allShapes = vrects.concat(buildShapes());
+
+			const currentXRange = figDiv.layout.xaxis?.range ? [...figDiv.layout.xaxis.range] : null;
+			const currentYRange = figDiv.layout.yaxis?.range ? [...figDiv.layout.yaxis.range] : null;
+
+			// Preserve existing annotations (e.g., vrect labels)
+            const existingAnnots = figDiv.layout.annotations?.filter(a => !a.customdata?.includes("line_label")) || [];
+            const combinedAnnots = existingAnnots.concat(buildAnnotations());
+
+            Plotly.relayout(figDiv, {
+                shapes: allShapes,
+                annotations: combinedAnnots,
+                "xaxis.autorange": false,
+                "yaxis.autorange": false,
+                ...(currentXRange && { "xaxis.range": currentXRange }),
+                ...(currentYRange && { "yaxis.range": currentYRange })
+            });
+		}
+
+		// --- Handle autoscale safely ---
+		function safelyReapplyAfterAutoscale() {
+			if (figDiv._isRescaling) return;
+			figDiv._isRescaling = true;
+
+			// Temporarily remove overlays, autorange, then reapply
+			Plotly.relayout(figDiv, { shapes: [], annotations: [] })
+				.then(() =>
+					Plotly.relayout(figDiv, {
+						"xaxis.autorange": true,
+						"yaxis.autorange": true
+					})
+				)
+				.then(() => {
+					const { xaxis, yaxis } = figDiv.layout;
+					return Plotly.relayout(figDiv, {
+						"xaxis.autorange": false,
+						"yaxis.autorange": false,
+						"xaxis.range": xaxis.range,
+						"yaxis.range": yaxis.range
+					});
+				})
+				.then(() => {
+					applyShapesAndAnnotations();
+				})
+				.finally(() => {
+					figDiv._isRescaling = false;
+				});
+		}
+
+		// --- Initial draw ---
+		applyShapesAndAnnotations();
+
+		// --- Attach event handlers once ---
+		if (!figDiv._ignoreOverlaysHandlerAdded) {
+			figDiv.on("plotly_doubleclick", safelyReapplyAfterAutoscale);
+			figDiv.on("plotly_relayout", ev => {
+				if (
+					ev["xaxis.autorange"] === true ||
+					ev["yaxis.autorange"] === true ||
+					ev["scene.autorange"] === true
+				) {
+					safelyReapplyAfterAutoscale();
+				}
+			});
+			figDiv._ignoreOverlaysHandlerAdded = true;
+		}
+	}, 1); // <-- redraw throttle (ms)
+  }
 
     function updateRedshiftVelocity() {
         // Always pull from the current slider values (force numbers)
@@ -103,11 +223,11 @@ fetch("{% static 'json/line_data.json' %}")
         const v = Number(velocitySlider.value);
 
         // Update paired inputs
-        redshiftInput.value = isFinite(z) ? z.toFixed(4) : "";
+        redshiftInput.value = isFinite(z) ? z.toFixed(3) : "";
         velocityInput.value = isFinite(v) ? v.toFixed(0) : "";
 
         // Only call updateLines if both are valid
-        if (!isNaN(z) && z >= 0 && z <= 2 && !isNaN(v) && v >= -25000 && v <= 25000) {
+        if (!isNaN(z) && z >= 0 && z <= 3 && !isNaN(v) && v >= -50000 && v <= 50000) {
             updateLines(z, v);
         }
     }
@@ -469,7 +589,7 @@ fetch("{% static 'json/line_data.json' %}")
       {% if spectra %}
       <div class="card mt-3">
         <div class="card-header">Available Spectra</div>
-        <div class="card-body p-2">
+        <div class="card-body p-2" style="max-height: 260px; overflow-y: auto;">
           <ul class="list-unstyled mb-0">
             {% for spec in spectra %}
               <li class="mb-2">
@@ -491,22 +611,78 @@ fetch("{% static 'json/line_data.json' %}")
 
       <h3>Classifications</h3>
       <p>
-        <u><strong>Auto Classification</strong></u>&emsp;
-        {% if object.auto_tidesclass %}
-          <br><strong>Class:</strong> {{ object.auto_tidesclass }}
-          {% if object.auto_tidesclass_subclass %}
-            <br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
-          {% endif %}
-          {% if object.auto_tidesclass_z %}
-            <br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
-          {% endif %}
-          {% if object.auto_tidesclass_prob %}
-            <br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
+        <u><strong>Pipeline Classifications (summary):</strong></u>
+        {% if aggregated_pipeline_class %}
+          <br><strong>Most Common:</strong> {{ aggregated_pipeline_class.most_common_class }}
+          <br><strong>Total:</strong> {{ aggregated_pipeline_class.total_submissions }}
+          <br><strong>No. of Most Common:</strong> {{ aggregated_pipeline_class.count }}
+          {% if aggregated_pipeline_class.ratio %}
+            <br><strong>Agreement:</strong> {{ aggregated_pipeline_class.ratio|floatformat:3 }}
           {% endif %}
         {% else %}
-          <br>No Auto Classification
+          <br><i>No pipeline classifications yet.</i>
         {% endif %}
       </p>
+
+      {% if pipeline_classifications %}
+      <div class="mb-2">
+        <label for="pipeline-class-select"><strong>View per-spectrum classification:</strong></label>
+        <select id="pipeline-class-select" class="form-control form-control-sm" style="max-width: 360px;">
+          {% for item in pipeline_classifications %}
+            <option value="{{ item.specid }}" {% if item.specid == default_specid %}selected{% endif %}>
+              {{ item.obs_date|date:"Y-m-d H:i" }} (specid={{ item.specid }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% for item in pipeline_classifications %}
+        <div class="pclass-detail" id="pclass-{{ item.specid }}" style="display: none;">
+          <u><strong>Global:</strong></u>
+          {% if item.global %}
+            <br><strong>Class:</strong> {{ item.global.sn_type|default:"—" }}
+            {% if item.global.phase %}<br><strong>Phase:</strong> {{ item.global.phase|floatformat:1 }} d{% endif %}
+            {% if item.global.z %}<br><strong>Redshift:</strong> {{ item.global.z|floatformat:3 }}{% endif %}
+            {% if item.global.zerr %}±{{ item.global.zerr|floatformat:3 }}{% endif %}
+            {% if item.global.probability %}<br><strong>Probability:</strong> {{ item.global.probability|floatformat:3 }}{% endif %}
+            {% if item.global.version %}<br><strong>Version:</strong> {{ item.global.version }}{% endif %}
+            {% if item.global.notes %}<br><strong>Notes:</strong> {{ item.global.notes }}{% endif %}
+          {% else %}
+            <br><i>No Global classification.</i>
+          {% endif %}
+
+          <br>
+          <u><strong>SNID:</strong></u>
+          {% if item.snid %}
+            <br><strong>Class:</strong> {{ item.snid.sn_type|default:"—" }}
+            {% if item.snid.phase %}<br><strong>Phase:</strong> {{ item.snid.phase|floatformat:1 }} d{% endif %}
+            {% if item.snid.z %}<br><strong>Redshift:</strong> {{ item.snid.z|floatformat:3 }}{% endif %}
+            {% if item.snid.zerr %}±{{ item.snid.zerr|floatformat:3 }}{% endif %}
+            {% if item.snid.probability %}<br><strong>Probability:</strong> {{ item.snid.probability|floatformat:3 }}{% endif %}
+            {% if item.snid.version %}<br><strong>Version:</strong> {{ item.snid.version }}{% endif %}
+          {% else %}
+            <br><i>No SNID classification.</i>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <script>
+      (function(){
+        const select = document.getElementById('pipeline-class-select');
+        function showSelected(){
+          const val = select && select.value;
+          document.querySelectorAll('.pclass-detail').forEach(el => el.style.display = 'none');
+          if (val) {
+            const target = document.getElementById('pclass-' + val);
+            if (target) target.style.display = 'block';
+          }
+        }
+        if (select) {
+          select.addEventListener('change', showSelected);
+          showSelected();
+        }
+      })();
+      </script>
+      {% endif %}
 
       <p>
         <u><strong>Human Classification:</strong></u>
@@ -667,17 +843,93 @@ fetch("{% static 'json/line_data.json' %}")
       <label for="redshiftSlider" style="display:block; width:250px;">
           Redshift (z):
       </label>
-    <input type="range" id="redshiftSlider" min="0" max="2" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 300px">
-      <label for="redshiftInput"></label><input type="number" id="redshiftInput" min="0" max="2" step="0.0001" value="{{ object.auto_tidesclass_z|default_if_none:0 }}" style="width: 80px; text-align: center;">
-  
-    </div>
-      <!-- Velocity Slider -->
+
+      <!-- Slider (on its own line) -->
+      <input
+          type="range"
+          id="redshiftSlider"
+          min="0"
+          max="3"
+          step="0.0001"
+          value="{{ object.auto_tidesclass_z|default_if_none:0 }}"
+          style="width: 300px"
+      >
+
+      <!-- Input + Reset button (below slider, same line) -->
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+          <button
+              id="resetRedshift"
+              style="
+                  padding: 3px 8px;
+                  background-color: #f0f0f0;
+                  border: 1px solid #ccc;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  transition: background-color 0.2s, border-color 0.2s;
+              "
+              onmouseover="this.style.backgroundColor='#e0e0e0'; this.style.borderColor='#bbb';"
+              onmouseout="this.style.backgroundColor='#f0f0f0'; this.style.borderColor='#ccc';"
+          >
+              Reset
+          </button>
+
+          <input
+              type="number"
+              id="redshiftInput"
+              min="0"
+              max="3"
+              step="0.0001"
+              value="{{ object.auto_tidesclass_z|default_if_none:0 }}"
+              style="width: 80px; text-align: center;"
+          >
+      </div>
+   </div>
+
+    <!-- Velocity Slider -->
     <div class="spectroscopy-only">
-        <label for="velocitySlider" style="display:block; width:250px;">
-          Additional line velocity (km\s):
-        </label>
-      <input type="range" id="velocitySlider" min="-25000" max="25000" step="100" value="0" style="width: 300px">
-        <label for="velocityInput"></label><input type="number" id="velocityInput" min="-25000" max="25000" step="100" value="0" style="width: 80px; text-align: center;">
+	<label for="velocitySlider" style="display:block; width:250px;">
+		Additional line velocity (km/s):
+	</label>
+
+	<!-- Slider (on its own line) -->
+	<input
+		type="range"
+		id="velocitySlider"
+		min="-50000"
+		max="50000"
+		step="100"
+		value="0"
+		style="width: 300px"
+	>
+
+	<!-- Input + Reset button (below slider, same line) -->
+	<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+		<button
+			id="resetVelocity"
+			style="
+				padding: 3px 8px;
+				background-color: #f0f0f0;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				cursor: pointer;
+				transition: background-color 0.2s, border-color 0.2s;
+			"
+			onmouseover="this.style.backgroundColor='#e0e0e0'; this.style.borderColor='#bbb';"
+			onmouseout="this.style.backgroundColor='#f0f0f0'; this.style.borderColor='#ccc';"
+		>
+			Reset
+		</button>
+
+		<input
+			type="number"
+			id="velocityInput"
+			min="-50000"
+			max="50000"
+			step="100"
+			value="0"
+			style="width: 80px; text-align: center;"
+		>
+	</div>
     </div>
 
 {% if request.user.is_authenticated %}

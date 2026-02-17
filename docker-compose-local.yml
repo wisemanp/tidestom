@@ -1,11 +1,9 @@
-version: "3.9"
+# version key is obsolete in modern Compose; remove to avoid warnings
 
 services:
   init-gatekeeper:
     image: alpine:3.19
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       database:
         condition: service_started
     command: >
@@ -23,9 +21,10 @@ services:
         if [ ! -f /db_init/.applied ]; then
           psql -h database -U tides -d tidestom -f /scripts/tides_merged_schema.sql
           psql -h database -U tides -d tidestom -f /scripts/tidestom_schema.sql
-          psql -h database -U tides -d tidestom -f /scripts/alters_tides_specid.sql
           touch /db_init/.applied
         fi
+        # Always apply idempotent alters to ensure latest columns
+        psql -h database -U tides -d tidestom -f /scripts/alters_tides_specid.sql
       '
 
     environment:
@@ -128,6 +127,8 @@ services:
     build: .
     entrypoint: []
     depends_on:
+      init-gatekeeper:
+        condition: service_completed_successfully
       database:
         condition: service_started
     volumes:

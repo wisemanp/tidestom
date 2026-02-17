@@ -1,7 +1,8 @@
 import os
 import hashlib
+import random
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from django.core.management.base import BaseCommand
@@ -80,6 +81,12 @@ class Command(BaseCommand):
         h = hashlib.sha1(f"{target_id}|{fname}".encode('utf-8')).hexdigest()
         return int(h[:15], 16)
 
+    def _compute_tides_specid_variant(self, target_id: int, filepath: Path, suffix: str) -> int:
+        """Deterministic variant to generate a different specid for mock duplicates."""
+        fname = filepath.name
+        h = hashlib.sha1(f"{target_id}|{fname}|{suffix}".encode('utf-8')).hexdigest()
+        return int(h[:15], 16)
+
     def _extract_obs_times(self, file_path: Path):
         """
         Try to get obs_date (timezone-aware) and obs_mjd from FITS headers.
@@ -129,9 +136,25 @@ class Command(BaseCommand):
                 print(f"WARNING: Found {count} tides_spec rows for {target.name} and {original.name}. "
                       f"Skipping insert to avoid duplicates.")
             else:
-                print(f"tides_spec already exists for target {target.name} and {original.name}; skipping insert.")
-            # Return existing tides_specid for downstream use
-            return existing_qs.first().tides_specid
+                existing = existing_qs.first()
+                # If tides_specid is missing, backfill it here (prefer qmost_id, else compute)
+                if not existing.tides_specid:
+                    # Always generate a spec ID (do not use qmost_id)
+                    backfill_specid = self._compute_tides_specid(target.id, store_path)
+                    update_fields = []
+                    if not existing.tides_specid:
+                        existing.tides_specid = backfill_specid
+                        update_fields.append('tides_specid')
+                    # Ensure qmost_id is non-null if schema requires it (temporary dummy)
+                    if existing.qmost_id is None:
+                        existing.qmost_id = backfill_specid
+                        update_fields.append('qmost_id')
+                    if update_fields:
+                        existing.save(update_fields=update_fields)
+                    print(f"Backfilled tides_specid for {target.name} -> {store_path.name} (tides_specid={backfill_specid})")
+                    return backfill_specid
+                print(f"tides_spec already exists for target {target.name} and {original.name}; using existing specid.")
+                return existing.tides_specid
 
         obs_date, obs_mjd = self._extract_obs_times(store_path)
         tides_specid = self._compute_tides_specid(target.id, store_path)
@@ -211,6 +234,28 @@ class Command(BaseCommand):
                         print(f'WARNING: No auto classification found for target {target.name}.')
                 else:
                     print(f'WARNING: {target.name} not found in mock catalogue index.')
+                # Randomly add a second spectrum entry to some targets (mock-only)
+                try:
+                    if random.random() < 0.35:
+                        dup_specid = self._compute_tides_specid_variant(target.id, Path(spectrum_file_path), 'dup')
+                        # Offset observation date slightly to simulate a different epoch
+                        dup_obs_date = now() + timedelta(hours=random.randint(-48, 48))
+                        try:
+                            dup_mjd = Time(dup_obs_date, scale='utc').mjd
+                        except Exception:
+                            dup_mjd = None
+                        # Insert duplicate spectrum row (same filepath, different specid/obs_date)
+                        TidesSpec.objects.create(
+                            tides_specid=dup_specid,
+                            qmost_id=dup_specid,
+                            tides=target,
+                            filepath=str(spectrum_file_path),
+                            obs_date=dup_obs_date,
+                            obs_mjd=dup_mjd,
+                        )
+                        print(f"Inserted mock duplicate spectrum for target {target.name} (tides_specid={dup_specid})")
+                except Exception as exc:
+                    print(f"WARNING: Failed to add mock duplicate spectrum for target {target.name}: {exc}")
             else:
                 print(f'WARNING: Spectrum file {spectrum_file_path} not found for target {target.name}')
 

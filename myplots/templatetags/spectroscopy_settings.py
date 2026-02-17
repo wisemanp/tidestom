@@ -114,7 +114,7 @@ def get_pysnid_results(inputfile: str) -> SNIDReader:
     snidres = SNIDReader.from_filename(inputfile)
     return snidres
 
-def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndarray, 
+def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndarray,
                        fig: go.Figure, n: int = 3) -> go.Figure:
     """Adds best-match SNID templates to the figure.
 
@@ -142,8 +142,8 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
         model_wave = model_df.wavelength.values
         model_flux = model_df.flux.values
         # normalise back
-        model_flux /= 1.05
-        model_flux *= mean
+        model_flux = model_flux / 1.05
+        model_flux = model_flux * mean
         # match observed grid
         model_wave, model_flux = match_grid(obs_wave, model_wave, model_flux)
 
@@ -158,6 +158,48 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
             visible='legendonly',
         ))
     return fig
+
+def add_snid_select_template(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndarray,
+                             fig: go.Figure, idx) -> go.Figure:
+    """Adds gets a user selcted SNID template for the figure.
+
+    Parameters
+    ----------
+    pysnid_file: Pysnid output file ('.h5' extension).
+    obs_wave: Observed spectrum wavelength.
+    obs_flux: Observed spectrum flux.
+    fig: Figure with the plot.
+    idx: index or mutliple of the desired template
+
+    Returns:
+    fig: Updated figure with SNID templates.
+    """
+    mean = np.nanmean(obs_flux)
+    snidres = get_pysnid_results(pysnid_file)
+    if type(idx) is not list:
+        idx = [idx]
+    for i in idx:
+        model_df = snidres.get_modeldata(int(i), fluxcorr=True)
+        model_wave = model_df.wavelength.values
+        model_flux = model_df.flux.values
+        # normalise back
+        model_flux = model_flux / 1.05
+        model_flux = model_flux * mean
+        # match observed grid
+        model_wave, model_flux = match_grid(obs_wave, model_wave, model_flux)
+
+        temp_info = snidres.results.iloc[int(i)]
+        fig.add_trace(go.Scatter(
+            x=model_wave,
+            y=model_flux,
+            name=f"SNID: {i}. {temp_info.sn}<br>{temp_info.type}<br>Phase:{temp_info.age}, z={temp_info.z}",
+            hovertemplate=(f'Name: {temp_info.sn}<br>Type: {temp_info.type}<br>'
+                           f'Phase: {temp_info.age} d<br>Wave.:%{{x}}'),
+            showlegend=True,
+            visible='legendonly',
+        ))
+    return fig
+
 
 ##################
 # NGSF templates #

@@ -1,0 +1,26 @@
+name: enforce-dev-branch-names
+
+on:
+  pull_request:
+    branches:
+      - dev-deploy
+  merge_group:
+
+jobs:
+  validate-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure branch name starts with feature or bugfix
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SRC="${{ github.head_ref }}"
+          else
+            # merge_group: already validated on the PR
+            exit 0
+          fi
+
+          if [[ "$SRC" != feature* && "$SRC" != bugfix* ]]; then
+            echo "Branch '$SRC' is not allowed."
+            echo "Branches merged into dev-deploy must start with 'feature' or 'bugfix'."
+            exit 1
+          fi

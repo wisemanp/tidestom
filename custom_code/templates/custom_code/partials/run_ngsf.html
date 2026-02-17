@@ -11,7 +11,7 @@
 				<select id="ngsf-spectrum" name="spectrum" class="form-control" required>
 					{% if spectra %}
 						{% for spec in spectra %}
-							<option value="{{ spec.tides_specid|default_if_none:spec.additional_info.TIDES_SPECID }}">
+							<option value="{{ spec.tides_specid }}">
 								{{ spec.obs_date|date:"Y-m-d H:i" }} — {{ spec.filepath|default:"(no path)"|slice:"-40:" }}
 							</option>
 						{% endfor %}
@@ -24,15 +24,15 @@
 			<div class="form-row">
 			<div class="form-group col-md-3">
 			<label for="z">z:</label>
-			<input type="number" name="z" step="0.01" required value="0.00" class="form-control">
+			<input type="number" name="z" step="0.01" value="0.00" class="form-control">
 			</div>
 			<div class="form-group col-md-3">
-			<label for="zmax">z Max:</label>
+			<label for="zmax">z Min:</label>
+			<input type="number" name="z_min" step="0.01" required value="0.0" class="form-control">
+			</div>
+			<div class="form-group col-md-3">
+			<label for="zmin">z Max:</label>
 			<input type="number" name="z_max" step="0.01" required value="0.1" class="form-control">
-			</div>
-			<div class="form-group col-md-3">
-			<label for="zmin">z Min:</label>
-			<input type="number" name="z_min" step="0.01" required value="0" class="form-control">
 			</div>
 			<div class="form-group col-md-3">
 			<label for="zint">z int:</label>
@@ -44,11 +44,11 @@
 			<div class="form-row">
 			<div class="form-group col-md-6">
 			<label for="wmin">Wavelength Min (&angst;):</label>
-			<input type="number" name="lower_lam" step="0.1" required value="0" class="form-control">
+			<input type="number" name="lower_lam" step="0.1" required value="3500" class="form-control">
 			</div>
 			<div class="form-group col-md-6">
 			<label for="wmax">Wavelength Max (&angst;):</label>
-			<input type="number" name="upper_lam" step="1" required value="0" class="form-control">
+			<input type="number" name="upper_lam" step="1" required value="9500" class="form-control">
 			</div>
 			</div>
 			

@@ -8,7 +8,12 @@ from django import template
 import glob
 import numpy as np
 
-from .spectroscopy_settings import add_snid_templates, add_ngsf_templates, load_spectra
+from .spectroscopy_settings import (
+        add_snid_templates,
+        add_snid_select_template,
+        add_ngsf_templates,
+        load_spectra
+)
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
 from tidestom.settings import BROKERS
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
@@ -17,7 +22,7 @@ lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
 register = template.Library()
 
 @register.inclusion_tag('myplots/target_spectroscopy.html', takes_context=True)
-def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_path=None):
+def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_index=None, ngsf_path=None):
     """
     Render a spectroscopic plot for a Target.
     Overlays all available spectra from tides_spec (FITS/TXT with WAVE/FLUX columns).
@@ -28,14 +33,13 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
         return {'target': target, 'plot': f'<p>Failed to load spectrum: {exc}</p>'}
     if not specs:
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
-
     plot_data = []
     ymins = []
     ymaxs = []
     colors = [
         '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-    ]
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    
     for i, (spectrum, spec) in enumerate(zip(spectra, specs)):
         label = (
             spec.obs_date.strftime('%Y%m%d-%H:%M:%S')
@@ -71,6 +75,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
     if ymins and ymaxs:
         fig.update_yaxes(range=[min(ymins), max(ymaxs)])
 
+
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
     # Wallace et al. 1996 “An Atlas of the Spectrum of the Solar Photosphere from 296 to 1300 nm”
@@ -95,22 +100,52 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             annotation_font=dict(size=12, color="black")
         )
 
-    ### templates ###
+    ### arm joins ###
+    # Inclusion of the 4MOST (low res) spectrograph arm overlap arm regions
+    # Taken from the 4MOST manual : https://www.4most.eu/cms/files/VIS-MAN-4MOST-47110-9800-0001_2_00-4MOST-User-Manual.pdf
+
+    overlap_bands = {
+        'blue-green' : (5240,5540),
+        'green-red': (6910,7210)
+    }
+
+    for label, (start, end) in overlap_bands.items():
+        fig.add_vrect(
+            x0=start, x1=end,
+            fillcolor="brown",
+            opacity=0.2,
+            layer="below",
+            line_width=0,
+            annotation_text="AJ",
+            annotation_position="top",
+            annotation_font=dict(size=12, color="black")
+        )
+
+
     if snid_path is not None:
         try:
             pysnid_file = snid_path
-            # Overlay templates against the latest spectrum for alignment
             spectrum_ref = spectra[-1]
-            fig = add_snid_templates(
-                pysnid_file,
-                spectrum_ref.spectral_axis.value,
-                spectrum_ref.flux.value,
-                fig,
-                n=3,
-            )
+            if snid_index is None:
+                fig = add_snid_templates(
+                    pysnid_file,
+                    spectrum_ref.spectral_axis.value,
+                    spectrum_ref.flux.value,
+                    fig,
+                    n=3,
+                )
+            else:
+                fig = add_snid_select_template(
+                    pysnid_file,
+                    spectrum_ref.spectral_axis.value,
+                    spectrum_ref.flux.value,
+                    fig,
+                    idx=snid_index,
+                )
         except Exception as exc:
             print(exc)
             pass
+
     else:
         tar = f"{target}"
         paths= glob.glob(f'/snid_api_runs/pipeline_out/*/{tar[6:]}/*h5')
@@ -147,11 +182,14 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, ngsf_
             return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
 
     fig.update_layout(autosize=True,
+                      height=650,
                       xaxis_title='Observed Wavelength (Å)',
                       yaxis_title='Flux (erg/s/cm²/Å)',
                       xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
                       legend_title="Best Matches",
+                      margin=dict(t=150),
+                      legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
                       showlegend=True,
                       font_family="P052",
                       font_size=16,
