@@ -181,19 +181,20 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
         except Exception as exc:
             return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
 
-    fig.update_layout(autosize=True,
-                      height=650,
-                      xaxis_title='Observed Wavelength (Å)',
-                      yaxis_title='Flux (erg/s/cm²/Å)',
-                      xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      legend_title="Best Matches",
-                      margin=dict(t=150),
-                      legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
-                      showlegend=True,
-                      font_family="P052",
-                      font_size=16,
-                      )
+    fig.update_layout(
+    	autosize=True,
+        height=650,
+        xaxis_title='Observed Wavelength (Å)',
+        yaxis_title='Flux (erg/s/cm²/Å)',
+        xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
+    	  yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
+        legend_title="Best Matches",
+        margin=dict(t=150),
+        legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
+        showlegend=True,
+        font_family="P052",
+        font_size=16
+    )
 
     return {
         'target': target,
@@ -211,24 +212,31 @@ def target_photometry(context, target, dataproduct=None):
     Renders a photometry plot for a ``Target``. If a ``DataProduct`` is specified, it will only render a plot with
     that photometry.
     """
-    # check if the Lasair's API key is set
-    if lasair_ztf_token is None or lasair_ztf_token == "":
-        warnings.warn("Warning: Lasair API key for ZTF not set!", UserWarning)
-        return {'target': target}
-    if lasair_lsst_token is None or lasair_lsst_token == "":
-        warnings.warn("Warning: Lasair API key for LSST not set!", UserWarning)
-        return {'target': target}
-
+    tokens = {"ztf": lasair_ztf_token,
+              "lsst": lasair_lsst_token,
+              }
     photometry_list = []
-    for survey in ["ztf", "lsst"]:
-        #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
+    for survey, token in tokens.items():
+        # check if the Lasair's API key is set
+        if token is None or token == "":
+            warnings.warn(f"Warning: Lasair API key for {survey.upper()} not set!", UserWarning)
+            continue
         try:
+            #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
             phot = fetch_target_lasair(target.ra, target.dec, survey)
+            photometry_list.append(phot)
         except Exception as exc:
             return {'target': target, 'plot': exc}
-        photometry_list.append(phot)
-    photometry = pd.concat(photometry_list)
+
+    if len(photometry_list) == 0:
+        # tokens not set
+        return {'target': target}
+    try:
+        photometry = pd.concat(photometry_list)
+    except ValueError:
+        return {'target': target}
     if photometry is None:
+        # no photometry found
         return {'target': target}
 
     # plot photometry
@@ -243,7 +251,7 @@ def target_photometry(context, target, dataproduct=None):
                                 annotation_text="s", annotation_position="top left")
     except Exception as exc:
         print(exc)
-        
+
     return {
         'target': target,
         'plot': offline.plot(fig, output_type='div', show_link=False)
