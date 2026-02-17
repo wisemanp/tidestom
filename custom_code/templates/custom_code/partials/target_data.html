@@ -34,24 +34,20 @@
     {% if key == 'dec' %}
       <dt class="col-sm-6">Dec</dt>
       <dd class="col-sm-6">{{ value|floatformat:5 }}</dd>
-      {% if target.constellation %}
-        <dt class="col-sm-6">Constellation</dt>
-        <dd class="col-sm-6">{{ target.constellation }}</dd>
-      {% endif %}
     {% endif %}
   {% endfor %}
   
   <!-- Lasair link ZTF -->
   <dt class="col-sm-6">Lasair-ZTF</dt>
   {% if ztflink != '' %}
-    <dd class="col-sm-6"><a href="{{ ztflink }}">{{ ztfname }}</a></dd>
+    <dd class="col-sm-6"><a href="{{ ztflink }}" target="_blank">{{ ztfname }}</a></dd>
   {% else %}
     <dd class="col-sm-6"></dd>
   {% endif %}
   <!-- Lasair link LSST -->
   <dt class="col-sm-6">Lasair-LSST</dt>
   {% if lsstlink != '' %}
-    <dd class="col-sm-6"><a href="{{ lsstlink }}">{{ lsstname }}</a></dd>
+    <dd class="col-sm-6"><a href="{{ lsstlink }}" target="_blank">{{ lsstname }}</a></dd>
   {% else %}
     <dd class="col-sm-6"></dd>
   {% endif %}
