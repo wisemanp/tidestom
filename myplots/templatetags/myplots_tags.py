@@ -35,7 +35,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
     if not specs:
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
     spectrum, spec = spectra[0], specs[0]
-    
+
     scale_factor = 1 #setting 1 currently as SNID plots wrongly right now with this
 
     plot_data = [
@@ -146,8 +146,8 @@ def target_photometry(context, target, dataproduct=None):
     Renders a photometry plot for a ``Target``. If a ``DataProduct`` is specified, it will only render a plot with
     that photometry.
     """
-    tokens = {"ztf": lasair_ztf_token, 
-              "lsst": lasair_lsst_token, 
+    tokens = {"ztf": lasair_ztf_token,
+              "lsst": lasair_lsst_token,
               }
     photometry_list = []
     for survey, token in tokens.items():
@@ -161,11 +161,14 @@ def target_photometry(context, target, dataproduct=None):
             photometry_list.append(phot)
         except Exception as exc:
             return {'target': target, 'plot': exc}
-        
+
     if len(photometry_list) == 0:
         # tokens not set
         return {'target': target}
-    photometry = pd.concat(photometry_list)
+    try:
+        photometry = pd.concat(photometry_list)
+    except ValueError:
+        return {'target': target}
     if photometry is None:
         # no photometry found
         return {'target': target}
@@ -182,7 +185,7 @@ def target_photometry(context, target, dataproduct=None):
                                 annotation_text="s", annotation_position="top left")
     except Exception as exc:
         print(exc)
-        
+
     return {
         'target': target,
         'plot': offline.plot(fig, output_type='div', show_link=False)
