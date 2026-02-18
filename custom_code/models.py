@@ -363,7 +363,7 @@ class TidesSpec(models.Model):
         on_delete=models.CASCADE,
         related_name='spectra'
     )
-    qmost_id = models.BigIntegerField(null=True, blank=True, db_column='qmost_id')
+    # qmost_id removed - now using tides_specid as PRIMARY KEY
     tides_specid = models.BigIntegerField(primary_key=True, db_column='tides_specid')
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     obs_date = models.DateTimeField(null=True, blank=True)

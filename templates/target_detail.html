@@ -762,22 +762,31 @@ fetch("{% static 'json/line_data.json' %}")
       {% if spectra %}
       <div class="card mt-3">
         <div class="card-header">Available Spectra</div>
-        <div class="card-body p-2" style="max-height: 260px; overflow-y: auto;">
-          <ul class="list-unstyled mb-0">
-            {% for spec in spectra %}
-              <li class="mb-2">
-                <span class="badge bg-secondary">{{ spec.obs_date|date:"Y-m-d H:i" }}</span>
-                {% if spec.additional_info.EXPOSURE_TIME_S %}
-                  <span class="ms-2">Exp: {{ spec.additional_info.EXPOSURE_TIME_S }} s</span>
-                {% endif %}
-                {% if spec.filepath %}
-                  <div class="text-muted small">{{ spec.filepath }}</div>
-                {% endif %}
-              </li>
-            {% empty %}
-              <li class="text-muted">No spectra available</li>
-            {% endfor %}
-          </ul>
+        <div class="card-body p-0" style="max-height: 260px; overflow-y: auto;">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th>SPECUID</th>
+                <th>Date-Obs</th>
+                <th>SNR</th>
+                <th>Exptime (s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for spec in spectra %}
+              <tr>
+                <td><strong>{{ spec.tides_specid|default:"—" }}</strong></td>
+                <td>{{ spec.obs_date|date:"Y-m-d H:i"|default:"—" }}</td>
+                <td>{{ spec.snr|floatformat:1|default:"—" }}</td>
+                <td>{{ spec.additional_info.EXPOSURE_TIME_S|floatformat:0|default:"—" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-muted text-center">No spectra available</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
       {% endif %}

@@ -137,20 +137,11 @@ class Command(BaseCommand):
                       f"Skipping insert to avoid duplicates.")
             else:
                 existing = existing_qs.first()
-                # If tides_specid is missing, backfill it here (prefer qmost_id, else compute)
+                # If tides_specid is missing, backfill it
                 if not existing.tides_specid:
-                    # Always generate a spec ID (do not use qmost_id)
                     backfill_specid = self._compute_tides_specid(target.id, store_path)
-                    update_fields = []
-                    if not existing.tides_specid:
-                        existing.tides_specid = backfill_specid
-                        update_fields.append('tides_specid')
-                    # Ensure qmost_id is non-null if schema requires it (temporary dummy)
-                    if existing.qmost_id is None:
-                        existing.qmost_id = backfill_specid
-                        update_fields.append('qmost_id')
-                    if update_fields:
-                        existing.save(update_fields=update_fields)
+                    existing.tides_specid = backfill_specid
+                    existing.save(update_fields=['tides_specid'])
                     print(f"Backfilled tides_specid for {target.name} -> {store_path.name} (tides_specid={backfill_specid})")
                     return backfill_specid
                 print(f"tides_spec already exists for target {target.name} and {original.name}; using existing specid.")
@@ -159,7 +150,6 @@ class Command(BaseCommand):
         obs_date, obs_mjd = self._extract_obs_times(store_path)
         tides_specid = self._compute_tides_specid(target.id, store_path)
         TidesSpec.objects.create(
-            qmost_id=tides_specid,  # temporary dummy to satisfy NOT NULL/PK
             tides_specid=tides_specid,
             tides=target,
             filepath=str(store_path),
@@ -247,7 +237,6 @@ class Command(BaseCommand):
                         # Insert duplicate spectrum row (same filepath, different specid/obs_date)
                         TidesSpec.objects.create(
                             tides_specid=dup_specid,
-                            qmost_id=dup_specid,
                             tides=target,
                             filepath=str(spectrum_file_path),
                             obs_date=dup_obs_date,
