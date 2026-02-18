@@ -6,8 +6,21 @@
     <div class="card-body" style="min-width:0;">
 			<form id="snid-form" class='ajax-form' data-result-id='snid-result' method="post" action="{% url 'snid-run' %}">
 			{% csrf_token %}
-			<!--Spectrum Inputs-->
-			<input type="hidden" name="spectrum" value="{{ spectrum }}" class=form-control>
+			<!--Spectrum Selection-->
+			<div class="form-group">
+				<label for="spectrum">Select Spectrum</label>
+				<select id="spectrum" name="spectrum" class="form-control" required>
+					{% if spectra %}
+						{% for spec in spectra %}
+							<option value="{{ spec.tides_specid }}">
+								{{ spec.obs_date|date:"Y-m-d H:i" }} — {{ spec.filepath|default:"(no path)"|slice:"-40:" }}
+							</option>
+						{% endfor %}
+					{% else %}
+						<option value="">No spectra available</option>
+					{% endif %}
+				</select>
+			</div>
 			<!-- Wavelength Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-6">

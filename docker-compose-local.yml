@@ -1,69 +1,31 @@
-version: "3.9"
+# version key is obsolete in modern Compose; remove to avoid warnings
 
 services:
   init-gatekeeper:
     image: alpine:3.19
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       database:
         condition: service_started
     command: >
-      sh -c "
-        echo 'Checking and creating API workspace directories' &&
-        #for dir in /snid_api_runs/workspaces; do
-        #  mkdir -pv $dir &&
-        #  chown -R 1000:1000 $dir &&
-        #  chmod -R 770 $dir
-        #done &&
-        echo 'Checking other directories' &&
-        mkdir -pv /ngsf_api_runs/workspaces &&
-        mkdir -pv /spectra_volume/test_data/sims &&
-        mkdir -pv /static/plots &&
-        echo 'Copying test data if available' &&
-        cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true &&
-        cp -ru /test_data/mock_DB.csv /spectra_volume/test_data/ 2>/dev/null || true && 
-        cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true &&
-        echo 'Directories Ready' &&
-
-        sleep 10 &&
-
-        echo 'Preparing database init script' &&
-        apk add --no-cache postgresql-client git &&
-
+      sh -c '
+        set -e
+        mkdir -pv /ngsf_api_runs/workspaces
+        mkdir -pv /spectra_volume/test_data/sims
+        mkdir -pv /static/plots
+        cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true
+        cp -ru /test_data/mock_DB.csv /spectra_volume/test_data/ 2>/dev/null || true
+        cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true
+        sleep 5
+        apk add --no-cache postgresql-client
+        mkdir -pv /db_init
         if [ ! -f /db_init/.applied ]; then
-          echo 'Cloning DB scripts'
-          git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
-          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
-          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tidestom_schema.sql
-          psql -h database -U tides -d tidestom -c 'ALTER TABLE pipeline_classification_global add z double precision;'
-          psql -h database -U tides -d tidestom -c 'ALTER TABLE pipeline_classification_global add zerr double precision;'
-          psql -h database -U tides -d tidestom -c 'ALTER TABLE pipeline_classification_global add phase double precision;'
-          psql -h database -U tides -d tidestom -c 'ALTER TABLE human_classifications add phase double precision;'
-          psql -h database -U tides -d tidestom -c 'ALTER TABLE human_classifications add host_z double precision;'
-          touch /db_init/.applied 
-          echo 'Database schema prepared'
-        else
-          echo 'Schema already present, skipping'
+          psql -h database -U tides -d tidestom -f /scripts/tides_merged_schema.sql
+          psql -h database -U tides -d tidestom -f /scripts/tidestom_schema.sql
+          touch /db_init/.applied
         fi
-        echo 'Init complete'
-
-        #echo 'Waiting for dependent APIs to become healthy...' &&
-        #for url in $API_1_HEALTH $API_2_HEALTH; do
-        #  attempt=1
-        #  until wget -qO- --timeout=2 --tries=1 $url >/dev/null 2>&1; do
-        #    if [ $attempt -ge 10 ]; then
-        #      echo 'ERROR; $url did not become healthy.' >&2
-        #      exit 1
-        #    fi
-        #    echo 'Attempt' $attempt 'failed for' $url '-retrying in 5s'
-        #    attempt=$((attempt+1))
-        #    sleep 5
-        #  done
-        #  echo '$url is healthy.'
-        #done &&
-        echo 'All dependencies healthy — init complete.'
-      "
+        # Always apply idempotent alters to ensure latest columns
+        psql -h database -U tides -d tidestom -f /scripts/alters_tides_specid.sql
+      '
 
     environment:
       PGPASSWORD: example
@@ -76,6 +38,7 @@ services:
       - ../test_data/:/test_data:ro #only for testing
       - ../test_data/sims:/test_data_src:ro #only for testing
       - ../test_data/plots:/test_plots_src:ro #only for testing
+      - ../tides-db-scripts:/scripts:ro
     healthcheck:
       test: ["CMD-SHELL", "[ -d /static/plots ] && [ -d /spectra_volume/test_data ]"]
       interval: 10s
@@ -156,7 +119,7 @@ services:
       POSTGRES_USER: tides
       POSTGRES_DB: tidestom
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -164,6 +127,8 @@ services:
     build: .
     entrypoint: []
     depends_on:
+      init-gatekeeper:
+        condition: service_completed_successfully
       database:
         condition: service_started
     volumes:
@@ -198,4 +163,3 @@ volumes:
   spectra:
   pgdata:
   ngsf_api_runs:
-

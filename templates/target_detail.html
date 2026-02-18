@@ -759,34 +759,112 @@ fetch("{% static 'json/line_data.json' %}")
       {% endif %}
       <!-- END TAGS -->
 
-      <h3>Download</h3>
-      <div class="mb-2">
-        <a href="{% url 'download_spectrum' target.id %}"
-           class="btn btn-sm btn-outline-secondary">
-          Download spectrum (ASCII)
-        </a>
+      {% if spectra %}
+      <div class="card mt-3">
+        <div class="card-header">Available Spectra</div>
+        <div class="card-body p-0" style="max-height: 260px; overflow-y: auto;">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th>SPECUID</th>
+                <th>Date-Obs</th>
+                <th>SNR</th>
+                <th>Exptime (s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for spec in spectra %}
+              <tr>
+                <td><strong>{{ spec.tides_specid|default:"—" }}</strong></td>
+                <td>{{ spec.obs_date|date:"Y-m-d H:i"|default:"—" }}</td>
+                <td>{{ spec.snr|floatformat:1|default:"—" }}</td>
+                <td>{{ spec.additional_info.EXPOSURE_TIME_S|floatformat:0|default:"—" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-muted text-center">No spectra available</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
+      {% endif %}
 
       <h3>Classifications</h3>
       <p>
-        <u><strong>Auto Classification:</strong></u>&emsp;
-        {% if object.auto_tidesclass %}
-          <br><strong>Class:</strong> {{ object.auto_tidesclass }}
-          {% if object.auto_tidesclass_subclass %}
-            <br><strong>Subclass:</strong> {{ object.auto_tidesclass_subclass.sub_class }}
-          {% endif %}
-          {% if object.auto_tidesclass_z %}
-            <br><strong>Redshift:</strong> {{ object.auto_tidesclass_z|floatformat:3 }}+-{{ object.auto_tidesclass_zerr|floatformat:3 }}
-          {% else %}
-            <br><strong>Redshift:</strong> <span style="color: red;">Not Recorded</span>
-          {% endif %}
-          {% if object.auto_tidesclass_prob %}
-            <br><strong>Probability:</strong> {{ object.auto_tidesclass_prob|floatformat:3 }}
+        <u><strong>Pipeline Classifications (summary):</strong></u>
+        {% if aggregated_pipeline_class %}
+          <br><strong>Most Common:</strong> {{ aggregated_pipeline_class.most_common_class }}
+          <br><strong>Total:</strong> {{ aggregated_pipeline_class.total_submissions }}
+          <br><strong>No. of Most Common:</strong> {{ aggregated_pipeline_class.count }}
+          {% if aggregated_pipeline_class.ratio %}
+            <br><strong>Agreement:</strong> {{ aggregated_pipeline_class.ratio|floatformat:3 }}
           {% endif %}
         {% else %}
-          <br><span style="color: red;">No Auto Classification</span>
+          <br><i>No pipeline classifications yet.</i>
         {% endif %}
       </p>
+
+      {% if pipeline_classifications %}
+      <div class="mb-2">
+        <label for="pipeline-class-select"><strong>View per-spectrum classification:</strong></label>
+        <select id="pipeline-class-select" class="form-control form-control-sm" style="max-width: 360px;">
+          {% for item in pipeline_classifications %}
+            <option value="{{ item.specid }}" {% if item.specid == default_specid %}selected{% endif %}>
+              {{ item.obs_date|date:"Y-m-d H:i" }} (specid={{ item.specid }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% for item in pipeline_classifications %}
+        <div class="pclass-detail" id="pclass-{{ item.specid }}" style="display: none;">
+          <u><strong>Global:</strong></u>
+          {% if item.global %}
+            <br><strong>Class:</strong> {{ item.global.sn_type|default:"—" }}
+            {% if item.global.phase %}<br><strong>Phase:</strong> {{ item.global.phase|floatformat:1 }} d{% endif %}
+            {% if item.global.z %}<br><strong>Redshift:</strong> {{ item.global.z|floatformat:3 }}{% endif %}
+            {% if item.global.zerr %}±{{ item.global.zerr|floatformat:3 }}{% endif %}
+            {% if item.global.probability %}<br><strong>Probability:</strong> {{ item.global.probability|floatformat:3 }}{% endif %}
+            {% if item.global.version %}<br><strong>Version:</strong> {{ item.global.version }}{% endif %}
+            {% if item.global.notes %}<br><strong>Notes:</strong> {{ item.global.notes }}{% endif %}
+          {% else %}
+            <br><i>No Global classification.</i>
+          {% endif %}
+
+          <br>
+          <u><strong>SNID:</strong></u>
+          {% if item.snid %}
+            <br><strong>Class:</strong> {{ item.snid.sn_type|default:"—" }}
+            {% if item.snid.phase %}<br><strong>Phase:</strong> {{ item.snid.phase|floatformat:1 }} d{% endif %}
+            {% if item.snid.z %}<br><strong>Redshift:</strong> {{ item.snid.z|floatformat:3 }}{% endif %}
+            {% if item.snid.zerr %}±{{ item.snid.zerr|floatformat:3 }}{% endif %}
+            {% if item.snid.probability %}<br><strong>Probability:</strong> {{ item.snid.probability|floatformat:3 }}{% endif %}
+            {% if item.snid.version %}<br><strong>Version:</strong> {{ item.snid.version }}{% endif %}
+          {% else %}
+            <br><i>No SNID classification.</i>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <script>
+      (function(){
+        const select = document.getElementById('pipeline-class-select');
+        function showSelected(){
+          const val = select && select.value;
+          document.querySelectorAll('.pclass-detail').forEach(el => el.style.display = 'none');
+          if (val) {
+            const target = document.getElementById('pclass-' + val);
+            if (target) target.style.display = 'block';
+          }
+        }
+        if (select) {
+          select.addEventListener('change', showSelected);
+          showSelected();
+        }
+      })();
+      </script>
+      {% endif %}
 
       <p>
         <u><strong>Human Classification:</strong></u>
@@ -1062,10 +1140,10 @@ fetch("{% static 'json/line_data.json' %}")
   <!-- Inner Tabs Content -->
   <div class="tab-content mt-3" id="fittingTabsContent">
     <div class="tab-pane fade show active" id="snid-pane" role="tabpanel" aria-labelledby="snid-tab">
-      {% snid_form spectrum=object.id %}
+      {% snid_form target=object %}
     </div>
     <div class="tab-pane fade" id="ngsf-pane" role="tabpanel" aria-labelledby="ngsf-tab">
-      {% ngsf_form spectrum=object.id %}
+      {% ngsf_form target=object %}
     </div>
   </div>
 </div>

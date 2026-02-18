@@ -105,13 +105,43 @@ def aladin_finderchart(target):
     """
     return {'target': target}
 
-@register.inclusion_tag('custom_code/partials/run_snid.html')
-def snid_form(spectrum=None):
+@register.inclusion_tag('custom_code/partials/run_snid.html', takes_context=True)
+def snid_form(context, target=None):
+    """Render SNID form with spectrum selector for the given target."""
+    spectra = []
+    if target is not None:
+        try:
+            from custom_code.models import TidesSpec
+            spectra = (
+                TidesSpec.objects
+                .filter(tides=target)
+                .order_by('obs_date', 'tides_specid')
+            )
+        except Exception:
+            spectra = []
+    return {
+        'target': target,
+        'spectra': spectra,
+        'request': context.get('request'),
+    }
 
-    return {'spectrum': spectrum}
-
-@register.inclusion_tag('custom_code/partials/run_ngsf.html')
-def ngsf_form(spectrum=None):
-
-    return {'spectrum': spectrum}
+@register.inclusion_tag('custom_code/partials/run_ngsf.html', takes_context=True)
+def ngsf_form(context, target=None):
+    """Render NGSF form with spectrum selector for the given target."""
+    spectra = []
+    if target is not None:
+        try:
+            from custom_code.models import TidesSpec
+            spectra = (
+                TidesSpec.objects
+                .filter(tides=target)
+                .order_by('obs_date', 'tides_specid')
+            )
+        except Exception:
+            spectra = []
+    return {
+        'target': target,
+        'spectra': spectra,
+        'request': context.get('request'),
+    }
 

@@ -58,7 +58,6 @@ class TidesTarget(TomTarget):
         db_table = 'tides_cand'
         verbose_name = 'target'
 
-    # Provide an integer tides_id like your old code expects
     @property
     def tides_id(self):
         return self.pk
@@ -253,6 +252,7 @@ class PipelineClassificationGlobal(models.Model):
         related_name='pipeline_classifications_global',
         db_column='tides_id'
     )
+    tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True)
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
@@ -264,6 +264,9 @@ class PipelineClassificationGlobal(models.Model):
         managed = False
         db_table = 'pipeline_classification_global'
         ordering = ['-probability']
+        indexes = [
+            models.Index(fields=['tides_specid'], name='idx_pclass_global_specid'),
+        ]
 
 
 class PipelineClassificationSuperfit(models.Model):
@@ -272,6 +275,7 @@ class PipelineClassificationSuperfit(models.Model):
         related_name='pipeline_classifications_superfit',
         db_column='tides_id'
     )
+    tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True)
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
@@ -281,6 +285,9 @@ class PipelineClassificationSuperfit(models.Model):
         managed = False
         db_table = 'pipeline_classification_superfit'
         ordering = ['-probability']
+        indexes = [
+            models.Index(fields=['tides_specid'], name='idx_pclass_superfit_specid'),
+        ]
 
 
 class PipelineClassificationSnid(models.Model):
@@ -289,6 +296,7 @@ class PipelineClassificationSnid(models.Model):
         related_name='pipeline_classifications_snid',
         db_column='tides_id'
     )
+    tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True)
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
@@ -299,6 +307,9 @@ class PipelineClassificationSnid(models.Model):
         managed = False
         db_table = 'pipeline_classification_snid'
         ordering = ['-probability']
+        indexes = [
+            models.Index(fields=['tides_specid'], name='idx_pclass_snid_specid'),
+        ]
 
 
 class PipelineClassificationDash(models.Model):
@@ -307,6 +318,7 @@ class PipelineClassificationDash(models.Model):
         related_name='pipeline_classifications_dash',
         db_column='tides_id'
     )
+    tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True)
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
@@ -316,6 +328,9 @@ class PipelineClassificationDash(models.Model):
         managed = False
         db_table = 'pipeline_classification_dash'
         ordering = ['-probability']
+        indexes = [
+            models.Index(fields=['tides_specid'], name='idx_pclass_dash_specid'),
+        ]
 
 
 class PipelineClassificationEd(models.Model):
@@ -324,6 +339,7 @@ class PipelineClassificationEd(models.Model):
         related_name='pipeline_classifications_ed',
         db_column='tides_id'
     )
+    tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True)
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
@@ -332,6 +348,9 @@ class PipelineClassificationEd(models.Model):
         managed = False
         db_table = 'pipeline_classification_ed'
         ordering = ['-probability']
+        indexes = [
+            models.Index(fields=['tides_specid'], name='idx_pclass_ed_specid'),
+        ]
 
 
 # ----------------------------
@@ -344,7 +363,8 @@ class TidesSpec(models.Model):
         on_delete=models.CASCADE,
         related_name='spectra'
     )
-    qmost_id = models.BigIntegerField(primary_key=True)
+    # qmost_id removed - now using tides_specid as PRIMARY KEY
+    tides_specid = models.BigIntegerField(primary_key=True, db_column='tides_specid')
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     obs_date = models.DateTimeField(null=True, blank=True)
     obs_mjd = models.FloatField(null=True, blank=True)
