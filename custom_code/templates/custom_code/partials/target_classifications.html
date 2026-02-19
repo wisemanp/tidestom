@@ -4,9 +4,10 @@
     {% for auto_classification in auto_classifications %}
       <li>
         <strong>Type:</strong> {{ auto_classification.sn_type }},
-        <strong>Probability:</strong> {{ auto_classification.probability|floatformat:2 }},
-        <strong>Version:</strong> {{ auto_classification.version }},
-        <strong>Notes:</strong> {{ auto_classification.notes }}
+        <strong>Probability:</strong> {{ auto_classification.probability|floatformat:2 }}{% if auto_classification.z %},
+        <strong>z:</strong> {{ auto_classification.z|floatformat:3 }}{% endif %}{% if auto_classification.phase %},
+        <strong>Phase:</strong> {{ auto_classification.phase|floatformat:1 }} d{% endif %}{% if auto_classification.notes %},
+        <strong>Notes:</strong> {{ auto_classification.notes }}{% endif %}
       </li>
     {% endfor %}
   </ul>
