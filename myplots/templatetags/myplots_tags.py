@@ -7,6 +7,7 @@ from astropy.time import Time
 from django import template
 import glob
 import numpy as np
+import os
 
 from .spectroscopy_settings import (
         add_snid_templates,
@@ -16,6 +17,7 @@ from .spectroscopy_settings import (
 )
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
 from tidestom.settings import BROKERS
+from custom_code.models import PipelineClassificationGlobal
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
 lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
 
@@ -147,24 +149,36 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
             pass
 
     else:
-        tar = f"{target}"
-        paths= glob.glob(f'/snid_api_runs/pipeline_out/*/{tar[6:]}/*h5')
+        # Query database for SNID results file from pipeline_classification_global
         try:
-            auto_snid = f'{paths[0]}'
-            try:
-                spectrum_ref = spectra[-1]
-                fig = add_snid_templates(
-                    auto_snid,
-                    spectrum_ref.spectral_axis.value,
-                    spectrum_ref.flux.value,
-                    fig,
-                    n=3,
-                )
-            except Exception as exc:
-                print(exc)
-                pass
-        except IndexError:
-            warnings.warn(f"{target}", UserWarning)
+            # Get the most recent classification with results_file
+            classification = PipelineClassificationGlobal.objects.filter(
+                tides_id=target.id,
+                results_file__isnull=False
+            ).order_by('-id').first()
+            
+            if classification and classification.results_file:
+                auto_snid = classification.results_file
+                # Verify file exists before attempting to plot
+                if os.path.exists(auto_snid):
+                    try:
+                        spectrum_ref = spectra[-1]
+                        fig = add_snid_templates(
+                            auto_snid,
+                            spectrum_ref.spectral_axis.value,
+                            spectrum_ref.flux.value,
+                            fig,
+                            n=3,
+                        )
+                    except Exception as exc:
+                        print(f"Error adding SNID templates: {exc}")
+                        pass
+                else:
+                    warnings.warn(f"SNID results file not found: {auto_snid}", UserWarning)
+            else:
+                warnings.warn(f"No SNID classification found for target {target}", UserWarning)
+        except Exception as exc:
+            warnings.warn(f"Error loading SNID classification: {exc}", UserWarning)
             pass
 
     if ngsf_path is not None:
