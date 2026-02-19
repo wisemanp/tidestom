@@ -306,6 +306,7 @@ class PipelineClassificationSnid(models.Model):
     phase = models.FloatField(null=True, blank=True)
     z = models.FloatField(null=True, blank=True)
     zerr = models.FloatField(null=True, blank=True)
+    results_file = models.TextField(null=True, blank=True)
     class Meta:
         managed = False
         db_table = 'pipeline_classification_snid'
