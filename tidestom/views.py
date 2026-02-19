@@ -55,14 +55,13 @@ class LatestView(ListView):
         date_threshold = now() - timedelta(days=days_range)
 
         # Base queryset: recent spectra
-        qs = (
+        base_qs = (
             TidesSpec.objects
             .filter(obs_date__gte=date_threshold)
-            .order_by('-obs_date')
         )
 
         # Collect tides_ids and prefetch their TidesTarget objects
-        tides_ids = [s.tides_id for s in qs if getattr(s, 'tides_id', None) is not None]
+        tides_ids = list(base_qs.values_list('tides_id', flat=True))
         targets_qs = TidesTarget.objects.filter(pk__in=tides_ids)
 
         # Apply filters on the TidesTarget side, then restrict specs to those targets
@@ -95,7 +94,12 @@ class LatestView(ListView):
 
         # Restrict TidesSpec to the filtered targets
         filtered_ids = list(targets_qs.values_list('pk', flat=True))
-        qs = qs.filter(tides_id__in=filtered_ids)
+        # Reduce to one spec per target (latest by obs_date)
+        qs = (
+            base_qs.filter(tides_id__in=filtered_ids)
+            .order_by('tides_id', '-obs_date')
+            .distinct('tides_id')
+        )
 
         return qs
 
@@ -162,6 +166,71 @@ class MyTargetDetailView(DetailView):
         # Individual submissions (ordered by remote 'created' column)
         context['human_classifications'] = submissions.order_by('-created')
         context['tags'] = Tag.objects.filter(is_active=True).order_by('name')  # NEW
+
+        # Include all spectra for this target (for multi-spectrum display)
+        try:
+            spectra_qs = (
+                TidesSpec.objects
+                .filter(tides_id=target.pk)
+                .order_by('-obs_date')
+            )
+            context['spectra'] = spectra_qs
+            # Aggregated pipeline classification summary (Global)
+            agg = (
+                PipelineClassificationGlobal.objects
+                .filter(tides=target)
+                .values('sn_type')
+                .annotate(count=models.Count('id'))
+                .order_by('-count')
+                .first()
+            )
+            if agg:
+                total = PipelineClassificationGlobal.objects.filter(tides=target).count()
+                context['aggregated_pipeline_class'] = {
+                    'most_common_class': agg['sn_type'],
+                    'count': agg['count'],
+                    'total_submissions': total,
+                    'ratio': (agg['count'] / total) if total else None,
+                }
+            else:
+                context['aggregated_pipeline_class'] = None
+
+            # Per-spectrum pipeline classifications (Global + SNID)
+            spec_list = list(spectra_qs)
+            per_spec = []
+            for spec in spec_list:
+                try:
+                    g = (
+                        PipelineClassificationGlobal.objects
+                        .filter(tides=target, tides_specid=getattr(spec, 'tides_specid', None))
+                        .order_by('-probability')
+                        .first()
+                    )
+                except Exception:
+                    g = None
+                try:
+                    sn = (
+                        PipelineClassificationSnid.objects
+                        .filter(tides=target, tides_specid=getattr(spec, 'tides_specid', None))
+                        .order_by('-probability')
+                        .first()
+                    )
+                except Exception:
+                    sn = None
+                per_spec.append({
+                    'specid': getattr(spec, 'tides_specid', None),
+                    'obs_date': getattr(spec, 'obs_date', None),
+                    'global': g,
+                    'snid': sn,
+                })
+            context['pipeline_classifications'] = per_spec
+            context['default_specid'] = per_spec[0]['specid'] if per_spec else None
+        except Exception as e:
+            logger.warning(f"Failed to load spectra for target {target.pk}: {e}")
+            context['spectra'] = []
+            context['pipeline_classifications'] = []
+            context['aggregated_pipeline_class'] = None
+            context['default_specid'] = None
         return context
 
 

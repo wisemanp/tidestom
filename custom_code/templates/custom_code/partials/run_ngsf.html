@@ -5,7 +5,21 @@
     <div class="card-body", style="min-width:0;">
 			<form id="ngsf-form" class='ajax-form' data-result-id='ngsf-result' method="post" action="{% url 'ngsf-run' %}">
 			{% csrf_token %}
-			<input type='hidden', name="spectrum" value="{{ spectrum }}" class="form-control">	
+			<!--Spectrum Selection-->
+			<div class="form-group">
+				<label for="ngsf-spectrum">Select Spectrum</label>
+				<select id="ngsf-spectrum" name="spectrum" class="form-control" required>
+					{% if spectra %}
+						{% for spec in spectra %}
+							<option value="{{ spec.tides_specid }}">
+								{{ spec.obs_date|date:"Y-m-d H:i" }} — {{ spec.filepath|default:"(no path)"|slice:"-40:" }}
+							</option>
+						{% endfor %}
+					{% else %}
+						<option value="">No spectra available</option>
+					{% endif %}
+				</select>
+			</div>
 			<!-- Z Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-3">

@@ -38,7 +38,7 @@ def load_spectra(target, last: bool = False) -> tuple[list, list]:
         specs = (
             TidesSpec.objects
             .filter(tides=target)
-            .order_by('obs_date', 'qmost_id')
+            .order_by('obs_date', 'tides_specid')
         )
         if not specs:
             return None
@@ -47,7 +47,7 @@ def load_spectra(target, last: bool = False) -> tuple[list, list]:
         spec = (
             TidesSpec.objects
             .filter(tides=target)
-            .order_by('-obs_date', '-qmost_id')
+            .order_by('-obs_date', '-tides_specid')
             .first()
         )
         if not spec:
