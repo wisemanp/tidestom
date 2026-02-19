@@ -33,7 +33,7 @@ from custom_code.views import (
     StrictTargetUpdateView,
     StrictTargetDeleteView,
 )
-from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
+from myplots.views import target_spectroscopy_partial, download_spectrum_ascii, download_spectrum_by_specid
 
 urlpatterns = [
     path(
@@ -86,6 +86,10 @@ urlpatterns = [
     path(
         "download_spectrum/<int:target_id>/", download_spectrum_ascii,
         name="download_spectrum",
+    ),
+    path(
+        "download_spectrum_by_specid/<int:tides_specid>/", download_spectrum_by_specid,
+        name="download_spectrum_by_specid",
     ),
     path(
         "api/previous_snid_runs/", PreviousSNIDRunsView.as_view(),

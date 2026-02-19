@@ -252,7 +252,7 @@ class PipelineClassificationGlobal(models.Model):
         related_name='pipeline_classifications_global',
         db_column='tides_id'
     )
-    tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True)
+    tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True, unique=True)
     sn_type = models.CharField(max_length=50, null=True, blank=True)
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
@@ -266,6 +266,9 @@ class PipelineClassificationGlobal(models.Model):
         ordering = ['-probability']
         indexes = [
             models.Index(fields=['tides_specid'], name='idx_pclass_global_specid'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['tides_specid'], name='pipeline_classification_global_tides_specid_key'),
         ]
 
 
