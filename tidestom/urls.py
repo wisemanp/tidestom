@@ -33,7 +33,11 @@ from custom_code.views import (
     StrictTargetUpdateView,
     StrictTargetDeleteView,
 )
-from myplots.views import target_spectroscopy_partial, download_spectrum_ascii, download_spectrum_by_specid
+from myplots.views import (
+    target_spectroscopy_partial,
+    download_spectrum_ascii, 
+    download_spectrum_by_specid
+)
 
 urlpatterns = [
     path(
