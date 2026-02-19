@@ -775,7 +775,15 @@ fetch("{% static 'json/line_data.json' %}")
             <tbody>
               {% for spec in spectra %}
               <tr>
-                <td><strong>{{ spec.tides_specid|default:"—" }}</strong></td>
+                <td>
+                  {% if spec.tides_specid %}
+                    <a href="{% url 'download_spectrum_by_specid' spec.tides_specid %}" title="Download spectrum">
+                      <strong>{{ spec.tides_specid }}</strong>
+                    </a>
+                  {% else %}
+                    <strong>—</strong>
+                  {% endif %}
+                </td>
                 <td>{{ spec.obs_date|date:"Y-m-d H:i"|default:"—" }}</td>
                 <td>{{ spec.snr|floatformat:1|default:"—" }}</td>
                 <td>{{ spec.additional_info.EXPOSURE_TIME_S|floatformat:0|default:"—" }}</td>
