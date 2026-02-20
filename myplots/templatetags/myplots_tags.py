@@ -17,7 +17,7 @@ from .spectroscopy_settings import (
 )
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
 from tidestom.settings import BROKERS
-from custom_code.models import PipelineClassificationGlobal
+from custom_code.models import PipelineClassificationGlobal, PipelineClassificationSnid
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
 lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
 
@@ -149,10 +149,10 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
             pass
 
     else:
-        # Query database for SNID results file from pipeline_classification_global
+        # Query database for SNID results file from pipeline_classification_snid
         try:
             # Get the most recent classification with results_file
-            classification = PipelineClassificationGlobal.objects.filter(
+            classification = PipelineClassificationSnid.objects.filter(
                 tides_id=target.id,
                 results_file__isnull=False
             ).order_by('-id').first()
@@ -174,11 +174,11 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
                         print(f"Error adding SNID templates: {exc}")
                         pass
                 else:
-                    warnings.warn(f"SNID results file not found: {auto_snid}", UserWarning)
+                    print(f"[DEBUG] SNID results file not found: {auto_snid}")
             else:
-                warnings.warn(f"No SNID classification found for target {target}", UserWarning)
+                print(f"[DEBUG] No SNID classification found for target {target}")
         except Exception as exc:
-            warnings.warn(f"Error loading SNID classification: {exc}", UserWarning)
+            print(f"[DEBUG] Error loading SNID classification: {exc}")
             pass
 
     if ngsf_path is not None:
