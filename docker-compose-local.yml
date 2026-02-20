@@ -16,15 +16,24 @@ services:
         cp -ru /test_data/mock_DB.csv /spectra_volume/test_data/ 2>/dev/null || true
         cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true
         sleep 5
-        apk add --no-cache postgresql-client
+        apk add --no-cache postgresql-client git
         mkdir -pv /db_init
         if [ ! -f /db_init/.applied ]; then
-          psql -h database -U tides -d tidestom -f /scripts/tides_merged_schema.sql
-          psql -h database -U tides -d tidestom -f /scripts/tidestom_schema.sql
+          echo "Cloning DB scripts"
+          git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
+          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
+          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tidestom_schema.sql
           touch /db_init/.applied
+          echo "Database schema prepared"
+        else
+          echo "Schema already present, skipping"
         fi
         # Always apply idempotent alters to ensure latest columns
-        psql -h database -U tides -d tidestom -f /scripts/alters_tides_specid.sql
+        if [ ! -d /tmp/tides-db-scripts ]; then
+          echo "Cloning DB scripts for alters"
+          git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
+        fi
+        psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/alters_tides_specid.sql
       '
 
     environment:
@@ -38,7 +47,6 @@ services:
       - ../test_data/:/test_data:ro #only for testing
       - ../test_data/sims:/test_data_src:ro #only for testing
       - ../test_data/plots:/test_plots_src:ro #only for testing
-      - ../tides-db-scripts:/scripts:ro
     healthcheck:
       test: ["CMD-SHELL", "[ -d /static/plots ] && [ -d /spectra_volume/test_data ]"]
       interval: 10s
