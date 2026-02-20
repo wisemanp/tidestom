@@ -149,19 +149,28 @@ class Command(BaseCommand):
 
         obs_date, obs_mjd = self._extract_obs_times(store_path)
         tides_specid = self._compute_tides_specid(target.id, store_path)
-        TidesSpec.objects.create(
+        
+        # Use get_or_create to handle case where tides_specid already exists
+        obj, created = TidesSpec.objects.get_or_create(
             tides_specid=tides_specid,
-            tides=target,
-            filepath=str(store_path),
-            obs_date=obs_date,
-            obs_mjd=obs_mjd,
+            defaults={
+                'tides': target,
+                'filepath': str(store_path),
+                'obs_date': obs_date,
+                'obs_mjd': obs_mjd,
+            }
         )
-        print(f"Inserted tides_spec for target {target.name} -> {store_path.name} (tides_specid={tides_specid})")
+        if created:
+            print(f"Inserted tides_spec for target {target.name} -> {store_path.name} (tides_specid={tides_specid})")
+        else:
+            print(f"tides_spec already exists for tides_specid={tides_specid}, skipping insert.")
         return tides_specid
 
     def _upsert_auto_classification(self, target, tides_specid, sn_type, sn_subtype, probability, source_version):
         if not sn_type and probability is None:
             return
+        
+        # Upsert to Global table
         obj, created = PipelineClassificationGlobal.objects.update_or_create(
             tides=target,
             version=source_version,
@@ -173,11 +182,26 @@ class Command(BaseCommand):
             },
         )
         if created:
-            print(f'Inserted auto classification [{source_version}] for target {target.name}: '
+            print(f'Inserted auto classification [Global/{source_version}] for target {target.name}: '
                   f'{sn_type} (p={probability})')
         else:
-            print(f'Updated auto classification [{source_version}] for target {target.name}: '
+            print(f'Updated auto classification [Global/{source_version}] for target {target.name}: '
                   f'{sn_type} (p={probability})')
+        
+        # Also upsert to SNID table (for mock data consistency)
+        snid_obj, snid_created = PipelineClassificationSnid.objects.update_or_create(
+            tides=target,
+            tides_specid=tides_specid,
+            defaults={
+                'sn_type': sn_type,
+                'probability': probability,
+                'version': source_version,
+            },
+        )
+        if snid_created:
+            print(f'Inserted SNID classification for target {target.name}: {sn_type} (p={probability})')
+        else:
+            print(f'Updated SNID classification for target {target.name}: {sn_type} (p={probability})')
 
     # ---------------- main loaders ----------------
 

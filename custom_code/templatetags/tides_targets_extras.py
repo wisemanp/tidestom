@@ -70,12 +70,41 @@ def target_classifications(target):
     auto_classifications = PipelineClassificationGlobal.objects.filter(
         tides_id=tides_pk
     ).order_by('-probability')
+    
+    # Also query SNID classifications
+    snid_classifications = PipelineClassificationSnid.objects.filter(
+        tides_id=tides_pk
+    ).order_by('-probability')
 
     human_qs = HumanClassification.objects.filter(
         tides_id=tides_pk
     ).order_by('-created')
 
-    aggregated = None
+    # Aggregate pipeline classifications
+    aggregated_pipeline = None
+    if auto_classifications.exists():
+        top_auto = (
+            auto_classifications.values('sn_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+            .first()
+        )
+        if top_auto:
+            # Get the highest probability classification of the most common type for representative z/phase
+            most_common_type = top_auto['sn_type']
+            representative = auto_classifications.filter(sn_type=most_common_type).order_by('-probability').first()
+            
+            aggregated_pipeline = {
+                'most_common_class': top_auto['sn_type'],
+                'count': top_auto['count'],
+                'total_submissions': auto_classifications.count(),
+                'z': representative.z if representative and representative.z else None,
+                'phase': representative.phase if representative and representative.phase else None,
+                'probability': representative.probability if representative and representative.probability else None,
+            }
+
+    # Aggregate human classifications
+    aggregated_human = None
     if human_qs.exists():
         top = (
             human_qs.values('sn_type')
@@ -84,7 +113,7 @@ def target_classifications(target):
             .first()
         )
         if top:
-            aggregated = {
+            aggregated_human = {
                 'most_common_class': top['sn_type'],
                 'count': top['count'],
                 'total_submissions': human_qs.count(),
@@ -93,8 +122,10 @@ def target_classifications(target):
     return {
         'target': target,
         'auto_classifications': auto_classifications,
+        'snid_classifications': snid_classifications,
         'human_classifications': human_qs,
-        'aggregated_human_class': aggregated,
+        'aggregated_pipeline_class': aggregated_pipeline,
+        'aggregated_human_class': aggregated_human,
     }
 
 @register.inclusion_tag('custom_code/partials/aladin_finderchart.html')
