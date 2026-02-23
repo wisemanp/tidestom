@@ -1,61 +1,47 @@
-version: "3.9"
-
 services:
   init-gatekeeper:
     image: busybox:latest
-    command: >
-      sh -c "
-        echo 'Checking and creating API workspace directories' &&
-        for dir in /snid_api_runs/workspaces; do
-          mkdir -pv $dir &&
-          chown -R 1000:1000 $dir &&
-          chmod -R 770 $dir
-        done &&
-        echo 'Checking other directories' &&
-        #mkdir -pv /ngsf_api_runs/workspaces &&
-        #mkdir -pv /spectra_volume/test_data/sims &&
-        mkdir -pv /static/plots &&
-        echo 'Copying test data if available' &&
-        cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true &&
-        cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true &&
-        echo 'Directories Ready' &&
+    command: |
+      sh -c '
+      set -e
 
-        sleep 10 &&
+      echo "Checking and creating API workspace directories"
 
-        echo 'Waiting for dependent APIs to become healthy...' &&
-        for url in $API_1_HEALTH $API_2_HEALTH; do
-          attempt=1
-          until wget -qO- --timeout=2 --tries=1 $url >/dev/null 2>&1; do
-            if [ $attempt -ge 10 ]; then
-              echo 'ERROR; $url did not become healthy.' >&2
-              exit 1
-            fi
-            echo 'Attempt' $attempt 'failed for' $url '-retrying in 5s'
-            attempt=$((attempt+1))
-            sleep 5
-          done
-          echo '$url is healthy.'
-        done &&
-        echo 'All dependencies healthy — init complete.'
-      "
+      for dir in /snid_api_runs/workspaces; do
+        mkdir -pv "$$dir"
+        chown -R 1000:1000 "$$dir"
+        chmod -R 770 "$$dir"
+      done
 
+      echo "Directories Ready"
+
+      echo "Waiting for dependent APIs to become healthy..."
+
+      for url in "$$API_1_HEALTH" "$$API_2_HEALTH"; do
+        attempt=1
+        until wget -qO- --timeout=2 --tries=1 "$$url" >/dev/null 2>&1; do
+          if [ "$$attempt" -ge 10 ]; then
+            echo "ERROR: $$url did not become healthy." >&2
+            exit 1
+          fi
+
+          echo "Attempt $$attempt failed for $$url — retrying in 5s"
+          attempt=$$((attempt+1))
+          sleep 5
+        done
+
+        echo "$$url is healthy."
+      done
+
+      echo "All dependencies healthy — init complete."
+      '
     environment:
-      - API_1_HEALTH='http:192.168.10.117:8000/health'
-      - API_2_HEALTH='http:192.168.10.117:8001/health'
+      API_1_HEALTH: http://192.168.10.117:8000/health
+      API_2_HEALTH: http://192.168.10.117:8001/health
     volumes:
       - /mnt/api_results/snid_api_runs:/snid_api_runs
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
       - media_volume_1:/media
-      #- spectra_volume:/spectra_volume
-      #- deliveries_volume:/deliveries
-      - static_volume_1:/static
-      #- ../test_data/sims:/test_data_src:ro #only for testing
-      #- ../test_data/plots:/test_plots_src:ro #only for testing
-    healthcheck:
-      test: ["CMD-SHELL", "[ -d /static/plots ] && [ -d /spectra_volume/test_data ]"]
-      interval: 10s
-      retries: 3
-      start_period: 5s
     restart: "no"
 
   web:
@@ -68,7 +54,7 @@ services:
       init-gatekeeper:
         condition: service_completed_successfully
     volumes:
-      - static_volume_1:/app/staticfiles
+      - /srv/app/static_volume_1:/app/staticfiles
       - media_volume_1:/app/media
       - /mnt/api_results/snid_api_runs:/snid_api_runs
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
@@ -92,8 +78,8 @@ services:
 
     healthcheck:
       test: ["CMD-SHELL",
-      "wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8000/health >/dev/null 2>&1 && \
-       wget -qO- --timeout=2 --tries=1 http:192.168.10.117:8001/health >/dev/null 2>&1"]
+      "wget -qO- --timeout=2 --tries=1 http://192.168.10.117:8000/health >/dev/null 2>&1 && \
+       wget -qO- --timeout=2 --tries=1 http://192.168.10.117:8001/health >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 4
@@ -121,7 +107,7 @@ services:
 #      - backend
 
 volumes:
-  static_volume_1:
+  #static_volume_1:
   media_volume_1:
   #snid_api_runs:
   #  external: true
