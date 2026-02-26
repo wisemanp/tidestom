@@ -11,6 +11,7 @@ from custom_code.models import (
     TidesSpec,
     PipelineClassificationGlobal,
     TidesClass,
+    HumanClassification,
 )
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm  # Ensure this is imported
@@ -264,6 +265,12 @@ class ToggleTagView(LoginRequiredMixin, View):
     def post(self, request, target_id, tag_id):
         target = get_object_or_404(TidesTarget, pk=target_id)
         tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
+        
+        # Check if tag is clickable
+        if not tag.is_clickable:
+            return JsonResponse({
+                'error': f'Tag "{tag.name}" cannot be manually toggled'
+            }, status=403)
 
         # TargetTag.tides is a FK to tom_targets.BaseTarget, so pass target (subclass)
         tt, created = TargetTag.objects.get_or_create(
@@ -446,6 +453,112 @@ class LatestView(ListView):
         for spec in context['targets']:
             spec.target = spec.tides
 
+        return context
+
+
+# --- Staging Area View ---
+
+class StagingAreaView(LoginRequiredMixin, TemplateView):
+    """
+    Staging area for newly observed targets before release.
+    Shows executive summary with classification statistics.
+    """
+    template_name = 'custom_code/staging_area.html'
+    
+    def get_context_data(self, **kwargs):
+        from custom_code.services import staged_queryset
+        from django.db.models import Count, Min, Max, Q
+        
+        context = super().get_context_data(**kwargs)
+        
+        # Get all staged targets
+        staged_targets = staged_queryset().distinct()
+        
+        # Build target data with latest classifications
+        target_data = []
+        for target in staged_targets:
+            # Get latest spectrum
+            latest_spec = target.spectra.order_by('-obs_date').first()
+            if not latest_spec:
+                continue
+            
+            # Get latest auto classification
+            auto_class = (
+                PipelineClassificationGlobal.objects
+                .filter(tides=target)
+                .order_by('-id')
+                .first()
+            )
+            
+            # Get latest human classification
+            human_class = (
+                HumanClassification.objects
+                .filter(tides=target)
+                .order_by('-created')
+                .first()
+            )
+            
+            # Get quality tags
+            quality_tags = list(
+                target.target_tags
+                .filter(tag__name__in=['auto-class-ok', 'auto-class-bad', 'human-class-ok', 'human-class-unsure'])
+                .values_list('tag__name', flat=True)
+            )
+            
+            target_data.append({
+                'target': target,
+                'obs_date': latest_spec.obs_date,
+                'auto_class': auto_class.sn_type if auto_class else None,
+                'auto_z': auto_class.z if auto_class else None,
+                'auto_prob': auto_class.probability if auto_class else None,
+                'human_class': human_class.classification if human_class else None,
+                'human_z': human_class.redshift if human_class else None,
+                'quality_tags': quality_tags,
+                'agrees': (
+                    auto_class and human_class and 
+                    auto_class.sn_type == human_class.classification
+                ),
+            })
+        
+        # Sort by observation date (newest first)
+        target_data.sort(key=lambda x: x['obs_date'], reverse=True)
+        
+        # Calculate summary statistics
+        total_count = len(target_data)
+        
+        # Class distribution (auto classifications)
+        auto_classes = [t['auto_class'] for t in target_data if t['auto_class']]
+        class_counts = {}
+        for cls in auto_classes:
+            class_counts[cls] = class_counts.get(cls, 0) + 1
+        
+        # Disagreements
+        disagreement_count = sum(
+            1 for t in target_data 
+            if t['auto_class'] and t['human_class'] and t['agrees'] is False
+        )
+        agreement_count = sum(
+            1 for t in target_data 
+            if t['auto_class'] and t['human_class'] and t['agrees'] is True
+        )
+        
+        # Redshift range (auto classifications)
+        z_values = [t['auto_z'] for t in target_data if t['auto_z'] is not None]
+        z_min = min(z_values) if z_values else None
+        z_max = max(z_values) if z_values else None
+        z_median = sorted(z_values)[len(z_values)//2] if z_values else None
+        
+        context['target_data'] = target_data
+        context['summary'] = {
+            'total_count': total_count,
+            'class_counts': class_counts,
+            'agreement_count': agreement_count,
+            'disagreement_count': disagreement_count,
+            'z_min': z_min,
+            'z_max': z_max,
+            'z_median': z_median,
+        }
+        
         return context
 
 

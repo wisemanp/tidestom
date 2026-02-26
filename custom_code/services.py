@@ -72,3 +72,102 @@ def filter_by_tags(qs, include_tags=None, exclude_tags=None):
 def released_queryset():
     rel_tag = get_released_tag()
     return TidesTarget.objects.filter(target_tags__tag=rel_tag)
+
+
+def get_staged_tag():
+    """Get or create the 'staged' system tag."""
+    tag, _ = Tag.objects.get_or_create(
+        name='staged',
+        defaults={
+            'description': 'Target is in staging area for next release',
+            'is_system': True,
+            'is_clickable': False,
+            'is_active': True,
+        }
+    )
+    return tag
+
+
+def staged_queryset():
+    """All targets that have the 'staged' tag but not 'released'."""
+    staged_tag = get_staged_tag()
+    released_tag = get_released_tag()
+    return (
+        TidesTarget.objects
+        .filter(target_tags__tag=staged_tag)
+        .exclude(target_tags__tag=released_tag)
+    )
+
+
+def update_staging_area():
+    """
+    Update staging area with new observations since last release.
+    Returns count of newly staged targets.
+    """
+    from .models import TidesSpec
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Find the most recent release time
+    released_tag = get_released_tag()
+    last_release = (
+        TargetTag.objects
+        .filter(tag=released_tag)
+        .order_by('-created')
+        .values_list('created', flat=True)
+        .first()
+    )
+    
+    # If no releases yet, use 24h ago as cutoff
+    if not last_release:
+        last_release = timezone.now() - timedelta(days=1)
+    
+    # Find targets with spectra observed after last release
+    recent_spectra = TidesSpec.objects.filter(obs_date__gt=last_release)
+    tides_ids = recent_spectra.values_list('tides_id', flat=True).distinct()
+    
+    # Get targets that aren't already released or staged
+    staged_tag = get_staged_tag()
+    targets_to_stage = (
+        TidesTarget.objects
+        .filter(pk__in=tides_ids)
+        .exclude(target_tags__tag=released_tag)
+        .exclude(target_tags__tag=staged_tag)
+    )
+    
+    # Add staged tag to these targets
+    count = 0
+    for target in targets_to_stage:
+        TargetTag.objects.get_or_create(
+            tides=target,
+            tag=staged_tag,
+            defaults={'user': None}
+        )
+        count += 1
+    
+    return count
+
+
+def promote_staged_to_released(user=None):
+    """
+    Move all staged targets to released.
+    Returns count of promoted targets.
+    """
+    staged_tag = get_staged_tag()
+    released_tag = get_released_tag()
+    
+    staged_targets = staged_queryset()
+    count = 0
+    
+    for target in staged_targets:
+        # Add released tag
+        TargetTag.objects.get_or_create(
+            tides=target,
+            tag=released_tag,
+            defaults={'user': user}
+        )
+        # Remove staged tag
+        TargetTag.objects.filter(tides=target, tag=staged_tag).delete()
+        count += 1
+    
+    return count

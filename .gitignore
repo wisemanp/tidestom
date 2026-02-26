@@ -18,3 +18,6 @@ tidestom/__pycache__/
 *.fits*
 static/.DS_Store
 static/tom_common/.DS_Store
+
+# Local Docker Compose overrides
+docker-compose-local.override.yml

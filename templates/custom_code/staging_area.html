@@ -1,0 +1,153 @@
+{% extends 'tom_common/base.html' %}
+{% load static %}
+{% load bootstrap4 %}
+
+{% block title %}Staging Area{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>Staging Area</h2>
+    <p class="text-muted">
+        Newly observed targets pending release. These will be moved to public release in the next cycle.
+    </p>
+
+    <!-- Summary Statistics -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Executive Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <h6>Total Targets</h6>
+                    <p class="h3">{{ summary.total_count }}</p>
+                </div>
+                <div class="col-md-3">
+                    <h6>Classification Distribution</h6>
+                    <ul class="list-unstyled">
+                        {% for cls, count in summary.class_counts.items %}
+                        <li><strong>{{ cls }}:</strong> {{ count }} ({{ count|floatformat:0 }}%)</li>
+                        {% empty %}
+                        <li class="text-muted">No classifications yet</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h6>Auto vs Human</h6>
+                    <p>
+                        <span class="badge badge-success">Agree: {{ summary.agreement_count }}</span><br>
+                        <span class="badge badge-warning">Disagree: {{ summary.disagreement_count }}</span>
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <h6>Redshift Range</h6>
+                    {% if summary.z_min and summary.z_max %}
+                    <p>
+                        Min: {{ summary.z_min|floatformat:3 }}<br>
+                        Median: {{ summary.z_median|floatformat:3 }}<br>
+                        Max: {{ summary.z_max|floatformat:3 }}
+                    </p>
+                    {% else %}
+                    <p class="text-muted">No redshift data</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Target Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Staged Targets ({{ summary.total_count }})</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Target ID</th>
+                        <th>Obs Date</th>
+                        <th>Auto Class</th>
+                        <th>Auto z</th>
+                        <th>Auto Prob</th>
+                        <th>Human Class</th>
+                        <th>Human z</th>
+                        <th>Quality Tags</th>
+                        <th>Agreement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in target_data %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'tom_targets:detail' item.target.pk %}">
+                                {{ item.target.name }}
+                            </a>
+                        </td>
+                        <td>{{ item.obs_date|date:"Y-m-d" }}</td>
+                        <td>
+                            {% if item.auto_class %}
+                            <span class="badge badge-info">{{ item.auto_class }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.auto_z %}
+                            {{ item.auto_z|floatformat:3 }}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.auto_prob %}
+                            {{ item.auto_prob|floatformat:2 }}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.human_class %}
+                            <span class="badge badge-primary">{{ item.human_class }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.human_z %}
+                            {{ item.human_z|floatformat:3 }}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% for tag in item.quality_tags %}
+                            <span class="badge badge-secondary">{{ tag }}</span>
+                            {% empty %}
+                            <span class="text-muted">—</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% if item.agrees is not None %}
+                                {% if item.agrees %}
+                                <span class="badge badge-success">✓</span>
+                                {% else %}
+                                <span class="badge badge-warning">✗</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">
+                            No targets in staging area
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -168,6 +168,8 @@ class Tag(models.Model):
     name = models.CharField(max_length=64, unique=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    is_system = models.BooleanField(default=False)  # System tags cannot be deleted/edited by users
+    is_clickable = models.BooleanField(default=True)  # If False, users cannot manually toggle this tag
 
     class Meta:
         ordering = ['name']
@@ -359,3 +361,45 @@ class TidesSpec(models.Model):
         managed = False
         db_table = 'tides_spec'
         ordering = ['-obs_date']
+
+# Signal to auto-tag new spectra as staged
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=TidesSpec)
+def auto_stage_new_spectrum(sender, instance, created, **kwargs):
+    """
+    When a new spectrum is created, automatically tag its target as 'staged'
+    if it's not already released.
+    """
+    if not created:
+        return
+    
+    try:
+        from custom_code.services import get_staged_tag, get_released_tag
+        
+        target = instance.tides
+        if not target:
+            return
+        
+        # Check if already released
+        released_tag = get_released_tag()
+        if target.target_tags.filter(tag=released_tag).exists():
+            return
+        
+        # Check if already staged
+        staged_tag = get_staged_tag()
+        if target.target_tags.filter(tag=staged_tag).exists():
+            return
+        
+        # Add staged tag
+        TargetTag.objects.get_or_create(
+            tides=target,
+            tag=staged_tag,
+            defaults={'user': None}
+        )
+    except Exception as e:
+        # Don't let tagging errors break spectrum creation
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to auto-stage target for spectrum {instance.tides_specid}: {e}")
