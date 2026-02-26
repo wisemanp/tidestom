@@ -4,9 +4,10 @@ from django.db import migrations, models
 
 
 def create_system_tags(apps, schema_editor):
-    """Create system tags for classification status and staging."""
+    """Create system tags for release workflow."""
     Tag = apps.get_model('custom_code', 'Tag')
     
+    # System tags for release workflow
     system_tags = [
         {
             'name': 'released',
@@ -16,42 +17,33 @@ def create_system_tags(apps, schema_editor):
             'is_active': True,
         },
         {
-            'name': 'staged',
-            'description': 'Target is in staging area for next release',
+            'name': 'needs-review',
+            'description': 'Target requires human review before release',
             'is_system': True,
             'is_clickable': False,
             'is_active': True,
         },
         {
-            'name': 'auto-class-ok',
-            'description': 'Pipeline classification appears correct',
-            'is_system': False,
-            'is_clickable': True,
-            'is_active': True,
-        },
-        {
-            'name': 'auto-class-bad',
-            'description': 'Pipeline classification appears incorrect',
-            'is_system': False,
-            'is_clickable': True,
-            'is_active': True,
-        },
-        {
-            'name': 'human-class-ok',
-            'description': 'Human classification is confident',
-            'is_system': False,
-            'is_clickable': True,
-            'is_active': True,
-        },
-        {
-            'name': 'human-class-unsure',
-            'description': 'Human classification is uncertain',
-            'is_system': False,
-            'is_clickable': True,
+            'name': 'ready',
+            'description': 'Target has been reviewed and approved for release',
+            'is_system': True,
+            'is_clickable': False,
             'is_active': True,
         },
     ]
     
+    # Update existing tags to set is_system and is_clickable flags
+    existing_tags = Tag.objects.filter(name__in=[
+        'auto classification ok',
+        'human classification ok', 
+        'human classification unsure'
+    ])
+    for tag in existing_tags:
+        tag.is_system = False
+        tag.is_clickable = True
+        tag.save()
+    
+    # Create new system tags
     for tag_data in system_tags:
         Tag.objects.update_or_create(
             name=tag_data['name'],
@@ -62,7 +54,7 @@ def create_system_tags(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('custom_code', '0001_initial'),  # Adjust this to your last migration
+        ('custom_code', '0003_add_released_tag'),
     ]
 
     operations = [

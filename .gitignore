@@ -21,3 +21,9 @@ static/tom_common/.DS_Store
 
 # Local Docker Compose overrides
 docker-compose-local.override.yml
+reset_test_docker.sh
+
+#CoPilot files
+IMPLEMENTATION_SUMMARY.md
+QUICKSTART_STAGING.md
+STAGING_AND_RELEASE.md

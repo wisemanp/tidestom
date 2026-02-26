@@ -5,12 +5,11 @@
 <div class="mb-2">
   {% with target.target_tags.all as target_tag_set %}
     {% for target_tag in target_tag_set %}
-      {% if target_tag.tag.name in 'auto-class-ok,auto-class-bad,human-class-ok,human-class-unsure' %}
+      {% if target_tag.tag.name in 'auto classification ok,human classification ok,human classification unsure' %}
         <span class="badge 
-          {% if target_tag.tag.name == 'auto-class-ok' %}badge-success
-          {% elif target_tag.tag.name == 'auto-class-bad' %}badge-danger
-          {% elif target_tag.tag.name == 'human-class-ok' %}badge-primary
-          {% elif target_tag.tag.name == 'human-class-unsure' %}badge-warning
+          {% if target_tag.tag.name == 'auto classification ok' %}badge-success
+          {% elif target_tag.tag.name == 'human classification ok' %}badge-primary
+          {% elif target_tag.tag.name == 'human classification unsure' %}badge-warning
           {% endif %}">
           {{ target_tag.tag.name }}
         </span>

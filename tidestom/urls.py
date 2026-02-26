@@ -32,7 +32,6 @@ from custom_code.views import (
     PublicClassificationsDownloadView,
     StrictTargetUpdateView,
     StrictTargetDeleteView,
-    StagingAreaView,
 )
 from myplots.views import target_spectroscopy_partial, download_spectrum_ascii
 
@@ -45,11 +44,6 @@ urlpatterns = [
     path(
         'latest/', LatestView.as_view(),
         name='latest'
-    ),
-    
-    path(
-        'staging/', StagingAreaView.as_view(),
-        name='staging_area'
     ),
 
     path(

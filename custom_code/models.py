@@ -369,14 +369,14 @@ from django.dispatch import receiver
 @receiver(post_save, sender=TidesSpec)
 def auto_stage_new_spectrum(sender, instance, created, **kwargs):
     """
-    When a new spectrum is created, automatically tag its target as 'staged'
-    if it's not already released.
+    When a new spectrum is created, automatically tag its target as 'needs-review'
+    if it's not already released or in the queue.
     """
     if not created:
         return
     
     try:
-        from custom_code.services import get_staged_tag, get_released_tag
+        from custom_code.services import get_needs_review_tag, get_released_tag, get_ready_tag
         
         target = instance.tides
         if not target:
@@ -387,19 +387,20 @@ def auto_stage_new_spectrum(sender, instance, created, **kwargs):
         if target.target_tags.filter(tag=released_tag).exists():
             return
         
-        # Check if already staged
-        staged_tag = get_staged_tag()
-        if target.target_tags.filter(tag=staged_tag).exists():
+        # Check if already in queue (needs-review or ready)
+        needs_review_tag = get_needs_review_tag()
+        ready_tag = get_ready_tag()
+        if target.target_tags.filter(tag__in=[needs_review_tag, ready_tag]).exists():
             return
         
-        # Add staged tag
+        # Add needs-review tag
         TargetTag.objects.get_or_create(
             tides=target,
-            tag=staged_tag,
+            tag=needs_review_tag,
             defaults={'user': None}
         )
     except Exception as e:
         # Don't let tagging errors break spectrum creation
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to auto-stage target for spectrum {instance.tides_specid}: {e}")
+        logger.error(f"Failed to auto-stage target for spectrum {instance.qmost_id}: {e}")

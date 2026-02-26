@@ -4,7 +4,8 @@
 {% block title %}Release Queue{% endblock %}
 
 {% block content %}
-<h2>Release queue (unreleased targets)</h2>
+<h2>Release Queue ({{ total_count }} targets pending release)</h2>
+<p class="text-muted">Targets with disagreements between human and auto classifications are shown first.</p>
 
 <form method="get" class="mb-3">
   <div class="form-row">
@@ -46,8 +47,8 @@
 <form id="release-form" method="post" action="{% url 'release_queue_apply' %}">
   {% csrf_token %}
   <div class="mb-2">
-    <button class="btn btn-sm btn-success" name="action" value="mark" type="submit">Mark released</button>
-    <button class="btn btn-sm btn-warning" name="action" value="unmark" type="submit">Unmark released</button>
+    <button class="btn btn-sm btn-success" name="action" value="mark_ready" type="submit">Mark Ready</button>
+    <button class="btn btn-sm btn-warning" name="action" value="mark_not_ready" type="submit">Mark Not Ready</button>
   </div>
   <table class="table table-sm table-striped">
     <thead>
@@ -55,31 +56,73 @@
         <th><input type="checkbox" id="select-all"></th>
         <th>ID</th>
         <th>Name</th>
-        <th>Auto class</th>
-        <th>Auto prob</th>
-        <th>Tags</th>
+        <th>Auto Class</th>
+        <th>Auto Subclass</th>
+        <th>Auto z</th>
+        <th>Auto Prob</th>
+        <th>Human Class</th>
+        <th>Human z</th>
+        <th>Status</th>
       </tr>
     </thead>
     <tbody>
-      {% for t in targets %}
-        <tr>
+      {% for item in target_data %}
+        <tr {% if not item.is_ready %}class="table-warning"{% endif %}>
           <td>
-            <input type="checkbox" name="target_id" value="{{ t.id }}">
+            <input type="checkbox" name="target_id" value="{{ item.target.id }}">
           </td>
-          <td>{{ t.tides_id }}</td>
-          <td><a href="{% url 'target_detail' t.id %}">{{ t.name }}</a></td>
-          <td>{{ t.auto_tidesclass }}</td>
-          <td>{{ t.auto_tidesclass_prob|floatformat:3 }}</td>
+          <td>{{ item.target.tides_id }}</td>
+          <td><a href="{% url 'target_detail' item.target.id %}">{{ item.target.name }}</a></td>
           <td>
-            {% for tag in t.tags.all %}
-              <span class="badge badge-info">{{ tag.name }}</span>
-            {% empty %}
-              <i>None</i>
+            {% if item.auto_class %}
+              <span class="badge badge-info">{{ item.auto_class }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.auto_subclass %}
+              {{ item.auto_subclass }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.auto_z %}
+              {{ item.auto_z|floatformat:3 }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.auto_prob %}
+              {{ item.auto_prob|floatformat:2 }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.human_class %}
+              <span class="badge badge-primary">{{ item.human_class }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.human_z %}
+              {{ item.human_z|floatformat:3 }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% for tag in item.tags %}
+              <span class="badge badge-secondary">{{ tag }}</span>
             {% endfor %}
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="6"><i>No unreleased targets match your filters.</i></td></tr>
+        <tr><td colspan="10" class="text-center text-muted"><i>No unreleased targets match your filters.</i></td></tr>
       {% endfor %}
     </tbody>
   </table>
