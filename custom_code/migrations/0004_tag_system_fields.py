@@ -6,7 +6,7 @@ from django.db import migrations, models
 def create_system_tags(apps, schema_editor):
     """Create system tags for release workflow."""
     Tag = apps.get_model('custom_code', 'Tag')
-    
+
     # System tags for release workflow
     system_tags = [
         {
@@ -31,18 +31,18 @@ def create_system_tags(apps, schema_editor):
             'is_active': True,
         },
     ]
-    
+
     # Update existing tags to set is_system and is_clickable flags
     existing_tags = Tag.objects.filter(name__in=[
         'auto classification ok',
-        'human classification ok', 
+        'human classification ok',
         'human classification unsure'
     ])
     for tag in existing_tags:
         tag.is_system = False
         tag.is_clickable = True
         tag.save()
-    
+
     # Create new system tags
     for tag_data in system_tags:
         Tag.objects.update_or_create(

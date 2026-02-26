@@ -594,33 +594,32 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
 
 class ReleaseQueueActionView(LoginRequiredMixin, View):
     def post(self, request):
-        from custom_code.services import get_ready_tag
-        
+        from custom_code.services import get_ready_tag, get_needs_review_tag
+        from django.shortcuts import redirect
+        from django.urls import reverse
+
         action = request.POST.get('action')
         ids = request.POST.getlist('target_id')
-        
+        next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('release_queue')
+
         if not ids:
-            return JsonResponse({'error': 'No targets selected'}, status=400)
+            return redirect(next_url)
 
         targets = TidesTarget.objects.filter(pk__in=ids)
         ready_tag = get_ready_tag()
+        needs_review_tag = get_needs_review_tag()
 
         if action == 'mark_ready':
-            count = 0
             for target in targets:
                 TargetTag.objects.get_or_create(tides=target, tag=ready_tag)
-                count += 1
-            return JsonResponse({'updated': count, 'message': f'Marked {count} targets as ready.'})
-            
+                TargetTag.objects.filter(tides=target, tag=needs_review_tag).delete()
+
         elif action == 'mark_not_ready':
-            count = 0
             for target in targets:
                 TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
-                count += 1
-            return JsonResponse({'updated': count, 'message': f'Marked {count} targets as not ready.'})
-            
-        else:
-            return JsonResponse({'error': 'Unknown action'}, status=400)
+                TargetTag.objects.get_or_create(tides=target, tag=needs_review_tag)
+
+        return redirect(next_url)
 
 class StrictTargetUpdateView(TargetUpdateView):
     """

@@ -31,7 +31,7 @@ services:
         echo 'Preparing database init script' &&
         apk add --no-cache postgresql-client git &&
 
-        if [ "$USE_DB_SCRIPTS" = "1" ] && [ ! -f /db_init/.applied ]; then
+        if [ ! -f /db_init/.applied ]; then
           echo 'Cloning DB scripts'
           git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
           psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
@@ -44,7 +44,7 @@ services:
           touch /db_init/.applied 
           echo 'Database schema prepared'
         else
-          echo 'Skipping DB scripts (USE_DB_SCRIPTS not set or already applied)'
+          echo 'Schema already present, skipping'
         fi
         echo 'Init complete'
 
@@ -176,7 +176,7 @@ services:
         done && \
         python manage.py migrate && \
         python manage.py makemigrations && \
-        python manage.py migrate && \
+        python manage.py migrate && \ 
         python manage.py collectstatic --no-input \
       "
     environment:
