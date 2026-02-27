@@ -11,6 +11,7 @@ from custom_code.models import (
     TidesTarget,
     HumanClassification,
     PipelineClassificationGlobal,
+    PipelineClassificationSnid,
     TidesSpec,
     TidesClass,
     TidesClassSubClass,
@@ -199,26 +200,31 @@ class MyTargetDetailView(DetailView):
             spec_list = list(spectra_qs)
             per_spec = []
             for spec in spec_list:
+                specid = getattr(spec, 'tides_specid', None)
                 try:
                     g = (
                         PipelineClassificationGlobal.objects
-                        .filter(tides=target, tides_specid=getattr(spec, 'tides_specid', None))
+                        .filter(tides=target, tides_specid=specid)
                         .order_by('-probability')
                         .first()
                     )
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Error loading global classification for target={target.pk} specid={specid}: {e}")
                     g = None
                 try:
                     sn = (
                         PipelineClassificationSnid.objects
-                        .filter(tides=target, tides_specid=getattr(spec, 'tides_specid', None))
+                        .filter(tides=target, tides_specid=specid)
                         .order_by('-probability')
                         .first()
                     )
-                except Exception:
+                    if not sn:
+                        logger.info(f"No SNID classification found for target={target.pk} specid={specid}")
+                except Exception as e:
+                    logger.warning(f"Error loading SNID classification for target={target.pk} specid={specid}: {e}")
                     sn = None
                 per_spec.append({
-                    'specid': getattr(spec, 'tides_specid', None),
+                    'specid': specid,
                     'obs_date': getattr(spec, 'obs_date', None),
                     'global': g,
                     'snid': sn,
