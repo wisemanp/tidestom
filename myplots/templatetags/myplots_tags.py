@@ -156,7 +156,7 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
                 tides_id=target.id,
                 results_file__isnull=False
             ).order_by('-id').first()
-            
+
             if classification and classification.results_file:
                 auto_snid = classification.results_file
                 # Verify file exists before attempting to plot

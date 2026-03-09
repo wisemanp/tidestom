@@ -222,7 +222,7 @@ def Alam(lamin, A_v: float = 1, R_v: float = 3.1) -> np.ndarray:
 
     return redreturn
 
-def add_ngsf_templates(ngsf_file: str, obs_wave: np.ndarray, obs_flux: np.ndarray, 
+def add_ngsf_templates(ngsf_file: str, obs_wave: np.ndarray, obs_flux: np.ndarray,
                        fig: go.Figure, n: int = 3) -> go.Figure:
     """Adds best-match NGSF templates to the figure.
 
@@ -252,9 +252,14 @@ def add_ngsf_templates(ngsf_file: str, obs_wave: np.ndarray, obs_flux: np.ndarra
     for i, row in sn_df[:n].iterrows():
         # template info
         z = row.Z  # redshift
-        temp_info = row.SN 
+        temp_info = row.SN
         # get path to template file
-        temp_path, _, _, _ = temp_info.split()
+        split_info = temp_info.split()
+        if len(split_info) == 4:
+            temp_path, _, _, _ = split_info
+        elif len(split_info) == 5:
+            a_temp_path, b_temp_path, _, _, _ = split_info
+            temp_path = f"{a_temp_path} {b_temp_path}"
         temp_path = Path(temp_path).parent
         temp_type, temp_sn = str(temp_path).split('/')
         temp_dir = ngsf_path / 'bank/original_resolution/sne' / temp_path
@@ -262,7 +267,7 @@ def add_ngsf_templates(ngsf_file: str, obs_wave: np.ndarray, obs_flux: np.ndarra
         # get phase from best templates to get peak mjd
         temp_phase = float(row.Phase)
         mjd_peak = max_df[max_df.Name==temp_sn].mjd_peak.values[0]
-        
+
         # get phases for all available templates
         wiserep_df = pd.read_csv(temp_dir / 'wiserep_spectra.csv')
         mjds = Time(wiserep_df.JD.values, format='jd').mjd
@@ -275,7 +280,7 @@ def add_ngsf_templates(ngsf_file: str, obs_wave: np.ndarray, obs_flux: np.ndarra
             temp_wave, temp_flux, _ = temp_df.values.T
         except Exception:
             temp_wave, temp_flux = temp_df.values.T
-        
+
         # load host-galaxy template
         gal_file = ngsf_path / 'bank/original_resolution/gal' / row.GALAXY
         host_wave, host_flux = np.loadtxt(gal_file).T
@@ -287,13 +292,13 @@ def add_ngsf_templates(ngsf_file: str, obs_wave: np.ndarray, obs_flux: np.ndarra
         temp_flux *= 10 ** (-0.4 * row.A_v * Alam(temp_wave)) / (1 + z)
         temp_wave *= (1 + z)
         temp_flux /= (1 + z)
-        host_flux /= (1 + z)        
+        host_flux /= (1 + z)
         # scale by constants and add host-galaxy contribution to the SN template
         temp_total_flux = (temp_flux * row.CONST_SN) + (host_flux * row.CONST_GAL)
         temp_total_flux *= median  # add observed spectrum scale
         # match observed grid
         temp_wave, temp_total_flux = match_grid(obs_wave, temp_wave, temp_total_flux)
-            
+
         # update figure with templates
         fig.add_trace(go.Scatter(
             x=temp_wave,
