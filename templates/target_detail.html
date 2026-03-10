@@ -41,37 +41,37 @@ document.addEventListener("DOMContentLoaded", function () {
     let lines = {};  // placeholder
 
 fetch("{% static 'json/line_data.json' %}")
-	.then(response => response.json())
-	.then(data => {
-		lines = data;
+    .then(response => response.json())
+    .then(data => {
+        lines = data;
 
-		const commonContainer = document.getElementById("common-lines");
-		const absorptionContainer = document.getElementById("absorption-lines");
-		const transientSpecificContainer = document.getElementById("transient-specific-lines");
+        const commonContainer = document.getElementById("common-lines");
+        const absorptionContainer = document.getElementById("absorption-lines");
+        const transientSpecificContainer = document.getElementById("transient-specific-lines");
 
-		// Build checkboxes
-		Object.entries(lines).forEach(([id, { color, label, type }]) => {
-			const wrapper = document.createElement("label");
-			wrapper.innerHTML = `
-				<input type="checkbox" id="${id}">
-				<span style="color:${color};">${label}</span>
-			`;
+        // Build checkboxes
+        Object.entries(lines).forEach(([id, { color, label, type }]) => {
+            const wrapper = document.createElement("label");
+            wrapper.innerHTML = `
+                <input type="checkbox" id="${id}">
+                <span style="color:${color};">${label}</span>
+            `;
 
-			if (type === "common") commonContainer.appendChild(wrapper);
-			else if (type === "absorption") absorptionContainer.appendChild(wrapper);
-			else if (type === "transient-specific") transientSpecificContainer.appendChild(wrapper);
-		});
+            if (type === "common") commonContainer.appendChild(wrapper);
+            else if (type === "absorption") absorptionContainer.appendChild(wrapper);
+            else if (type === "transient-specific") transientSpecificContainer.appendChild(wrapper);
+        });
 
-		// Attach listeners
-		Object.keys(lines).forEach(id => {
-			document.getElementById(id)?.addEventListener("change", updateRedshiftVelocity);
-		});
+        // Attach listeners
+        Object.keys(lines).forEach(id => {
+            document.getElementById(id)?.addEventListener("change", updateRedshiftVelocity);
+        });
 
         document.getElementById("resetVelocity").addEventListener("click", () => {
           velocitySlider.value = 0;
           velocityInput.value = 0;
           updateRedshiftVelocity();
-	    });
+        });
 
         document.getElementById("resetRedshift").addEventListener("click", () => {
             const resetValue = "{{ object.auto_tidesclass_z|default_if_none:0 }}";
@@ -80,14 +80,14 @@ fetch("{% static 'json/line_data.json' %}")
             updateRedshiftVelocity();
         });
 
-		// Initial draw to ensure sync between the checkboxes and line drawing
-		updateRedshiftVelocity();
-	})
-	.catch(error => console.error("Error loading line data:", error));
+        // Initial draw to ensure sync between the checkboxes and line drawing
+        updateRedshiftVelocity();
+    })
+    .catch(error => console.error("Error loading line data:", error));
 
   let updateTimeout = null; // global throttle timer
   
-	// --- Overlay toggle configuration ---
+    // --- Overlay toggle configuration ---
     const overlayButtons = [
         { id: "telluric_display", overlay: "telluric", active: true },
         { id: "arm_join_display", overlay: "armJoin", active: true },
@@ -99,7 +99,7 @@ fetch("{% static 'json/line_data.json' %}")
     overlayButtons.forEach(btn => {
         overlayState[btn.overlay] = btn.active;
 
-	// Style buttons: green when active, white when off, remove focus outline & highlight
+    // Style buttons: green when active, white when off, remove focus outline & highlight
         const element = document.getElementById(btn.id);
         if (element) {
             element.style.backgroundColor = btn.active ? "green" : "white";
@@ -117,8 +117,52 @@ fetch("{% static 'json/line_data.json' %}")
             });
         }
     });
-	
- 	// --- Main updateLines function ---
+    
+    function updateRestAxis() {
+
+        if (!figDiv || !figDiv.layout || !figDiv.layout.xaxis) return;
+
+        const xaxis = figDiv.layout.xaxis;
+        if (!xaxis.range || xaxis.range.length !== 2) return;
+
+        const z = Number(redshiftInput.value) || 0;
+        const factor = 1 + z;
+
+        const obsMin = Number(xaxis.range[0]);
+        const obsMax = Number(xaxis.range[1]);
+
+        if (!isFinite(obsMin) || !isFinite(obsMax)) return;
+
+        let tickvals = [];
+
+        if (Array.isArray(xaxis.tickvals) && xaxis.tickvals.length) {
+            tickvals = xaxis.tickvals.map(Number).filter(v => isFinite(v));
+        } else {
+            const nTicks = 6;
+            const step = (obsMax - obsMin) / (nTicks - 1);
+            for (let i = 0; i < nTicks; i++) {
+                tickvals.push(obsMin + i * step);
+            }
+        }
+
+        const ticktext = tickvals.map(obs => {
+            const rest = obs / factor;
+
+            if ((obsMax - obsMin) < 200) {
+                return rest.toFixed(1);
+            } else {
+                return Math.round(rest).toString();
+            }
+        });
+
+        Plotly.relayout(figDiv, {
+            "xaxis2.tickmode": "array",
+            "xaxis2.tickvals": tickvals,
+            "xaxis2.ticktext": ticktext
+        });
+    }
+
+    // --- Main updateLines function ---
     function updateLines(z, v) {
         const figDiv = getFigDiv();
         if (!figDiv) return;
@@ -238,7 +282,7 @@ fetch("{% static 'json/line_data.json' %}")
                         xref: "x", yref: "paper",
                         text: "⊕", showarrow: false,
                         font: { size: 12, color: "black" },
-                        xanchor: "center", yanchor: "bottom",
+                        xanchor: "center", yanchor: "top",
                         opacity: 0.95
                     });
                 });
@@ -259,7 +303,7 @@ fetch("{% static 'json/line_data.json' %}")
                         xref: "x", yref: "paper",
                         text: "AJ", showarrow: false,
                         font: { size: 12, color: "black" },
-                        xanchor: "center", yanchor: "bottom",
+                        xanchor: "center", yanchor: "top",
                         opacity: 0.95
                     });
                 });
@@ -280,7 +324,7 @@ fetch("{% static 'json/line_data.json' %}")
                         xref: "x", yref: "paper",
                         text: "Sky-Sub", showarrow: false,
                         font: { size: 12, color: "black" },
-                        xanchor: "center", yanchor: "bottom",
+                        xanchor: "center", yanchor: "top",
                         opacity: 0.95
                     });
                 });
@@ -399,6 +443,8 @@ fetch("{% static 'json/line_data.json' %}")
         redshiftInput.value = isFinite(z) ? z.toFixed(3) : "";
         velocityInput.value = isFinite(v) ? v.toFixed(0) : "";
 
+        updateRestAxis();
+
         // Only call updateLines if both are valid
         if (!isNaN(z) && z >= 0 && z <= 3 && !isNaN(v) && v >= -50000 && v <= 50000) {
             updateLines(z, v);
@@ -408,6 +454,20 @@ fetch("{% static 'json/line_data.json' %}")
     // Attach event listeners.
     redshiftSlider.addEventListener("input", updateRedshiftVelocity);
     velocitySlider.addEventListener("input", updateRedshiftVelocity);
+
+    if (figDiv) {
+        figDiv.on("plotly_relayout", function(eventData) {
+
+            if (
+                eventData["xaxis.range[0]"] !== undefined ||
+                eventData["xaxis.range[1]"] !== undefined ||
+                eventData["xaxis.autorange"] !== undefined
+            ) {
+                updateRestAxis();
+            }
+
+        });
+    }
 
     // --- Manual text inputs (push back into sliders) ---
     redshiftInput.addEventListener("change", () => {
@@ -591,7 +651,7 @@ fetch("{% static 'json/line_data.json' %}")
       <div class='btn-group' role='group' aria-label='Slack button'>
         {% if request.user.is_authenticated %}
         <button id="slackButton" class="btn btn-slack">
-		<svg
+        <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 122.8 122.8"
     width="18"
@@ -607,11 +667,11 @@ fetch("{% static 'json/line_data.json' %}")
     <path fill="#ECB22E" d="M77.5 92.5c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3-15.3-6.8-15.3-15.3V92.5h15.3z"/>
     <path fill="#ECB22E" d="M77.5 84.8c-8.4 0-15.3-6.8-15.3-15.3s6.8-15.3 15.3-15.3h38.2c8.4 0 15.3 6.8 15.3 15.3s-6.8 15.3-15.3 15.3H77.5z"/>
   </svg>
-			<span> Send to Slack</span>
+            <span> Send to Slack</span>
         </button>
 
         {% endif %}
-		</div>
+        </div>
 
 <style>
 .btn-slack {
@@ -918,9 +978,9 @@ fetch("{% static 'json/line_data.json' %}")
           <br><i>No human classifications submitted yet.</i>
         {% endif %}
       </p>
-	  {% if request.user.is_authenticated %}
+      {% if request.user.is_authenticated %}
       {% classification_form target.id %}
-	  {% endif %}
+      {% endif %}
     </div>
   </div>
 
@@ -1100,49 +1160,49 @@ fetch("{% static 'json/line_data.json' %}")
 
     <!-- Velocity Slider -->
     <div class="spectroscopy-only">
-	<label for="velocitySlider" style="display:block; width:250px;">
-		Additional line velocity (km/s):
-	</label>
+    <label for="velocitySlider" style="display:block; width:250px;">
+        Additional line velocity (km/s):
+    </label>
 
-	<!-- Slider (on its own line) -->
-	<input
-		type="range"
-		id="velocitySlider"
-		min="-50000"
-		max="50000"
-		step="100"
-		value="0"
-		style="width: 300px"
-	>
+    <!-- Slider (on its own line) -->
+    <input
+        type="range"
+        id="velocitySlider"
+        min="-50000"
+        max="50000"
+        step="100"
+        value="0"
+        style="width: 300px"
+    >
 
-	<!-- Input + Reset button (below slider, same line) -->
-	<div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
-		<button
-			id="resetVelocity"
-			style="
-				padding: 3px 8px;
-				background-color: #f0f0f0;
-				border: 1px solid #ccc;
-				border-radius: 4px;
-				cursor: pointer;
-				transition: background-color 0.2s, border-color 0.2s;
-			"
-			onmouseover="this.style.backgroundColor='#e0e0e0'; this.style.borderColor='#bbb';"
-			onmouseout="this.style.backgroundColor='#f0f0f0'; this.style.borderColor='#ccc';"
-		>
-			Reset
-		</button>
+    <!-- Input + Reset button (below slider, same line) -->
+    <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+        <button
+            id="resetVelocity"
+            style="
+                padding: 3px 8px;
+                background-color: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: background-color 0.2s, border-color 0.2s;
+            "
+            onmouseover="this.style.backgroundColor='#e0e0e0'; this.style.borderColor='#bbb';"
+            onmouseout="this.style.backgroundColor='#f0f0f0'; this.style.borderColor='#ccc';"
+        >
+            Reset
+        </button>
 
-		<input
-			type="number"
-			id="velocityInput"
-			min="-50000"
-			max="50000"
-			step="100"
-			value="0"
-			style="width: 80px; text-align: center;"
-		>
-	</div>
+        <input
+            type="number"
+            id="velocityInput"
+            min="-50000"
+            max="50000"
+            step="100"
+            value="0"
+            style="width: 80px; text-align: center;"
+        >
+    </div>
     </div>
 
 {% if request.user.is_authenticated %}
@@ -1369,7 +1429,7 @@ $(document).ready(function() {
 </div>
   </div>
   {% else %}
- 		Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
+        Please <a href="{% url 'login' %}?next={% url 'targets:list' %}">login</a> to view or create targets.
 
 
   {% endif %}
