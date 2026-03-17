@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db.models import Count
 from custom_code.models import PipelineClassificationGlobal, HumanClassification, PipelineClassificationSnid
 from myplots.templatetags.utils import find_target_name
+import warnings
 
 register = template.Library()
 
@@ -43,10 +44,14 @@ def tides_target_data(target):
     # add Lasair links
     try:
         ztfname = find_target_name(target.ra, target.dec, "ztf")
+    except Exception as e:
+        warnings.warn(f"{e}")
+        ztfname = None
+    try:
         lsstname = find_target_name(target.ra, target.dec, "lsst")
-    except Exception as exc:
-        print(exc)
-        return {'target': target, 'extras': extras}
+    except Exception as e:
+        warnings.warn(f"{e}")
+        lsstname = None
     if ztfname is not None:
         ztflink = "https://lasair-ztf.lsst.ac.uk/objects/" + ztfname
     else:
@@ -55,7 +60,7 @@ def tides_target_data(target):
         lsstlink = "https://lasair-lsst.lsst.ac.uk/objects/" + lsstname
     else:
         lsstlink = ''
-    return {'target': target, 'extras': extras, 
+    return {'target': target, 'extras': extras,
             'ztfname': ztfname, 'lsstname': lsstname,
             'ztflink': ztflink, 'lsstlink': lsstlink,
             }
@@ -66,11 +71,11 @@ def target_classifications(target):
     Displays the classifications of a target.
     """
     tides_pk = target.pk  # parent_link => pk == tides_cand.tides_id
-    
+
     auto_classifications = PipelineClassificationGlobal.objects.filter(
         tides_id=tides_pk
     ).order_by('-probability')
-    
+
     # Also query SNID classifications
     snid_classifications = PipelineClassificationSnid.objects.filter(
         tides_id=tides_pk
@@ -93,7 +98,7 @@ def target_classifications(target):
             # Get the highest probability classification of the most common type for representative z/phase
             most_common_type = top_auto['sn_type']
             representative = auto_classifications.filter(sn_type=most_common_type).order_by('-probability').first()
-            
+
             aggregated_pipeline = {
                 'most_common_class': top_auto['sn_type'],
                 'count': top_auto['count'],
