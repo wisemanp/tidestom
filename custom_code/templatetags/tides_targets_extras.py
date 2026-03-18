@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db.models import Count
 from custom_code.models import PipelineClassificationGlobal, HumanClassification, PipelineClassificationSnid
 from myplots.templatetags.utils import find_target_name
+import warnings
 
 register = template.Library()
 
@@ -43,10 +44,14 @@ def tides_target_data(target):
     # add Lasair links
     try:
         ztfname = find_target_name(target.ra, target.dec, "ztf")
+    except Exception as e:
+        warnings.warn(f"{e}")
+        ztfname = None
+    try:
         lsstname = find_target_name(target.ra, target.dec, "lsst")
-    except Exception as exc:
-        print(exc)
-        return {'target': target, 'extras': extras}
+    except Exception as e:
+        warnings.warn(f"{e}")
+        lsstname = None
     if ztfname is not None:
         ztflink = "https://lasair-ztf.lsst.ac.uk/objects/" + ztfname
     else:
@@ -55,7 +60,7 @@ def tides_target_data(target):
         lsstlink = "https://lasair-lsst.lsst.ac.uk/objects/" + lsstname
     else:
         lsstlink = ''
-    return {'target': target, 'extras': extras, 
+    return {'target': target, 'extras': extras,
             'ztfname': ztfname, 'lsstname': lsstname,
             'ztflink': ztflink, 'lsstlink': lsstlink,
             }
@@ -66,8 +71,13 @@ def target_classifications(target):
     Displays the classifications of a target.
     """
     tides_pk = target.pk  # parent_link => pk == tides_cand.tides_id
-    
+
     auto_classifications = PipelineClassificationGlobal.objects.filter(
+        tides_id=tides_pk
+    ).order_by('-probability')
+
+    # Also query SNID classifications
+    snid_classifications = PipelineClassificationSnid.objects.filter(
         tides_id=tides_pk
     ).order_by('-probability')
 
@@ -75,7 +85,31 @@ def target_classifications(target):
         tides_id=tides_pk
     ).order_by('-created')
 
-    aggregated = None
+    # Aggregate pipeline classifications
+    aggregated_pipeline = None
+    if auto_classifications.exists():
+        top_auto = (
+            auto_classifications.values('sn_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+            .first()
+        )
+        if top_auto:
+            # Get the highest probability classification of the most common type for representative z/phase
+            most_common_type = top_auto['sn_type']
+            representative = auto_classifications.filter(sn_type=most_common_type).order_by('-probability').first()
+
+            aggregated_pipeline = {
+                'most_common_class': top_auto['sn_type'],
+                'count': top_auto['count'],
+                'total_submissions': auto_classifications.count(),
+                'z': representative.z if representative and representative.z else None,
+                'phase': representative.phase if representative and representative.phase else None,
+                'probability': representative.probability if representative and representative.probability else None,
+            }
+
+    # Aggregate human classifications
+    aggregated_human = None
     if human_qs.exists():
         top = (
             human_qs.values('sn_type')
@@ -84,7 +118,7 @@ def target_classifications(target):
             .first()
         )
         if top:
-            aggregated = {
+            aggregated_human = {
                 'most_common_class': top['sn_type'],
                 'count': top['count'],
                 'total_submissions': human_qs.count(),
@@ -93,8 +127,10 @@ def target_classifications(target):
     return {
         'target': target,
         'auto_classifications': auto_classifications,
+        'snid_classifications': snid_classifications,
         'human_classifications': human_qs,
-        'aggregated_human_class': aggregated,
+        'aggregated_pipeline_class': aggregated_pipeline,
+        'aggregated_human_class': aggregated_human,
     }
 
 @register.inclusion_tag('custom_code/partials/aladin_finderchart.html')
@@ -105,13 +141,43 @@ def aladin_finderchart(target):
     """
     return {'target': target}
 
-@register.inclusion_tag('custom_code/partials/run_snid.html')
-def snid_form(spectrum=None):
+@register.inclusion_tag('custom_code/partials/run_snid.html', takes_context=True)
+def snid_form(context, target=None):
+    """Render SNID form with spectrum selector for the given target."""
+    spectra = []
+    if target is not None:
+        try:
+            from custom_code.models import TidesSpec
+            spectra = (
+                TidesSpec.objects
+                .filter(tides=target)
+                .order_by('obs_date', 'tides_specid')
+            )
+        except Exception:
+            spectra = []
+    return {
+        'target': target,
+        'spectra': spectra,
+        'request': context.get('request'),
+    }
 
-    return {'spectrum': spectrum}
-
-@register.inclusion_tag('custom_code/partials/run_ngsf.html')
-def ngsf_form(spectrum=None):
-
-    return {'spectrum': spectrum}
+@register.inclusion_tag('custom_code/partials/run_ngsf.html', takes_context=True)
+def ngsf_form(context, target=None):
+    """Render NGSF form with spectrum selector for the given target."""
+    spectra = []
+    if target is not None:
+        try:
+            from custom_code.models import TidesSpec
+            spectra = (
+                TidesSpec.objects
+                .filter(tides=target)
+                .order_by('obs_date', 'tides_specid')
+            )
+        except Exception:
+            spectra = []
+    return {
+        'target': target,
+        'spectra': spectra,
+        'request': context.get('request'),
+    }
 

@@ -25,12 +25,32 @@
     {% for auto_classification in auto_classifications %}
       <li>
         <strong>Type:</strong> {{ auto_classification.sn_type }},
-        <strong>Probability:</strong> {{ auto_classification.probability|floatformat:2 }},
-        <strong>Version:</strong> {{ auto_classification.version }},
-        <strong>Notes:</strong> {{ auto_classification.notes }}
+        <strong>Probability:</strong> {{ auto_classification.probability|floatformat:2 }}
+        <!-- Debug: z={{ auto_classification.z }} -->
+        {% if auto_classification.z %},
+        <strong>z:</strong> {{ auto_classification.z|floatformat:3 }}{% endif %}{% if auto_classification.phase %},
+        <strong>Phase:</strong> {{ auto_classification.phase|floatformat:1 }} d{% endif %}{% if auto_classification.notes %},
+        <strong>Notes:</strong> {{ auto_classification.notes }}{% endif %}
       </li>
     {% endfor %}
   </ul>
 {% else %}
   <p><strong>Auto Classifications:</strong> None</p>
+{% endif %}
+
+{% if snid_classifications %}
+  <p><strong>SNID Classifications:</strong></p>
+  <ul>
+    {% for snid_classification in snid_classifications %}
+      <li>
+        <strong>Type:</strong> {{ snid_classification.sn_type }},
+        <strong>Probability:</strong> {{ snid_classification.probability|floatformat:2 }}
+        {% if snid_classification.z %},
+        <strong>z:</strong> {{ snid_classification.z|floatformat:3 }}{% endif %}{% if snid_classification.zerr %}±{{ snid_classification.zerr|floatformat:3 }}{% endif %}{% if snid_classification.phase %},
+        <strong>Phase:</strong> {{ snid_classification.phase|floatformat:1 }} d{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p><strong>SNID Classifications:</strong> None</p>
 {% endif %}
