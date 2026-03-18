@@ -151,7 +151,7 @@ def add_snid_templates(pysnid_file: str, obs_wave: np.ndarray, obs_flux: np.ndar
         fig.add_trace(go.Scatter(
             x=model_wave,
             y=model_flux,
-            name=f"SNID: {m}. {temp_info.sn}<br>{temp_info.type}<br>Phase:{temp_info.age}, z={temp_info.z}",
+            name=f"SNID {m}: {temp_info.type} @ {temp_info.age:+}d (z={temp_info.z:.3f})",
             hovertemplate=(f'Name: {temp_info.sn}<br>Type: {temp_info.type}<br>'
                            f'Phase: {temp_info.age} d<br>Wave.:%{{x}}'),
             showlegend=True,
@@ -192,7 +192,7 @@ def add_snid_select_template(pysnid_file: str, obs_wave: np.ndarray, obs_flux: n
         fig.add_trace(go.Scatter(
             x=model_wave,
             y=model_flux,
-            name=f"SNID: {i}. {temp_info.sn}<br>{temp_info.type}<br>Phase:{temp_info.age}, z={temp_info.z}",
+            name=f"SNID {m}: {temp_info.type} @ {temp_info.age:+}d (z={temp_info.z:.3f})",
             hovertemplate=(f'Name: {temp_info.sn}<br>Type: {temp_info.type}<br>'
                            f'Phase: {temp_info.age} d<br>Wave.:%{{x}}'),
             showlegend=True,

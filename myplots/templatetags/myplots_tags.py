@@ -44,9 +44,9 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
     
     for i, (spectrum, spec) in enumerate(zip(spectra, specs)):
         label = (
-            spec.obs_date.strftime('%Y%m%d-%H:%M:%S')
+            spec.obs_date.strftime('%d/%m/%Y')
             if getattr(spec, 'obs_date', None)
-            else datetime.now().strftime('%Y%m%d-%H:%M:%S')
+            else datetime.now().strftime('%d/%m/%Y')
         )
         # Include exposure where available
         try:
@@ -195,16 +195,71 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
         except Exception as exc:
             return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
 
+    try:
+        xmin = min(np.nanmin(spectrum.spectral_axis.value) for spectrum in spectra)
+        xmax = max(np.nanmax(spectrum.spectral_axis.value) for spectrum in spectra)
+        ymin = min(ymins) if ymins else 0.0
+    except Exception:
+        xmin, xmax, ymin = 3600, 9600, 0.0
+
+    fig.add_trace(
+        go.Scatter(
+            x=[xmin, xmax],
+            y=[ymin, ymin],
+            xaxis='x2',
+            yaxis='y',
+            mode='lines',
+            line=dict(color='rgba(0,0,0,0)', width=1),
+            hoverinfo='skip',
+            showlegend=False,
+        )
+    )
+
     fig.update_layout(
-    	autosize=True,
+        autosize=True,
         height=650,
-        xaxis_title='Observed Wavelength (Å)',
-        yaxis_title='Flux (erg/s/cm²/Å)',
-        xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-    	  yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-        legend_title="Best Matches",
-        margin=dict(t=150),
-        legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
+        xaxis=dict(
+            title='Observed Wavelength (Å)',
+            showticklabels=True,
+            ticks='outside',
+            linewidth=2,
+            side='bottom',
+            tickformat=".0f"
+        ),
+        xaxis2=dict(
+            title=dict(
+                text='Rest Wavelength (Å)',
+                standoff=10
+            ),
+            overlaying='x',
+            side='top',
+            anchor='y',
+            showgrid=False,
+            zeroline=False,
+            ticks='outside',
+            showticklabels=True,
+            showline=True,
+            linewidth=2,
+            tickmode='sync',
+            visible=True
+        ),
+        yaxis=dict(
+            title='Flux (erg/s/cm²/Å)',
+            showticklabels=True,
+            ticks='outside',
+            linewidth=2
+        ),
+        margin=dict(t=180),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.18,
+            xanchor="center",
+            x=0.5,
+            entrywidth=0.5,
+            entrywidthmode="fraction",
+            font=dict(size=14)
+        ),
         showlegend=True,
         font_family="P052",
         font_size=16
