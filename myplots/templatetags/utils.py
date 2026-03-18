@@ -6,7 +6,7 @@ from tidestom.settings import BROKERS
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
 lasair_ztf_url = "https://lasair-ztf.lsst.ac.uk"
 lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
-lasair_lsst_url = "https://lasair-lsst.lsst.ac.uk"
+lasair_lsst_url = "https://lasair.lsst.ac.uk"
 
 ##########
 # Lasair #

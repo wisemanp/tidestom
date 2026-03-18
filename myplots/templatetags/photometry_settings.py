@@ -10,7 +10,7 @@ from tidestom.settings import BROKERS
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
 lasair_ztf_url = "https://lasair-ztf.lsst.ac.uk"
 lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
-lasair_lsst_url = "https://lasair-lsst.lsst.ac.uk"
+lasair_lsst_url = "https://lasair.lsst.ac.uk"
 
 ##########
 # Lasair #
@@ -35,9 +35,7 @@ def fetch_target_lasair(ra: float, dec: float, survey: str = None) -> pd.DataFra
         filter_dict = {1: 'ztf_g', 2: 'ztf_r', 3: 'ztf_i'}
     else:
         url, token = lasair_lsst_url, lasair_lsst_token
-        filter_dict = {1: 'lsst_u', 2: 'lsst_g', 3: 'lsst_r',
-                       4: 'lsst_i', 5: 'lsst_z', 6: 'lsst_y',
-                       }
+
     # get name of target
     target_name = find_target_name(ra, dec, survey)
     if target_name is None:
@@ -47,37 +45,58 @@ def fetch_target_lasair(ra: float, dec: float, survey: str = None) -> pd.DataFra
     if not is_site_up(url):
         return None
     lasair = lasair_client(token, endpoint = url + "/api")
-    target_info = lasair.lightcurves([target_name])
-    phot_list = target_info[0]['candidates']
-    det_list = []  # detections
-    nondet_list = []  # non-detections
-    # convert to dataframe
-    for phot_dict in phot_list:
-        # convert values into list to convert to dataframe
-        phot_dict = {key:[value] for key, value in phot_dict.items()}
-        df = pd.DataFrame(phot_dict)
-        if 'magpsf' in phot_dict.keys():
-            det_list.append(df)
-        else:
-            nondet_list.append(df)
-    with warnings.catch_warnings():
-        # ignore annoying pandas future warning
-        warnings.simplefilter("ignore")
-        det_df = pd.concat(det_list)
-        nondet_df = pd.concat(nondet_list)
-    phot_df = pd.concat([det_df, nondet_df])  # for non detection use diffmaglim
-    jds = Time(phot_df['jd'].values, format='jd')
-    phot_df['mjd'] = jds.mjd
+    ### ZTF ###
+    if survey == "ztf":
+        target_info = lasair.lightcurves([target_name])
+        phot_list = target_info[0]['candidates']
+        det_list = []  # detections
+        nondet_list = []  # non-detections
+        # convert to dataframe
+        for phot_dict in phot_list:
+            # convert values into list to convert to dataframe
+            phot_dict = {key:[value] for key, value in phot_dict.items()}
+            df = pd.DataFrame(phot_dict)
+            if 'magpsf' in phot_dict.keys():
+                det_list.append(df)
+            else:
+                nondet_list.append(df)
+        with warnings.catch_warnings():
+            # ignore annoying pandas future warning
+            warnings.simplefilter("ignore")
+            det_df = pd.concat(det_list)
+            nondet_df = pd.concat(nondet_list)
+        phot_df = pd.concat([det_df, nondet_df])  # for non detection use diffmaglim
+        jds = Time(phot_df['jd'].values, format='jd')
+        phot_df['mjd'] = jds.mjd
+        # Replace photometric filter numbers with human-readable names
+        phot_df['fid'] = [filter_dict[fid] for fid in phot_df['fid']]
+        # rename columns
+        phot_df.rename(columns={'fid':'filter', 
+                               'magpsf':'mag', 
+                               'sigmapsf':'mag_err',
+                               'diffmaglim':'upper_mag'
+                              }, 
+                      inplace=True)
+    ### LSST ###
+    else:
+        result = lasair.object(target_name, lasair_added=False, lite=True)
+        phot_df = pd.DataFrame(result["diaSourcesList"]).set_index("diaSourceId")
+        ['midpointMjdTai', 'band', 'psfFlux', 'psfFluxErr', 'reliability']
+        zp = 31.4  # LSST zeropoint as the flux is in nano-Jansky
+        #phot_df.loc[phot_df["psfFlux"] < 1, "psfFlux"] = 1
+        phot_df["mag"] = -2.5 * np.log10(phot_df.psfFlux.values) + zp
+        phot_df["mag_err"] = (2.5 / np.log(10)) * (phot_df.psfFluxErr.values / phot_df.psfFlux.values)
+        # 3-sigma upper limits, as in https://fallingstar-data.com/forcedphot/resultdesc/
+        snr = phot_df.psfFlux.values / phot_df.psfFluxErr.values
+        upper_mag = -2.5 * np.log10(3 * phot_df.psfFluxErr.values) + zp
+        phot_df["upper_mag"] = np.where(snr < 3, upper_mag, np.nan)
+        phot_df["mag"] = np.where(~phot_df.upper_mag.isna(), np.nan, phot_df.mag.values)
+        phot_df["band"] = "lsst_" + phot_df["band"].astype(str)
+        phot_df.rename(columns={'midpointMjdTai':'mjd', 
+                               'band':'filter', 
+                              }, 
+                      inplace=True)
     
-    # rename columns
-    phot_df.rename(columns={'fid':'filter', 
-                           'magpsf':'mag', 
-                           'sigmapsf':'mag_err',
-                           'diffmaglim':'upper_mag'
-                          }, 
-                  inplace=True)
-    # Replace photometric filter numbers with human-readable names
-    phot_df['filter'] = [filter_dict[fid] for fid in phot_df['filter']]
     # Sort the table on filter and time:
     phot_df.sort_values(['filter', 'mjd'], inplace=True)
     phot_df = phot_df[['filter', 'mjd', 'mag', 'mag_err', 'upper_mag']]
@@ -260,7 +279,8 @@ def plot_lightcurves(photometry: pd.DataFrame) -> go.Figure:
     photometry["UTC"] = Time(photometry.mjd.values, format="mjd").iso
     
     # add columns
-    zp = 23.9  # to get flux in micro jansky
+    zp_condition = photometry["filter"].str.startswith("ztf", na=False)
+    zp = np.where(zp_condition, 23.9, 31.4)  # ZTF or LSST
     photometry["flux"] = 10 ** (-0.4 * (photometry.mag.values - zp))
     photometry["flux_err"] = np.abs(photometry.flux.values * 0.4 * np.log(10) * photometry.mag_err.values)
     photometry["upper_flux"] = 10 ** (-0.4 * (photometry.upper_mag.values - zp))

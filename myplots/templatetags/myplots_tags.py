@@ -187,24 +187,35 @@ def target_photometry(context, target, dataproduct=None):
     Renders a photometry plot for a ``Target``. If a ``DataProduct`` is specified, it will only render a plot with
     that photometry.
     """
-    # check if the Lasair's API key is set
-    if lasair_ztf_token is None or lasair_ztf_token == "":
-        warnings.warn("Warning: Lasair API key for ZTF not set!", UserWarning)
-        return {'target': target}
-    if lasair_lsst_token is None or lasair_lsst_token == "":
-        warnings.warn("Warning: Lasair API key for LSST not set!", UserWarning)
-        return {'target': target}
-
+    tokens = {"ztf": lasair_ztf_token,
+              "lsst": lasair_lsst_token,
+              }
     photometry_list = []
-    for survey in ["ztf", "lsst"]:
-        #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
+    for survey, token in tokens.items():
+        # check if the Lasair's API key is set
+        if token is None or token == "":
+            warnings.warn(f"Warning: Lasair API key for {survey.upper()} not set!", UserWarning)
+            continue
         try:
+            #if survey == "ztf":
+            #   phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
+            #if survey == "lsst":
+            #   phot = fetch_target_lasair(57.421526, -48.269298, survey)  # 313761042284412983 for testing
             phot = fetch_target_lasair(target.ra, target.dec, survey)
+            photometry_list.append(phot)
         except Exception as exc:
-            return {'target': target, 'plot': exc}
-        photometry_list.append(phot)
-    photometry = pd.concat(photometry_list)
+            print(exc)
+            continue
+
+    if len(photometry_list) == 0:
+        # tokens not set
+        return {'target': target}
+    try:
+        photometry = pd.concat(photometry_list)
+    except ValueError:
+        return {'target': target}
     if photometry is None:
+        # no photometry found
         return {'target': target}
 
     # plot photometry
