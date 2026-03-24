@@ -22,9 +22,11 @@
             <label class="form-label" for="tag">Tags (hold Ctrl/Cmd to select multiple)</label>
             <select name="tag" id="tag" class="form-select form-control" multiple size="4">
               {% for t in all_tags %}
-                <option value="{{ t.name }}" {% if t.name in filter_tags %}selected{% endif %}>
-                  {{ t.name }}
-                </option>
+                {% if t.is_clickable %}
+                  <option value="{{ t.name }}" {% if t.name in filter_tags %}selected{% endif %}>
+                    {{ t.name }}
+                  </option>
+                {% endif %}
               {% endfor %}
             </select>
           </div>

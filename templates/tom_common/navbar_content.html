@@ -16,8 +16,11 @@ For customization instructions, see tom_common/base.html
         <a class="dropdown-item" href="{% url 'targets:targetgrouping' %}">Target Grouping</a>
     </div>
 </li>
+<li class="nav-item {% if request.resolver_match.url_name == 'release_queue' %}active{% endif %}">
+    <a class="nav-link" href="{% url 'release_queue' %}">Release Queue</a>
+</li>
 <li class="nav-item {% if request.resolver_match.url_name == 'public_classifications' %}active{% endif %}">
-	<a class="nav-link" href="{% url 'public_classifications' %}">Classifications</a>
+    <a class="nav-link" href="{% url 'public_classifications' %}">Classifications</a>
 </li>
 <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" data-toggle="dropdown">Observations</a>
@@ -51,5 +54,6 @@ For customization instructions, see tom_common/base.html
 {% else %}
 <li class="nav-item {% if request.resolver_match.url_name == 'public_classifications' %}active{% endif %}">
 	<a class="nav-link" href="{% url 'public_classifications' %}">Classifications</a>
+</li>
 </li>
 {% endif %}

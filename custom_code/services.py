@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.db import models
 from django.contrib.auth import get_user_model
 from .models import TidesTarget, Tag, TargetTag
 
@@ -72,3 +73,131 @@ def filter_by_tags(qs, include_tags=None, exclude_tags=None):
 def released_queryset():
     rel_tag = get_released_tag()
     return TidesTarget.objects.filter(target_tags__tag=rel_tag)
+
+
+def get_needs_review_tag():
+    """Get or create the 'needs-review' system tag."""
+    tag, _ = Tag.objects.get_or_create(
+        name='needs-review',
+        defaults={
+            'description': 'Target requires human review before release',
+            'is_system': True,
+            'is_clickable': False,
+            'is_active': True,
+        }
+    )
+    return tag
+
+
+def get_ready_tag():
+    """Get or create the 'ready' system tag."""
+    tag, _ = Tag.objects.get_or_create(
+        name='ready',
+        defaults={
+            'description': 'Target has been reviewed and approved for release',
+            'is_system': True,
+            'is_clickable': False,
+            'is_active': True,
+        }
+    )
+    return tag
+
+
+def staged_queryset():
+    """All targets that are pending release (needs-review or ready, but not released)."""
+    needs_review_tag = get_needs_review_tag()
+    ready_tag = get_ready_tag()
+    released_tag = get_released_tag()
+    return (
+        TidesTarget.objects
+        .filter(
+            models.Q(target_tags__tag=needs_review_tag) |
+            models.Q(target_tags__tag=ready_tag)
+        )
+        .exclude(target_tags__tag=released_tag)
+        .distinct()
+    )
+
+
+def update_staging_area():
+    """
+    Update staging area with new observations since last release.
+    Marks new targets as needs-review.
+    Returns count of newly staged targets.
+    """
+    from .models import TidesSpec
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Find the most recent release time
+    released_tag = get_released_tag()
+    last_release = (
+        TargetTag.objects
+        .filter(tag=released_tag)
+        .order_by('-created')
+        .values_list('created', flat=True)
+        .first()
+    )
+    
+    # If no releases yet, use 24h ago as cutoff
+    if not last_release:
+        last_release = timezone.now() - timedelta(days=1)
+    
+    # Find targets with spectra observed after last release
+    recent_spectra = TidesSpec.objects.filter(obs_date__gt=last_release)
+    tides_ids = recent_spectra.values_list('tides_id', flat=True).distinct()
+    
+    # Get targets that aren't already released or in review
+    needs_review_tag = get_needs_review_tag()
+    ready_tag = get_ready_tag()
+    targets_to_stage = (
+        TidesTarget.objects
+        .filter(pk__in=tides_ids)
+        .exclude(target_tags__tag=released_tag)
+        .exclude(target_tags__tag=needs_review_tag)
+        .exclude(target_tags__tag=ready_tag)
+    )
+    
+    # Add needs-review tag to new targets
+    count = 0
+    for target in targets_to_stage:
+        TargetTag.objects.get_or_create(
+            tides=target,
+            tag=needs_review_tag,
+            defaults={'user': None}
+        )
+        count += 1
+    
+    return count
+
+
+def promote_staged_to_released(user=None):
+    """
+    Move all 'ready' targets to released.
+    Only targets with the 'ready' tag are promoted.
+    Returns count of promoted targets.
+    """
+    ready_tag = get_ready_tag()
+    released_tag = get_released_tag()
+    
+    # Get targets that are ready but not yet released
+    ready_targets = (
+        TidesTarget.objects
+        .filter(target_tags__tag=ready_tag)
+        .exclude(target_tags__tag=released_tag)
+        .distinct()
+    )
+    
+    count = 0
+    for target in ready_targets:
+        # Add released tag
+        TargetTag.objects.get_or_create(
+            tides=target,
+            tag=released_tag,
+            defaults={'user': user}
+        )
+        # Remove ready tag
+        TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
+        count += 1
+    
+    return count

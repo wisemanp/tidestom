@@ -3,6 +3,7 @@ from django.conf import settings
 
 SEED_TAGS = [
     "auto classification ok",
+    "auto classification bad",
     "human classification ok",
     "human classification unsure",
     "high-redshift",
