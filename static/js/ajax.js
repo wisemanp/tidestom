@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     form.addEventListener("submit", async function(e) {
       e.preventDefault();
-      if (form.dataset.submitting) return false; // prevent double submission
+      if (form.dataset.submitting === "true") return false; // prevent double submission
       form.dataset.submitting = "true";
 
       const formData = new FormData(form);
@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", function() {
         resultDiv.innerHTML = `<p style="color:red;">AJAX failed: ${err}</p>`;
         console.error(err);
       } finally {
-        form.dataset.submitting = "false";
+        delete form.dataset.submitting;
         form.classList.remove("form-disabled");
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;

@@ -91,16 +91,22 @@ class SnidFormAjaxView(FormView):
     def form_valid(self, form):
         spectrum_id = form.cleaned_data.pop('spectrum', None)
         if not spectrum_id:
-            return JsonResponse({"success": False, "error": "No spectrum selected"},
-                                status=400)
-        spec = (TidesSpec.objects
-                .filter(tides=spectrum_id)
-                .order_by('-obs_date', '-qmost_id')
-                .first()
-            )
+            return JsonResponse({"success": False, "error": "No spectrum selected"}, status=400)
+        # Resolve by tides_specid (preferred); fallback to JSON additional_info
+        spec = None
+        try:
+            spec = TidesSpec.objects.get(tides_specid=int(spectrum_id))
+        except Exception:
+            try:
+                spec = (
+                    TidesSpec.objects
+                    .filter(additional_info__TIDES_SPECID=int(spectrum_id))
+                    .first()
+                )
+            except Exception:
+                spec = None
         if not spec:
-            return JsonResponse({"success": False, "error": "No spectrum found"},
-                                status=400)
+            return JsonResponse({"success": False, "error": "Spectrum not found"}, status=404)
         p = Path(spec.filepath)
         if not p.exists():
             candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
@@ -122,7 +128,7 @@ class SnidFormAjaxView(FormView):
             return HttpResponseForbidden("You do not have permission to access this\
                     workspace.")
 
-        target_name = str(spectrum_id)
+        target_name = str(spec.tides_id)
         timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
 
         run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"
@@ -195,16 +201,22 @@ class NGSFFormAJAXView(FormView):
     def form_valid(self, form):
         spectrum_id = form.cleaned_data.pop('spectrum', None)
         if not spectrum_id:
-            return JsonResponse({"success": False, "error": "No spectrum selected"},
-                                status=400)
-        spec = (TidesSpec.objects
-                .filter(tides=spectrum_id)
-                .order_by('-obs_date', '-qmost_id')
-                .first()
-            )
+            return JsonResponse({"success": False, "error": "No spectrum selected"}, status=400)
+        # Resolve by tides_specid (preferred); fallback to JSON additional_info
+        spec = None
+        try:
+            spec = TidesSpec.objects.get(tides_specid=int(spectrum_id))
+        except Exception:
+            try:
+                spec = (
+                    TidesSpec.objects
+                    .filter(additional_info__TIDES_SPECID=int(spectrum_id))
+                    .first()
+                )
+            except Exception:
+                spec = None
         if not spec:
-            return JsonResponse({"success": False, "error": "No spectrum found"},
-                                status=400)
+            return JsonResponse({"success": False, "error": "Spectrum not found"}, status=404)
         p = Path(spec.filepath)
         if not p.exists():
             candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
@@ -226,7 +238,7 @@ class NGSFFormAJAXView(FormView):
             return HttpResponseForbidden("You do not have permission to access this\
                     workspace.")
 
-        target_name = str(spectrum_id)
+        target_name = str(spec.tides_id)
         timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
 
         run_dir = Path(workspace_path) / target_name / f"run_{timestamp}"

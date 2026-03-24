@@ -1,4 +1,4 @@
-<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.15/js/bootstrap-multiselect.min.js"></script>
 <div class="card" style="min-width:0;">
     <div class="card-header">
        Run SNID
@@ -6,8 +6,21 @@
     <div class="card-body" style="min-width:0;">
 			<form id="snid-form" class='ajax-form' data-result-id='snid-result' method="post" action="{% url 'snid-run' %}">
 			{% csrf_token %}
-			<!--Spectrum Inputs-->
-			<input type="hidden" name="spectrum" value="{{ spectrum }}" class=form-control>
+			<!--Spectrum Selection-->
+			<div class="form-group">
+				<label for="spectrum">Select Spectrum</label>
+				<select id="spectrum" name="spectrum" class="form-control" required>
+					{% if spectra %}
+						{% for spec in spectra %}
+							<option value="{{ spec.tides_specid }}">
+								{{ spec.obs_date|date:"Y-m-d H:i" }} — {{ spec.filepath|default:"(no path)"|slice:"-40:" }}
+							</option>
+						{% endfor %}
+					{% else %}
+						<option value="">No spectra available</option>
+					{% endif %}
+				</select>
+			</div>
 			<!-- Wavelength Inputs -->
 			<div class="form-row">
 			<div class="form-group col-md-6">
@@ -84,11 +97,11 @@
 			<div class='form-group col-md-6 text-center'>
 			<label for="avoid" class="d-block"> Avoid these types:</label>
 			<select id='avoid' name='avoid' multiple='multiple'>
-				<option value='Ia'>Ia</option>
-				<option value='Ib'>Ib</option>
-				<option value='Ic'>Ic</option>
-				<option value='II'>II</option>
-				<option value='NotSN'>NotSN</option>
+				<option value='Ia' data-type='Ia'>Ia</option>
+				<option value='Ib' data-type='Ib'>Ib</option>
+				<option value='Ic' data-type='Ic'>Ic</option>
+				<option value='II' data-type='II'>II</option>
+				<option value='NotSN' data-type='NotSN'>NotSN</option>
 			</select>
 			</div>
 			
@@ -138,27 +151,90 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-	function setupMutualExclusion(selectA, selectB) {
-		$(`#${selectA}`).on('change', function () {
-			const selected = $(this).val() || [];
-			const other = $(`#${selectB}`);
-			selected.forEach(val => {
-				other.multiselect('deselect', val);
-			});
-		});
+	let isSyncing =false;
 
-		$(`#${selectB}`).on('change', function () {
-			const selected = $(this).val() || [];
-			const other = $(`#${selectA}`);
-			selected.forEach(val => {
-				other.multiselect('deselect', val);
-			});
+	function setupMirror(selectA, selectB) {
+	    const A = $(`#${selectA}`);
+		const B = $(`#${selectB}`);
+
+		A.on('change', function () {
+			if (isSyncing) return;
+			isSyncing = true;
+
+			const selected = A.val() || [];
+			const all = B.find('option').map(function () {
+				return this.value;
+			}).get();
+
+			const complement = all.filter(v => !selected.includes(v));
+
+			B.multiselect('deselectAll', false);
+			B.multiselect('select', complement);
+
+			isSyncing = false;
 		});
+	}
+
+	function cascadeTypeToSubtypes(typeId, subtypeId) {
+		$(`#${typeId}`).on('change', function () {
+			if (isSyncing) return;
+			isSyncing = true;
+
+			const selectedTypes = $(this).val() || [];
+			const subSelect = $(`#${subtypeId}`);
+
+			subSelect.find('option').each(function () {
+				const parent = this.dataset.type;
+				const value = this.value;
+
+				if (selectedTypes.includes(parent)) {
+					subSelect.multiselect('select', value);
+				} else {
+					subSelect.multiselect('deselect', value);
+				}
+			});
+
+			isSyncing = false;
+		});
+	}
+
+	function restoreTypeFromSubtypes(typeId, subtypeId) {
+		$(`#${subtypeId}`).on('change', function () {
+			if (isSyncing) return;
+			isSyncing = true;
+
+			const typeSelect = $(`#${typeId}`);
+			const subSelect = $(this);
+
+			typeSelect.find('option').each(function () {
+				const typeVal = this.value;
+
+				const related = subSelect.find(`option[data-type="${typeVal}"]`);
+				const selected = related.filter(':selected');
+
+				if (related.length > 0 && selected.length === related.length) {
+					typeSelect.multiselect('select', typeVal);
+				} else {
+					typeSelect.multiselect('deselect', typeVal);
+				}
+			});
+
+			isSyncing = false;
+		});
+	}
+
+	function getParentType(subtype) {
+	    if (subtype.startsWith("Ia")) return "Ia";
+		if (subtype.startsWith("Ib")) return "Ib";
+		if (subtype.startsWith("Ic")) return "Ic";
+		if (subtype.startsWith("II")) return "II";
+
+		return "NotSN";
 	}
 
 
     function populateSelects(fileUrl, selectIds) {
-        fetch(fileUrl)
+        return fetch(fileUrl)
             .then(response => response.text())
             .then(data => {
                 const options = data.split("\n").map(line => line.trim()).filter(Boolean);
@@ -174,6 +250,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         const option = document.createElement("option");
                         option.value = opt;
                         option.textContent = opt;
+						option.dataset.type = getParentType(opt)
                         select.appendChild(option);
                     });
 
@@ -185,11 +262,24 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 	
     // Populate subtypes (usesub + avoidsub)
-    populateSelects("/static/config/subtypes.txt", ["usesub"]);
-    populateSelects("/static/config/subtypes.txt", ["avoidsub"]);
+    populateSelects("/static/config/subtypes.txt", ["usesub", "avoidsub"])
+		.then(() => {
+			
+			$('#use').multiselect('selectAll', false);
+			$('#usesub').multiselect('selectAll', false);
 
-	setupMutualExclusion("usesub", "avoidsub");
-	setupMutualExclusion("use", "avoid");
+			$('#avoid').multiselect('deselectAll', false);
+			$('#avoidsub').multiselect('deselectAll', false);
+
+			setupMirror("usesub", "avoidsub");
+			setupMirror("use", "avoid");
+
+			cascadeTypeToSubtypes("use", "usesub");
+			cascadeTypeToSubtypes("avoid", "avoidsub");
+
+			restoreTypeFromSubtypes("use", "usesub");
+			restoreTypeFromSubtypes("avoid", "avoidsub");
+		});
 
 	const targetId = "{{ spectrum|default:'' }}";
 	const runsTable = document.querySelector("#runs-table tbody");

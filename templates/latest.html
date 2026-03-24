@@ -66,8 +66,8 @@
               <div class="card-body">
                 <h5 class="card-title text-truncate">
                   {% if spec.target %}
-                    <a href="{% url 'target_detail' spec.target.id %}" title="{{ spec.target.id }}">
-                      {{ spec.target.id }}
+                    <a href="{% url 'target_detail' spec.target.id %}" title="{{ spec.target.name }}">
+                      {{ spec.target.name }}
                     </a>
                   {% else %}
                     <span class="text-muted">No Target</span>

@@ -7,6 +7,7 @@ from astropy.time import Time
 from django import template
 import glob
 import numpy as np
+import os
 
 from .spectroscopy_settings import (
         add_snid_templates,
@@ -16,6 +17,7 @@ from .spectroscopy_settings import (
 )
 from .photometry_settings import plot_lightcurves, fetch_target_lasair
 from tidestom.settings import BROKERS
+from custom_code.models import PipelineClassificationGlobal, PipelineClassificationSnid
 lasair_ztf_token = BROKERS['LASAIR']['ztf_api_key']
 lasair_lsst_token = BROKERS['LASAIR']['lsst_api_key']
 
@@ -25,34 +27,56 @@ register = template.Library()
 def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_index=None, ngsf_path=None):
     """
     Render a spectroscopic plot for a Target.
-    Loads the latest spectrum from tides_spec (FITS with WAVE/FLUX columns).
+    Overlays all available spectra from tides_spec (FITS/TXT with WAVE/FLUX columns).
     """
     try:
-        # last spectrum only
-        spectra, specs = load_spectra(target, last=True)
+        spectra, specs = load_spectra(target, last=False)
     except Exception as exc:
         return {'target': target, 'plot': f'<p>Failed to load spectrum: {exc}</p>'}
     if not specs:
         return {'target': target, 'plot': f'<p>No spectrum available for this target:{target}.</p>'}
-    spectrum, spec = spectra[0], specs[0]
+    plot_data = []
+    ymins = []
+    ymaxs = []
+    colors = [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
-    scale_factor = 1 #setting 1 currently as SNID plots wrongly right now with this
-
-    plot_data = [
-        go.Scatter(
-            x=spectrum.spectral_axis.value,
-            y=spectrum.flux.value/scale_factor,
-            name=(spec.obs_date.strftime('%Y%m%d-%H:%M:%S') if getattr(spec, 'obs_date', None)
-                    else datetime.now().strftime('%Y%m%d-%H:%M:%S')),
-            marker=dict(color='darkslategray'),
-            opacity=0.5,
-            #visible='legendonly',
+    for i, (spectrum, spec) in enumerate(zip(spectra, specs)):
+        label = (
+            spec.obs_date.strftime('%d/%m/%Y')
+            if getattr(spec, 'obs_date', None)
+            else datetime.now().strftime('%d/%m/%Y')
         )
-    ]
+        # Include exposure where available
+        try:
+            exp = spec.additional_info.get('EXPOSURE_TIME_S') if spec.additional_info else None
+            if exp:
+                label = f"{label} (exp {float(exp):.0f}s)"
+        except Exception:
+            pass
+
+        c = colors[i % len(colors)]
+        plot_data.append(
+            go.Scatter(
+                x=spectrum.spectral_axis.value,
+                y=spectrum.flux.value,
+                name=label,
+                marker=dict(color=c),
+                opacity=0.6,
+            )
+        )
+        # Track y-axis ranges to set a reasonable global range
+        try:
+            ymins.append(np.nanpercentile(spectrum.flux.value, 0.1))
+            ymaxs.append(np.nanpercentile(spectrum.flux.value, 99.9))
+        except Exception:
+            pass
 
     fig = go.Figure(data=plot_data)
-    fig.update_yaxes(range=[np.nanpercentile(spectrum.flux.value/scale_factor, 0.1),
-                            np.nanpercentile(spectrum.flux.value/scale_factor,99.9)])
+    if ymins and ymaxs:
+        fig.update_yaxes(range=[min(ymins), max(ymaxs)])
+
 
     ### tellurics ###
     # Hinkle et al. 2003 “Infrared Atlas of the Arcturus Spectrum”
@@ -100,76 +124,146 @@ def target_spectroscopy(context, target, dataproduct=None, snid_path=None, snid_
         )
 
 
-    ### templates ###
     if snid_path is not None:
-        if snid_index is None:
-            try:
-                pysnid_file = snid_path
-                fig = add_snid_templates(pysnid_file,
-                                 spectrum.spectral_axis.value,
-                                 spectrum.flux.value,
-                                 fig,
-                                 n=3
-                                )
-            except Exception as exc:
-                print(exc)
-                pass
-        elif snid_index is not None:
-            try:
-                pysnid_file = snid_path
-                fig = add_snid_select_template(pysnid_file,
-                                         spectrum.spectral_axis.value,
-                                         spectrum.flux.value,
-                                         fig,
-                                         idx=snid_index
-                                         )
-            except Exception as exc:
-                print(exc)
-                pass
-    else:
-        tar = f"{target}"
-        paths= glob.glob(f'/snid_api_runs/pipeline_out/*/{tar[6:]}/*h5')
         try:
-            auto_snid = f'{paths[0]}'
-            try:
-                fig = add_snid_templates(auto_snid,
-                                spectrum.spectral_axis.value,
-                                spectrum.flux.value/scale_factor,
-                                fig,
-                                n=3
-                                )
-            except Exception as exc:
-                print(exc)
-                pass
-        except IndexError:
-            warnings.warn(f"{target}", UserWarning)
+            pysnid_file = snid_path
+            spectrum_ref = spectra[-1]
+            if snid_index is None:
+                fig = add_snid_templates(
+                    pysnid_file,
+                    spectrum_ref.spectral_axis.value,
+                    spectrum_ref.flux.value,
+                    fig,
+                    n=3,
+                )
+            else:
+                fig = add_snid_select_template(
+                    pysnid_file,
+                    spectrum_ref.spectral_axis.value,
+                    spectrum_ref.flux.value,
+                    fig,
+                    idx=snid_index,
+                )
+        except Exception as exc:
+            print(exc)
+            pass
+
+    else:
+        # Query database for SNID results file from pipeline_classification_snid
+        try:
+            # Get the most recent classification with results_file
+            classification = PipelineClassificationSnid.objects.filter(
+                tides_id=target.id,
+                results_file__isnull=False
+            ).order_by('-id').first()
+
+            if classification and classification.results_file:
+                auto_snid = classification.results_file
+                # Verify file exists before attempting to plot
+                if os.path.exists(auto_snid):
+                    try:
+                        spectrum_ref = spectra[-1]
+                        fig = add_snid_templates(
+                            auto_snid,
+                            spectrum_ref.spectral_axis.value,
+                            spectrum_ref.flux.value,
+                            fig,
+                            n=3,
+                        )
+                    except Exception as exc:
+                        print(f"Error adding SNID templates: {exc}")
+                        pass
+                else:
+                    print(f"[DEBUG] SNID results file not found: {auto_snid}")
+            else:
+                print(f"[DEBUG] No SNID classification found for target {target}")
+        except Exception as exc:
+            print(f"[DEBUG] Error loading SNID classification: {exc}")
             pass
 
     if ngsf_path is not None:
         try:
             ngsf_file = ngsf_path
-            fig = add_ngsf_templates(ngsf_file,
-                             spectrum.spectral_axis.value,
-                             spectrum.flux.value/scale_factor,
-                             fig,
-                             n=3
-                             )
+            spectrum_ref = spectra[-1]
+            fig = add_ngsf_templates(
+                ngsf_file,
+                spectrum_ref.spectral_axis.value,
+                spectrum_ref.flux.value,
+                fig,
+                n=3,
+            )
         except Exception as exc:
             return {'target': target, 'plot': f'<p>NGSF failed: {exc}</p>'}
 
-    fig.update_layout(autosize=True,
-                      height=650,
-                      xaxis_title='Observed Wavelength (Å)',
-                      yaxis_title='Flux (erg/s/cm²/Å)',
-                      xaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      yaxis = dict(showticklabels=True, ticks='outside', linewidth=2),
-                      legend_title="Best Matches",
-                      margin=dict(t=150),
-                      legend=dict(orientation="h",yanchor="bottom",y=1.05,xanchor="center",x=0.5,entrywidth=0.5,entrywidthmode="fraction",font=dict(size=14)),
-                      showlegend=True,
-                      font_family="P052",
-                      font_size=16,
-                      )
+    try:
+        xmin = min(np.nanmin(spectrum.spectral_axis.value) for spectrum in spectra)
+        xmax = max(np.nanmax(spectrum.spectral_axis.value) for spectrum in spectra)
+        ymin = min(ymins) if ymins else 0.0
+    except Exception:
+        xmin, xmax, ymin = 3600, 9600, 0.0
+
+    fig.add_trace(
+        go.Scatter(
+            x=[xmin, xmax],
+            y=[ymin, ymin],
+            xaxis='x2',
+            yaxis='y',
+            mode='lines',
+            line=dict(color='rgba(0,0,0,0)', width=1),
+            hoverinfo='skip',
+            showlegend=False,
+        )
+    )
+
+    fig.update_layout(
+        autosize=True,
+        height=650,
+        xaxis=dict(
+            title='Observed Wavelength (Å)',
+            showticklabels=True,
+            ticks='outside',
+            linewidth=2,
+            side='bottom',
+            tickformat=".0f"
+        ),
+        xaxis2=dict(
+            title=dict(
+                text='Rest Wavelength (Å)',
+                standoff=10
+            ),
+            overlaying='x',
+            side='top',
+            anchor='y',
+            showgrid=False,
+            zeroline=False,
+            ticks='outside',
+            showticklabels=True,
+            showline=True,
+            linewidth=2,
+            tickmode='sync',
+            visible=True
+        ),
+        yaxis=dict(
+            title='Flux (erg/s/cm²/Å)',
+            showticklabels=True,
+            ticks='outside',
+            linewidth=2
+        ),
+        margin=dict(t=180),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.18,
+            xanchor="center",
+            x=0.5,
+            entrywidth=0.5,
+            entrywidthmode="fraction",
+            font=dict(size=14)
+        ),
+        showlegend=True,
+        font_family="P052",
+        font_size=16
+    )
 
     return {
         'target': target,
@@ -187,24 +281,31 @@ def target_photometry(context, target, dataproduct=None):
     Renders a photometry plot for a ``Target``. If a ``DataProduct`` is specified, it will only render a plot with
     that photometry.
     """
-    # check if the Lasair's API key is set
-    if lasair_ztf_token is None or lasair_ztf_token == "":
-        warnings.warn("Warning: Lasair API key for ZTF not set!", UserWarning)
-        return {'target': target}
-    if lasair_lsst_token is None or lasair_lsst_token == "":
-        warnings.warn("Warning: Lasair API key for LSST not set!", UserWarning)
-        return {'target': target}
-
+    tokens = {"ztf": lasair_ztf_token,
+              "lsst": lasair_lsst_token,
+              }
     photometry_list = []
-    for survey in ["ztf", "lsst"]:
-        #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
+    for survey, token in tokens.items():
+        # check if the Lasair's API key is set
+        if token is None or token == "":
+            warnings.warn(f"Warning: Lasair API key for {survey.upper()} not set!", UserWarning)
+            continue
         try:
+            #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
             phot = fetch_target_lasair(target.ra, target.dec, survey)
+            photometry_list.append(phot)
         except Exception as exc:
             return {'target': target, 'plot': exc}
-        photometry_list.append(phot)
-    photometry = pd.concat(photometry_list)
+
+    if len(photometry_list) == 0:
+        # tokens not set
+        return {'target': target}
+    try:
+        photometry = pd.concat(photometry_list)
+    except ValueError:
+        return {'target': target}
     if photometry is None:
+        # no photometry found
         return {'target': target}
 
     # plot photometry
@@ -219,7 +320,7 @@ def target_photometry(context, target, dataproduct=None):
                                 annotation_text="s", annotation_position="top left")
     except Exception as exc:
         print(exc)
-        
+
     return {
         'target': target,
         'plot': offline.plot(fig, output_type='div', show_link=False)
