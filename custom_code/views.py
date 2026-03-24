@@ -466,7 +466,7 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
     template_name = 'custom_code/release_queue.html'
 
     def get_context_data(self, **kwargs):
-        from custom_code.services import update_staging_area, get_needs_review_tag, get_ready_tag
+        from custom_code.services import update_staging_area
         
         ctx = super().get_context_data(**kwargs)
         
@@ -494,72 +494,17 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
             qs = filter_by_tags(qs, exclude_tags=exclude)
 
         # Build enriched target data with classifications and tags
+        QUEUE_LIMIT = 500
+        qs_distinct = qs.distinct()
+        total_unreleased = qs_distinct.count()
         target_data = []
-        needs_review_tag = get_needs_review_tag()
-        ready_tag = get_ready_tag()
-        for target in qs.distinct()[:500]:
-            # Get latest auto classification
-            auto_class = (
-                PipelineClassificationGlobal.objects
-                .filter(tides=target)
-                .order_by('-id')
-                .first()
-            )
-            
-            # Get latest human classification
-            human_class = (
-                HumanClassification.objects
-                .filter(tides_id=target)
-                .order_by('-created')
-                .first()
-            )
-            
-            # Determine review status and update tags
-            if not human_class:
-                # No human classification yet - needs review (default)
-                TargetTag.objects.get_or_create(
-                    tides=target,
-                    tag=needs_review_tag,
-                    defaults={'user': None}
-                )
-                TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
-                is_ready = False
-            else:
-                # Human classification exists - check if it matches auto
-                has_disagreement = False
-                if auto_class:
-                    # Class disagreement
-                    if auto_class.sn_type and human_class.sn_type:
-                        if auto_class.sn_type != human_class.sn_type:
-                            has_disagreement = True
-                    
-                    # Redshift disagreement (more than 5% difference)
-                    if auto_class.z and human_class.sn_z:
-                        z_diff = abs(auto_class.z - human_class.sn_z)
-                        z_percent = (z_diff / max(auto_class.z, human_class.sn_z)) * 100
-                        if z_percent > 5:
-                            has_disagreement = True
-                
-                if has_disagreement:
-                    # Disagreement - mark as needs review
-                    TargetTag.objects.get_or_create(
-                        tides=target,
-                        tag=needs_review_tag,
-                        defaults={'user': None}
-                    )
-                    TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
-                    is_ready = False
-                else:
-                    # Agreement - mark as ready
-                    TargetTag.objects.get_or_create(
-                        tides=target,
-                        tag=ready_tag,
-                        defaults={'user': None}
-                    )
-                    TargetTag.objects.filter(tides=target, tag=needs_review_tag).delete()
-                    is_ready = True
-            
-            # Get all tags for this target AFTER updating them
+        for target in qs_distinct[:QUEUE_LIMIT]:
+            is_ready = target.sync_review_tag()
+
+            auto_class = target.latest_auto_classification
+            human_class = target.latest_human_classification
+
+            # Get all tags for this target AFTER syncing them
             target_tags = list(
                 target.target_tags
                 .select_related('tag')
@@ -583,6 +528,9 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
         
         ctx['target_data'] = target_data
         ctx['total_count'] = len(target_data)
+        ctx['total_unreleased'] = total_unreleased
+        ctx['has_more'] = total_unreleased > QUEUE_LIMIT
+        ctx['queue_limit'] = QUEUE_LIMIT
         
         # Context for filter form
         ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')

@@ -161,6 +161,72 @@ class TidesTarget(TomTarget):
         # Returns a queryset so templates can call .all
         return Tag.objects.filter(target_tags__tides_id=self.pk, is_active=True)
 
+    @property
+    def latest_auto_classification(self):
+        return self.pipeline_classifications_global.order_by('-id').first()
+
+    @property
+    def latest_human_classification(self):
+        return self.human_classifications.order_by('-created').first()
+
+    @property
+    def classifications_agree(self):
+        """
+        True  - human classification exists and agrees with auto (type + z within 5%).
+        False - no human classification, or a disagreement was detected.
+        None  - no auto classification to compare against.
+        """
+        human = self.latest_human_classification
+        if not human:
+            return False
+        auto = self.latest_auto_classification
+        if not auto:
+            return None
+        if auto.sn_type and human.sn_type:
+            if auto.sn_type != human.sn_type:
+                return False
+        if auto.z and human.sn_z:
+            z_diff = abs(auto.z - human.sn_z)
+            z_percent = (z_diff / max(auto.z, human.sn_z)) * 100
+            if z_percent > 5:
+                return False
+        return True
+
+    def sync_review_tag(self):
+        """
+        Evaluate the current state of this target and ensure exactly one of
+        'needs-review' or 'ready' is set. Returns True if ready, False if
+        needs-review. Manual ready/needs-review tags always take precedence;
+        'auto classification ok' promotes to ready; classification agreement
+        is the final fallback.
+        """
+        from custom_code.services import get_needs_review_tag, get_ready_tag
+        needs_review_tag = get_needs_review_tag()
+        ready_tag = get_ready_tag()
+        existing = set(self.target_tags.values_list('tag__name', flat=True))
+
+        if ready_tag.name in existing:
+            TargetTag.objects.filter(tides=self, tag=needs_review_tag).delete()
+            return True
+
+        if needs_review_tag.name in existing:
+            return False
+
+        if 'auto classification ok' in existing:
+            TargetTag.objects.get_or_create(tides=self, tag=ready_tag, defaults={'user': None})
+            TargetTag.objects.filter(tides=self, tag=needs_review_tag).delete()
+            return True
+
+        if self.classifications_agree:
+            TargetTag.objects.get_or_create(tides=self, tag=ready_tag, defaults={'user': None})
+            TargetTag.objects.filter(tides=self, tag=needs_review_tag).delete()
+            return True
+
+        # Default: needs review
+        TargetTag.objects.get_or_create(tides=self, tag=needs_review_tag, defaults={'user': None})
+        TargetTag.objects.filter(tides=self, tag=ready_tag).delete()
+        return False
+
 # ----------------------------
 # Tags (managed locally)
 # ----------------------------
@@ -363,8 +429,41 @@ class TidesSpec(models.Model):
         ordering = ['-obs_date']
 
 # Signal to auto-tag new spectra as staged
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+
+
+@receiver(post_save, sender='custom_code.TargetTag')
+def sync_review_status_on_tag_add(sender, instance, created, **kwargs):
+    """
+    When 'auto classification ok' is added → promote to ready, clear needs-review.
+    When 'auto classification bad' is added → force needs-review, clear ready.
+    """
+    if not created:
+        return
+
+    tag_name = instance.tag.name
+    if tag_name not in ('auto classification ok', 'auto classification bad'):
+        return
+
+    try:
+        from custom_code.services import get_needs_review_tag, get_ready_tag
+        target = instance.tides
+        needs_review_tag = get_needs_review_tag()
+        ready_tag = get_ready_tag()
+
+        if tag_name == 'auto classification ok':
+            TargetTag.objects.get_or_create(tides=target, tag=ready_tag, defaults={'user': None})
+            TargetTag.objects.filter(tides=target, tag=needs_review_tag).delete()
+        elif tag_name == 'auto classification bad':
+            TargetTag.objects.get_or_create(tides=target, tag=needs_review_tag, defaults={'user': None})
+            TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(
+            f"Failed to sync review status for target {instance.tides_id} on tag '{tag_name}': {e}"
+        )
+
 
 @receiver(post_save, sender=TidesSpec)
 def auto_stage_new_spectrum(sender, instance, created, **kwargs):

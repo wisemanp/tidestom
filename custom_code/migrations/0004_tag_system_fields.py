@@ -35,6 +35,7 @@ def create_system_tags(apps, schema_editor):
     # Update existing tags to set is_system and is_clickable flags
     existing_tags = Tag.objects.filter(name__in=[
         'auto classification ok',
+        'auto classification bad',
         'human classification ok',
         'human classification unsure'
     ])
