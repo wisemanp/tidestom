@@ -467,7 +467,7 @@ class LatestView(ListView):
 
         return context
 
-        
+
 # --- Release Queue Views ---
 
 class ReleaseQueueView(LoginRequiredMixin, TemplateView):
@@ -526,6 +526,7 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
                 'auto_z': auto_class.z if auto_class else None,
                 'auto_prob': auto_class.probability if auto_class else None,
                 'human_class': human_class.sn_type if human_class else None,
+                'human_subclass': human_class.sn_subtype if human_class else None,
                 'human_z': human_class.sn_z if human_class else None,
                 'tags': target_tags,
                 'is_ready': is_ready,
