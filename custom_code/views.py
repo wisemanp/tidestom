@@ -467,11 +467,7 @@ class LatestView(ListView):
 
         return context
 
-
-# --- Staging Area View ---
-
-
-
+        
 # --- Release Queue Views ---
 
 class ReleaseQueueView(LoginRequiredMixin, TemplateView):
