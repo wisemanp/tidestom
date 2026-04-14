@@ -200,7 +200,7 @@ To use the Tides TOM with test data, follow these steps:
 
 ---
 
-### Using tides_merged_schema.sql with TiDES TOM
+### Using tides_unmanaged_tables.sql with TiDES TOM
 
 This sets up a local Postgres schema compatible with TiDES and TOM, then seeds targets from a MEC file so you can run the pipeline locally.
 
@@ -233,11 +233,11 @@ cd tidestom
 python manage.py migrate
 ```
 
-4) Apply the TiDES schema additions:
+4) Apply the TiDES unmanaged tables (must run after migrate):
 - Clone the tides_db schema: https://github.com/TiDES-4MOST/tides-db-scripts
 ```bash
 psql "host=localhost port=5432 user=tides password=tides dbname=tides_db" \
-  -f ../tides-db-scripts/tides_merged_schema.sql
+  -f ../tides-db-scripts/tides_unmanaged_tables.sql
 ```
 
 5) Seed targets from a MEC file-with-transient-spectra:

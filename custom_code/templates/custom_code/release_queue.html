@@ -116,6 +116,13 @@
             {% endif %}
           </td>
           <td>
+            {% if item.human_subclass %}
+              <span class="badge badge-primary">{{ item.human_subclass }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
             {% if item.human_z %}
               {{ item.human_z|floatformat:3 }}
             {% else %}

@@ -49,15 +49,14 @@ def auto_stage_new_spectrum(sender, instance, created, **kwargs):
         return
 
     try:
-        from custom_code.services import get_needs_review_tag, get_released_tag, get_ready_tag
+        from custom_code.services import get_needs_review_tag, get_ready_tag
 
         target = instance.tides
         if not target:
             return
 
         # Check if already released
-        released_tag = get_released_tag()
-        if target.target_tags.filter(tag=released_tag).exists():
+        if target.released:
             return
 
         # Check if already in queue (needs-review or ready)

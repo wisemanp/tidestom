@@ -25,7 +25,7 @@ import json
 import logging
 from workspaces import utils
 from pathlib import Path
-from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
+from custom_code.services import filter_by_tags, unreleased_queryset
 from django.db import DatabaseError
 import csv
 from tom_targets.views import TargetUpdateView, TargetDeleteView

@@ -8,14 +8,8 @@ def create_system_tags(apps, schema_editor):
     Tag = apps.get_model('custom_code', 'Tag')
 
     # System tags for release workflow
+    # Note: 'released' is now a boolean on tides_cand, not a tag
     system_tags = [
-        {
-            'name': 'released',
-            'description': 'Target has been publicly released',
-            'is_system': True,
-            'is_clickable': False,
-            'is_active': True,
-        },
         {
             'name': 'needs-review',
             'description': 'Target requires human review before release',
