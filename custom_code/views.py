@@ -272,8 +272,17 @@ class NGSFFormAJAXView(FormView):
 class ToggleTagView(LoginRequiredMixin, View):
     """
     POST to add/remove a tag for a target. Returns JSON:
-    { "toggled": "added" | "removed", "tag": "<tag name>" }
+    { "toggled": "added" | "removed", "tag": "<tag name>",
+      "current_tags": [{"id": ..., "name": ...}, ...] }
+    Mutually exclusive pairs are enforced: adding one removes the other.
     """
+    MUTUALLY_EXCLUSIVE = {
+        'auto classification ok': 'auto classification bad',
+        'auto classification bad': 'auto classification ok',
+        'human classification ok': 'human classification unsure',
+        'human classification unsure': 'human classification ok',
+    }
+
     def post(self, request, target_id, tag_id):
         target = get_object_or_404(TidesTarget, pk=target_id)
         tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
@@ -292,13 +301,32 @@ class ToggleTagView(LoginRequiredMixin, View):
         )
 
         if created:
+            toggled = 'added'
             logger.info("Tag '%s' added to target %s by %s", tag.name, target.id, request.user)
-            return JsonResponse({'toggled': 'added', 'tag': tag.name})
+            # Remove mutually exclusive counterpart if present
+            opposite_name = self.MUTUALLY_EXCLUSIVE.get(tag.name)
+            if opposite_name:
+                removed = TargetTag.objects.filter(
+                    tides=target, tag__name=opposite_name
+                ).delete()[0]
+                if removed:
+                    logger.info("Tag '%s' auto-removed (mutex) from target %s", opposite_name, target.id)
+        else:
+            toggled = 'removed'
+            tt.delete()
+            logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
 
-        # Already existed: delete to "un-tag"
-        tt.delete()
-        logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
-        return JsonResponse({'toggled': 'removed', 'tag': tag.name})
+        # Return the full current tag list so the UI can update system tags
+        # (e.g. needs-review / ready) that may have changed via signals.
+        current_tags = [
+            {'id': t.id, 'name': t.name}
+            for t in target.tags.all()
+        ]
+        return JsonResponse({
+            'toggled': toggled,
+            'tag': tag.name,
+            'current_tags': current_tags,
+        })
 
 class TagSearchView(View):
     def get(self, request):

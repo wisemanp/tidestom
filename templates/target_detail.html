@@ -745,33 +745,38 @@ fetch("{% static 'json/line_data.json' %}")
             window.csrftoken = window.getCookie('csrftoken');
           }
 
-          function updateCurrentTags(tagId, tagName, action) {
+          function syncAllTags(currentTags) {
+            // Rebuild the #current-tags badge list from the server's authoritative list
             const container = document.getElementById('current-tags');
             if (!container) return;
 
-            const noLabel = document.getElementById('no-tags-label');
-            if (noLabel) noLabel.remove();
-
-            const sel = '[data-tag-id="' + tagId + '"]';
-            const existing = container.querySelector(sel);
-
-            if (action === 'added') {
-              if (!existing) {
+            container.innerHTML = '';
+            if (currentTags.length === 0) {
+              const i = document.createElement('i');
+              i.id = 'no-tags-label';
+              i.textContent = 'No tags';
+              container.appendChild(i);
+            } else {
+              currentTags.forEach(t => {
                 const span = document.createElement('span');
                 span.className = 'badge badge-info me-1';
-                span.dataset.tagId = tagId;
-                span.textContent = tagName;
+                span.dataset.tagId = t.id;
+                span.textContent = t.name;
                 container.appendChild(span);
-              }
-            } else if (action === 'removed') {
-              if (existing) existing.remove();
-              if (!container.querySelector('[data-tag-id]')) {
-                const i = document.createElement('i');
-                i.id = 'no-tags-label';
-                i.textContent = 'No tags';
-                container.appendChild(i);
-              }
+              });
             }
+
+            // Update all toggle-button styles to match current state
+            const activeIds = new Set(currentTags.map(t => String(t.id)));
+            document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
+              if (activeIds.has(btn.dataset.tagId)) {
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+              } else {
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-secondary');
+              }
+            });
           }
 
           document.querySelectorAll('#tag-toggle-form button').forEach(btn => {
@@ -779,7 +784,6 @@ fetch("{% static 'json/line_data.json' %}")
               const el = e.currentTarget;
               const url = el.dataset.url;
               const tagId = el.dataset.tagId;
-              const tagName = el.textContent.trim();
               if (!url || !tagId) return;
 
               try {
@@ -796,20 +800,10 @@ fetch("{% static 'json/line_data.json' %}")
                   el.disabled = false;
                   return;
                 }
-                const data = await res.json(); // {toggled: "added"/"removed", tag: "..."}
-                const toggled = data.toggled;
+                const data = await res.json();
 
-                // Toggle button style
-                if (toggled === 'added') {
-                  el.classList.remove('btn-outline-secondary');
-                  el.classList.add('btn-success');
-                } else if (toggled === 'removed') {
-                  el.classList.remove('btn-success');
-                  el.classList.add('btn-outline-secondary');
-                }
-
-                // Update visible tag list
-                updateCurrentTags(tagId, tagName, toggled);
+                // Sync all badges and buttons from the server's current_tags
+                syncAllTags(data.current_tags || []);
                 el.disabled = false;
               } catch (err) {
                 console.error('Tag toggle error', err);

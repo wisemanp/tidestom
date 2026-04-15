@@ -20,6 +20,7 @@ services:
         apk add --no-cache postgresql-client git
         if [ ! -f /db_init/.applied ]; then
           echo "Cloning DB scripts"
+          rm -rf /tmp/tides-db-scripts
           git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
           psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_unmanaged_tables.sql
           mkdir -pv /db_init
