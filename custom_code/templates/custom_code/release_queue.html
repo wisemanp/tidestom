@@ -4,6 +4,48 @@
 {% block title %}Release Queue{% endblock %}
 
 {% block content %}
+<style>
+  /* Sticky header */
+  .rq-wrap {
+    max-height: 75vh;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: .25rem;
+  }
+  .rq-wrap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+    box-shadow: inset 0 -2px 0 #dee2e6;
+  }
+  /* Even column spacing */
+  .rq-table th, .rq-table td {
+    white-space: nowrap;
+    padding: .4rem .6rem;
+    vertical-align: middle;
+  }
+  /* Allow name to wrap on small screens */
+  .rq-table .col-name {
+    white-space: normal;
+    min-width: 8rem;
+  }
+  /* Clickable status badges */
+  .badge-status {
+    cursor: pointer;
+    font-size: .82rem;
+    padding: .3em .6em;
+    user-select: none;
+  }
+  .badge-status:hover { opacity: .8; }
+  .badge-status.disabled { opacity: .5; pointer-events: none; }
+  /* Mobile: make table horizontally scrollable */
+  @media (max-width: 768px) {
+    .rq-wrap { max-height: none; }
+    .rq-table th, .rq-table td { font-size: .82rem; padding: .3rem .4rem; }
+  }
+</style>
+
 <h2>Release Queue ({{ total_count }} of {{ total_unreleased }} targets shown)</h2>
 <p class="text-muted">Targets with disagreements between human and auto classifications are shown first.</p>
 {% if has_more %}
@@ -52,93 +94,165 @@
 <form id="release-form" method="post" action="{% url 'release_queue_apply' %}">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ request.get_full_path }}">
-  <div class="mb-2">
-    <button class="btn btn-sm btn-success" name="action" value="mark_ready" type="submit">Mark Ready</button>
-    <button class="btn btn-sm btn-warning" name="action" value="mark_not_ready" type="submit">Mark Not Ready</button>
+  <div class="mb-2 d-flex flex-wrap gap-2">
+    <button class="btn btn-sm btn-success" name="action" value="mark_ready" type="submit">Mark Selected Ready</button>
+    <button class="btn btn-sm btn-warning" name="action" value="mark_not_ready" type="submit">Mark Selected Not Ready</button>
   </div>
-  <table class="table table-sm table-striped">
-    <thead>
-      <tr>
-        <th><input type="checkbox" id="select-all"></th>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Auto Class</th>
-        <th>Auto Subclass</th>
-        <th>Auto z</th>
-        <th>Auto Prob</th>
-        <th>Human Class</th>
-        <th>Human Subclass</th>
-        <th>Human z</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in target_data %}
-        <tr {% if not item.is_ready %}class="table-warning"{% endif %}>
-          <td>
-            <input type="checkbox" name="target_id" value="{{ item.target.id }}">
-          </td>
-          <td>{{ item.target.tides_id }}</td>
-          <td><a href="{% url 'target_detail' item.target.id %}">{{ item.target.name }}</a></td>
-          <td>
-            {% if item.auto_class %}
-              <span class="badge badge-info">{{ item.auto_class }}</span>
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if item.auto_subclass %}
-              <span class="badge badge-info">{{ item.auto_subclass }}</span>
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if item.auto_z %}
-              {{ item.auto_z|floatformat:3 }}
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if item.auto_prob %}
-              {{ item.auto_prob|floatformat:2 }}
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if item.human_class %}
-              <span class="badge badge-primary">{{ item.human_class }}</span>
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if item.human_z %}
-              {{ item.human_z|floatformat:3 }}
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% for tag in item.tags %}
-              <span class="badge badge-secondary">{{ tag }}</span>
-            {% endfor %}
-          </td>
+
+  <div class="rq-wrap">
+    <table class="table table-sm table-striped rq-table mb-0">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="select-all"></th>
+          <th class="col-name">Name</th>
+          <th>Auto Class</th>
+          <th>Auto Sub</th>
+          <th>Auto z</th>
+          <th>Auto Prob</th>
+          <th>Human Class</th>
+          <th>Human Sub</th>
+          <th>Human z</th>
+          <th>Status</th>
         </tr>
-      {% empty %}
-        <tr><td colspan="10" class="text-center text-muted"><i>No unreleased targets match your filters.</i></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for item in target_data %}
+          <tr data-target-id="{{ item.target.id }}" {% if not item.is_ready %}class="table-warning"{% endif %}>
+            <td>
+              <input type="checkbox" name="target_id" value="{{ item.target.id }}">
+            </td>
+            <td class="col-name">
+              <a href="{% url 'target_detail' item.target.id %}">{{ item.target.name }}</a>
+            </td>
+            <td>
+              {% if item.auto_class %}
+                <span class="badge badge-info">{{ item.auto_class }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.auto_subclass %}
+                <span class="badge badge-info">{{ item.auto_subclass }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.auto_z %}
+                {{ item.auto_z|floatformat:3 }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.auto_prob %}
+                {{ item.auto_prob|floatformat:2 }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.human_class %}
+                <span class="badge badge-primary">{{ item.human_class }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.human_subclass %}
+                <span class="badge badge-primary">{{ item.human_subclass }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.human_z %}
+                {{ item.human_z|floatformat:3 }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="td-status" data-target-id="{{ item.target.id }}">
+              {% if item.is_ready %}
+                <span class="badge badge-success badge-status" data-ready="true">ready</span>
+              {% else %}
+                <span class="badge badge-warning badge-status" data-ready="false">needs-review</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10" class="text-center text-muted"><i>No unreleased targets match your filters.</i></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </form>
 
 <script>
+// Select-all checkbox
 document.getElementById('select-all')?.addEventListener('change', function(e) {
   document.querySelectorAll('input[name="target_id"]').forEach(cb => {
     cb.checked = e.target.checked;
+  });
+});
+
+// CSRF helper
+if (typeof window.getCookie === 'undefined') {
+  window.getCookie = function(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  };
+}
+
+// Clickable status badges — toggle between ready / needs-review
+document.querySelectorAll('.badge-status').forEach(badge => {
+  badge.addEventListener('click', async function() {
+    const td = this.closest('.td-status');
+    const targetId = td.dataset.targetId;
+    const isReady = this.dataset.ready === 'true';
+    const action = isReady ? 'mark_not_ready' : 'mark_ready';
+    const row = this.closest('tr');
+
+    this.classList.add('disabled');
+
+    try {
+      const body = new URLSearchParams();
+      body.append('action', action);
+      body.append('target_id', targetId);
+
+      const res = await fetch("{% url 'release_queue_apply' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': window.getCookie('csrftoken'),
+          'Accept': 'application/json',
+        },
+        body: body,
+      });
+
+      if (!res.ok) { console.error('Action failed', res.status); this.classList.remove('disabled'); return; }
+      const data = await res.json();
+      const info = data.results?.[targetId];
+      if (!info) { this.classList.remove('disabled'); return; }
+
+      // Update badge and row
+      if (info.is_ready) {
+        this.className = 'badge badge-success badge-status';
+        this.textContent = 'ready';
+        this.dataset.ready = 'true';
+        row.classList.remove('table-warning');
+      } else {
+        this.className = 'badge badge-warning badge-status';
+        this.textContent = 'needs-review';
+        this.dataset.ready = 'false';
+        row.classList.add('table-warning');
+      }
+    } catch (err) {
+      console.error('Status toggle error', err);
+      this.classList.remove('disabled');
+    }
   });
 });
 </script>

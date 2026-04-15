@@ -25,7 +25,7 @@ import json
 import logging
 from workspaces import utils
 from pathlib import Path
-from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
+from custom_code.services import filter_by_tags, unreleased_queryset
 from django.db import DatabaseError
 import csv
 from tom_targets.views import TargetUpdateView, TargetDeleteView
@@ -272,8 +272,17 @@ class NGSFFormAJAXView(FormView):
 class ToggleTagView(LoginRequiredMixin, View):
     """
     POST to add/remove a tag for a target. Returns JSON:
-    { "toggled": "added" | "removed", "tag": "<tag name>" }
+    { "toggled": "added" | "removed", "tag": "<tag name>",
+      "current_tags": [{"id": ..., "name": ...}, ...] }
+    Mutually exclusive pairs are enforced: adding one removes the other.
     """
+    MUTUALLY_EXCLUSIVE = {
+        'auto classification ok': 'auto classification bad',
+        'auto classification bad': 'auto classification ok',
+        'human classification ok': 'human classification unsure',
+        'human classification unsure': 'human classification ok',
+    }
+
     def post(self, request, target_id, tag_id):
         target = get_object_or_404(TidesTarget, pk=target_id)
         tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
@@ -292,13 +301,32 @@ class ToggleTagView(LoginRequiredMixin, View):
         )
 
         if created:
+            toggled = 'added'
             logger.info("Tag '%s' added to target %s by %s", tag.name, target.id, request.user)
-            return JsonResponse({'toggled': 'added', 'tag': tag.name})
+            # Remove mutually exclusive counterpart if present
+            opposite_name = self.MUTUALLY_EXCLUSIVE.get(tag.name)
+            if opposite_name:
+                removed = TargetTag.objects.filter(
+                    tides=target, tag__name=opposite_name
+                ).delete()[0]
+                if removed:
+                    logger.info("Tag '%s' auto-removed (mutex) from target %s", opposite_name, target.id)
+        else:
+            toggled = 'removed'
+            tt.delete()
+            logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
 
-        # Already existed: delete to "un-tag"
-        tt.delete()
-        logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
-        return JsonResponse({'toggled': 'removed', 'tag': tag.name})
+        # Return the full current tag list so the UI can update system tags
+        # (e.g. needs-review / ready) that may have changed via signals.
+        current_tags = [
+            {'id': t.id, 'name': t.name}
+            for t in target.tags.all()
+        ]
+        return JsonResponse({
+            'toggled': toggled,
+            'tag': tag.name,
+            'current_tags': current_tags,
+        })
 
 class TagSearchView(View):
     def get(self, request):
@@ -468,10 +496,6 @@ class LatestView(ListView):
         return context
 
 
-# --- Staging Area View ---
-
-
-
 # --- Release Queue Views ---
 
 class ReleaseQueueView(LoginRequiredMixin, TemplateView):
@@ -530,6 +554,7 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
                 'auto_z': auto_class.z if auto_class else None,
                 'auto_prob': auto_class.probability if auto_class else None,
                 'human_class': human_class.sn_type if human_class else None,
+                'human_subclass': human_class.sn_subtype if human_class else None,
                 'human_z': human_class.sn_z if human_class else None,
                 'tags': target_tags,
                 'is_ready': is_ready,
@@ -578,6 +603,16 @@ class ReleaseQueueActionView(LoginRequiredMixin, View):
             for target in targets:
                 TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
                 TargetTag.objects.get_or_create(tides=target, tag=needs_review_tag)
+
+        # Return JSON for AJAX requests, redirect otherwise
+        if request.headers.get('Accept') == 'application/json':
+            results = {}
+            for target in targets:
+                is_ready = ready_tag.name in set(
+                    target.target_tags.values_list('tag__name', flat=True)
+                )
+                results[str(target.pk)] = {'is_ready': is_ready}
+            return JsonResponse({'ok': True, 'results': results})
 
         return redirect(next_url)
 

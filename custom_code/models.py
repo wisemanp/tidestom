@@ -52,6 +52,7 @@ class TidesTarget(TomTarget):
     z_gal = models.FloatField(null=True, blank=True)
     z_source = models.CharField(max_length=50, null=True, blank=True)
     confidence = models.FloatField(null=True, blank=True)
+    released = models.BooleanField(default=False)
 
     class Meta:
         managed = False

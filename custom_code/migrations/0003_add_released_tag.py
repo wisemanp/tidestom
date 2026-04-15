@@ -1,8 +1,9 @@
 from django.db import migrations
 
-def add_released_tag(apps, schema_editor):
-    Tag = apps.get_model('custom_code', 'Tag')
-    Tag.objects.get_or_create(name='released', defaults={'description': 'Classifications released to public'})
+# The 'released' attribute has moved from a Tag to a boolean column on
+# tides_cand (managed by SQL scripts, not Django).  This migration is
+# kept as a no-op so the migration chain is not broken for databases
+# that already applied the original version.
 
 class Migration(migrations.Migration):
 
@@ -11,5 +12,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(add_released_tag, reverse_code=migrations.RunPython.noop),
+        # originally: RunPython(add_released_tag) – now intentionally empty
     ]

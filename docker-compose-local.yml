@@ -6,6 +6,8 @@ services:
     depends_on:
       database:
         condition: service_started
+      migrate:
+        condition: service_completed_successfully
     command: >
       sh -c '
         set -e
@@ -15,25 +17,18 @@ services:
         cp -ru /test_data_src/* /spectra_volume/test_data/sims/ 2>/dev/null || true
         cp -ru /test_data/mock_DB.csv /spectra_volume/test_data/ 2>/dev/null || true
         cp -ru /test_plots_src/* /static/plots/ 2>/dev/null || true
-        sleep 5
         apk add --no-cache postgresql-client git
-        mkdir -pv /db_init
         if [ ! -f /db_init/.applied ]; then
           echo "Cloning DB scripts"
+          rm -rf /tmp/tides-db-scripts
           git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
-          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_merged_schema.sql
-          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tidestom_schema.sql
+          psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/tides_unmanaged_tables.sql
+          mkdir -pv /db_init
           touch /db_init/.applied
-          echo "Database schema prepared"
+          echo "Unmanaged tables created"
         else
-          echo "Schema already present, skipping"
+          echo "Unmanaged tables already present, skipping"
         fi
-        # Always apply idempotent alters to ensure latest columns
-        if [ ! -d /tmp/tides-db-scripts ]; then
-          echo "Cloning DB scripts for alters"
-          git clone https://github.com/TiDES-4MOST/tides-db-scripts.git /tmp/tides-db-scripts
-        fi
-        psql -h database -U tides -d tidestom -f /tmp/tides-db-scripts/alters_tides_specid.sql
       '
 
     environment:
@@ -135,8 +130,6 @@ services:
     build: .
     entrypoint: []
     depends_on:
-      init-gatekeeper:
-        condition: service_completed_successfully
       database:
         condition: service_started
     volumes:
@@ -147,7 +140,6 @@ services:
           echo 'Waiting for DB...'
           sleep 2
         done && \
-        python manage.py migrate && \
         python manage.py makemigrations && \
         python manage.py migrate && \ 
         python manage.py collectstatic --no-input \
