@@ -604,6 +604,16 @@ class ReleaseQueueActionView(LoginRequiredMixin, View):
                 TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
                 TargetTag.objects.get_or_create(tides=target, tag=needs_review_tag)
 
+        # Return JSON for AJAX requests, redirect otherwise
+        if request.headers.get('Accept') == 'application/json':
+            results = {}
+            for target in targets:
+                is_ready = ready_tag.name in set(
+                    target.target_tags.values_list('tag__name', flat=True)
+                )
+                results[str(target.pk)] = {'is_ready': is_ready}
+            return JsonResponse({'ok': True, 'results': results})
+
         return redirect(next_url)
 
 class StrictTargetUpdateView(TargetUpdateView):
