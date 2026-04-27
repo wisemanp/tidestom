@@ -281,7 +281,7 @@ document.addEventListener("DOMContentLoaded", function() {
 			restoreTypeFromSubtypes("avoid", "avoidsub");
 		});
 
-	const targetId = "{{ spectrum|default:'' }}";
+	const targetId = "{{ target.tides_id|default:'' }}";
 	const runsTable = document.querySelector("#runs-table tbody");
 	const noRunsMsg = document.getElementById("no-runs");
 

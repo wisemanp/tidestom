@@ -41,6 +41,15 @@ To build and deploy the TiDES TOM follow these steps:
    docker compose -f docker-compose-local.yml up --build -d
    ```
    It is very important that you build using the -local file version, the other files are for deployment building or for intgration and deployment tests. 
+   
+   **If you are switching branches or already have a local container from another branch:**
+   You may need to reset the local database volume so migrations can run cleanly.
+   **Warning: this deletes local data.**
+   ```bash
+   docker compose -f docker-compose-local.yml down -v
+   docker volume rm tidestom_postgres_data_local 2>/dev/null || true
+   docker compose -f docker-compose-local.yml up --build -d
+   ```
 
 6. **Create a superuser**:   
    This creates a superuser for you to test everything on your local installation; this is necessary because the deployed user list is managed on the live database.
@@ -191,7 +200,7 @@ To use the Tides TOM with test data, follow these steps:
 
 ---
 
-### Using tides_merged_schema.sql with TiDES TOM
+### Using tides_unmanaged_tables.sql with TiDES TOM
 
 This sets up a local Postgres schema compatible with TiDES and TOM, then seeds targets from a MEC file so you can run the pipeline locally.
 
@@ -224,11 +233,11 @@ cd tidestom
 python manage.py migrate
 ```
 
-4) Apply the TiDES schema additions:
+4) Apply the TiDES unmanaged tables (must run after migrate):
 - Clone the tides_db schema: https://github.com/TiDES-4MOST/tides-db-scripts
 ```bash
 psql "host=localhost port=5432 user=tides password=tides dbname=tides_db" \
-  -f ../tides-db-scripts/tides_merged_schema.sql
+  -f ../tides-db-scripts/tides_unmanaged_tables.sql
 ```
 
 5) Seed targets from a MEC file-with-transient-spectra:

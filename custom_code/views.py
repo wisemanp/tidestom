@@ -11,6 +11,7 @@ from custom_code.models import (
     TidesSpec,
     PipelineClassificationGlobal,
     TidesClass,
+    HumanClassification,
 )
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm  # Ensure this is imported
@@ -24,7 +25,7 @@ import json
 import logging
 from workspaces import utils
 from pathlib import Path
-from custom_code.services import filter_by_tags, unreleased_queryset, mark_released, unmark_released
+from custom_code.services import filter_by_tags, unreleased_queryset
 from django.db import DatabaseError
 import csv
 from tom_targets.views import TargetUpdateView, TargetDeleteView
@@ -271,11 +272,26 @@ class NGSFFormAJAXView(FormView):
 class ToggleTagView(LoginRequiredMixin, View):
     """
     POST to add/remove a tag for a target. Returns JSON:
-    { "toggled": "added" | "removed", "tag": "<tag name>" }
+    { "toggled": "added" | "removed", "tag": "<tag name>",
+      "current_tags": [{"id": ..., "name": ...}, ...] }
+    Mutually exclusive pairs are enforced: adding one removes the other.
     """
+    MUTUALLY_EXCLUSIVE = {
+        'auto classification ok': 'auto classification bad',
+        'auto classification bad': 'auto classification ok',
+        'human classification ok': 'human classification unsure',
+        'human classification unsure': 'human classification ok',
+    }
+
     def post(self, request, target_id, tag_id):
         target = get_object_or_404(TidesTarget, pk=target_id)
         tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
+        
+        # Check if tag is clickable
+        if not tag.is_clickable:
+            return JsonResponse({
+                'error': f'Tag "{tag.name}" cannot be manually toggled'
+            }, status=403)
 
         # TargetTag.tides is a FK to tom_targets.BaseTarget, so pass target (subclass)
         tt, created = TargetTag.objects.get_or_create(
@@ -285,13 +301,32 @@ class ToggleTagView(LoginRequiredMixin, View):
         )
 
         if created:
+            toggled = 'added'
             logger.info("Tag '%s' added to target %s by %s", tag.name, target.id, request.user)
-            return JsonResponse({'toggled': 'added', 'tag': tag.name})
+            # Remove mutually exclusive counterpart if present
+            opposite_name = self.MUTUALLY_EXCLUSIVE.get(tag.name)
+            if opposite_name:
+                removed = TargetTag.objects.filter(
+                    tides=target, tag__name=opposite_name
+                ).delete()[0]
+                if removed:
+                    logger.info("Tag '%s' auto-removed (mutex) from target %s", opposite_name, target.id)
+        else:
+            toggled = 'removed'
+            tt.delete()
+            logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
 
-        # Already existed: delete to "un-tag"
-        tt.delete()
-        logger.info("Tag '%s' removed from target %s by %s", tag.name, target.id, request.user)
-        return JsonResponse({'toggled': 'removed', 'tag': tag.name})
+        # Return the full current tag list so the UI can update system tags
+        # (e.g. needs-review / ready) that may have changed via signals.
+        current_tags = [
+            {'id': t.id, 'name': t.name}
+            for t in target.tags.all()
+        ]
+        return JsonResponse({
+            'toggled': toggled,
+            'tag': tag.name,
+            'current_tags': current_tags,
+        })
 
 class TagSearchView(View):
     def get(self, request):
@@ -461,15 +496,20 @@ class LatestView(ListView):
         return context
 
 
-# --- Reinstated Release Queue Views ---
+# --- Release Queue Views ---
 
 class ReleaseQueueView(LoginRequiredMixin, TemplateView):
     template_name = 'custom_code/release_queue.html'
 
     def get_context_data(self, **kwargs):
+        from custom_code.services import update_staging_area
+        
         ctx = super().get_context_data(**kwargs)
         
-        # Start with unreleased targets
+        # Auto-update staging area
+        update_staging_area()
+        
+        # Start with unreleased targets (these are "staged")
         qs = unreleased_queryset().select_related()
 
         # Filters
@@ -479,7 +519,6 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
 
         if min_prob:
             try:
-                # Filter on the related pipeline classification probability
                 qs = qs.filter(pipeline_classifications_global__probability__gte=float(min_prob))
                 ctx['min_prob'] = float(min_prob)
             except ValueError:
@@ -490,8 +529,45 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
         if exclude:
             qs = filter_by_tags(qs, exclude_tags=exclude)
 
-        # Limit results to avoid massive page loads
-        ctx['targets'] = qs.distinct()[:500]
+        # Build enriched target data with classifications and tags
+        QUEUE_LIMIT = 500
+        qs_distinct = qs.distinct()
+        total_unreleased = qs_distinct.count()
+        target_data = []
+        for target in qs_distinct[:QUEUE_LIMIT]:
+            is_ready = target.sync_review_tag()
+
+            auto_class = target.latest_auto_classification
+            human_class = target.latest_human_classification
+
+            # Get all tags for this target AFTER syncing them
+            target_tags = list(
+                target.target_tags
+                .select_related('tag')
+                .values_list('tag__name', flat=True)
+            )
+            
+            target_data.append({
+                'target': target,
+                'auto_class': auto_class.sn_type if auto_class else None,
+                'auto_subclass': auto_class.notes if auto_class else None,
+                'auto_z': auto_class.z if auto_class else None,
+                'auto_prob': auto_class.probability if auto_class else None,
+                'human_class': human_class.sn_type if human_class else None,
+                'human_subclass': human_class.sn_subtype if human_class else None,
+                'human_z': human_class.sn_z if human_class else None,
+                'tags': target_tags,
+                'is_ready': is_ready,
+            })
+        
+        # Sort by ready status first (needs review first), then by name
+        target_data.sort(key=lambda x: (x['is_ready'], x['target'].name))
+        
+        ctx['target_data'] = target_data
+        ctx['total_count'] = len(target_data)
+        ctx['total_unreleased'] = total_unreleased
+        ctx['has_more'] = total_unreleased > QUEUE_LIMIT
+        ctx['queue_limit'] = QUEUE_LIMIT
         
         # Context for filter form
         ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
@@ -503,24 +579,42 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
 
 class ReleaseQueueActionView(LoginRequiredMixin, View):
     def post(self, request):
+        from custom_code.services import get_ready_tag, get_needs_review_tag
+        from django.shortcuts import redirect
+        from django.urls import reverse
+
         action = request.POST.get('action')
         ids = request.POST.getlist('target_id')
-        
+        next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('release_queue')
+
         if not ids:
-            return JsonResponse({'error': 'No targets selected'}, status=400)
+            return redirect(next_url)
 
         targets = TidesTarget.objects.filter(pk__in=ids)
+        ready_tag = get_ready_tag()
+        needs_review_tag = get_needs_review_tag()
 
-        if action == 'mark':
-            count = mark_released(targets, request.user)
-            return JsonResponse({'updated': count, 'message': f'Marked {count} targets as released.'})
-            
-        elif action == 'unmark':
-            count = unmark_released(targets)
-            return JsonResponse({'updated': count, 'message': f'Unmarked {count} targets.'})
-            
-        else:
-            return JsonResponse({'error': 'Unknown action'}, status=400)
+        if action == 'mark_ready':
+            for target in targets:
+                TargetTag.objects.get_or_create(tides=target, tag=ready_tag)
+                TargetTag.objects.filter(tides=target, tag=needs_review_tag).delete()
+
+        elif action == 'mark_not_ready':
+            for target in targets:
+                TargetTag.objects.filter(tides=target, tag=ready_tag).delete()
+                TargetTag.objects.get_or_create(tides=target, tag=needs_review_tag)
+
+        # Return JSON for AJAX requests, redirect otherwise
+        if request.headers.get('Accept') == 'application/json':
+            results = {}
+            for target in targets:
+                is_ready = ready_tag.name in set(
+                    target.target_tags.values_list('tag__name', flat=True)
+                )
+                results[str(target.pk)] = {'is_ready': is_ready}
+            return JsonResponse({'ok': True, 'results': results})
+
+        return redirect(next_url)
 
 class StrictTargetUpdateView(TargetUpdateView):
     """

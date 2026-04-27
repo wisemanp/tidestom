@@ -1,51 +1,33 @@
 from django.db.models import Q
+from django.db import models
 from django.contrib.auth import get_user_model
 from .models import TidesTarget, Tag, TargetTag
 
 User = get_user_model()
 
-def get_released_tag():
-    return Tag.objects.get(name='released')
+# -----------------------------------------------------------
+# Released status — now driven by tides_cand.released boolean
+# (writable by Prefect or any direct SQL/ORM call)
+# -----------------------------------------------------------
 
 def is_released(target: TidesTarget) -> bool:
-    rel_tag = get_released_tag()
-    return TargetTag.objects.filter(tides=target, tag=rel_tag).exists()
+    return target.released
 
-def mark_released(targets, user: User | None = None):
-    """Attach the 'released' tag to all given targets."""
-    rel_tag = get_released_tag()
-    created = 0
-    for t in targets:
-        _, c = TargetTag.objects.get_or_create(
-            tides=t, tag=rel_tag, defaults={'user': user}
-        )
-        if c:
-            created += 1
-    return created
+def mark_released(targets, user=None):
+    """Set released=True on all given targets. Returns count updated."""
+    return TidesTarget.objects.filter(pk__in=[t.pk for t in targets]).update(released=True)
 
 def unmark_released(targets):
-    """Remove the 'released' tag from all given targets."""
-    rel_tag = get_released_tag()
-    return TargetTag.objects.filter(tides__in=targets, tag=rel_tag).delete()[0]
+    """Set released=False on all given targets. Returns count updated."""
+    return TidesTarget.objects.filter(pk__in=[t.pk for t in targets]).update(released=False)
+
+def released_queryset():
+    """All targets with released=True."""
+    return TidesTarget.objects.filter(released=True)
 
 def unreleased_queryset():
-    """All targets that do NOT have the 'released' tag."""
-    rel_tag = get_released_tag()
-    # TidesTarget inherits BaseTarget, so join via basetarget
-    return (
-        TidesTarget.objects
-        .exclude(target_tags__tag=rel_tag)  # target_tags is related_name on TargetTag.tides
-    )
-
-def queued_by_auto_prob(min_prob: float):
-    """
-    Targets with auto classification prob >= min_prob that are not released yet.
-    Adjust field names if your auto prob field differs.
-    """
-    qs = unreleased_queryset()
-    if hasattr(TidesTarget, 'auto_tidesclass_prob'):
-        qs = qs.filter(auto_tidesclass_prob__gte=min_prob)
-    return qs
+    """All targets with released=False."""
+    return TidesTarget.objects.filter(released=False)
 
 def filter_by_tags(qs, include_tags=None, exclude_tags=None):
     """
@@ -69,6 +51,84 @@ def filter_by_tags(qs, include_tags=None, exclude_tags=None):
 
     return qs.distinct()
 
-def released_queryset():
-    rel_tag = get_released_tag()
-    return TidesTarget.objects.filter(target_tags__tag=rel_tag)
+
+def get_needs_review_tag():
+    """Get or create the 'needs-review' system tag."""
+    tag, _ = Tag.objects.get_or_create(
+        name='needs-review',
+        defaults={
+            'description': 'Target requires human review before release',
+            'is_system': True,
+            'is_clickable': False,
+            'is_active': True,
+        }
+    )
+    return tag
+
+
+def get_ready_tag():
+    """Get or create the 'ready' system tag."""
+    tag, _ = Tag.objects.get_or_create(
+        name='ready',
+        defaults={
+            'description': 'Target has been reviewed and approved for release',
+            'is_system': True,
+            'is_clickable': False,
+            'is_active': True,
+        }
+    )
+    return tag
+
+
+def staged_queryset():
+    """All targets that are pending release (needs-review or ready, but not released)."""
+    needs_review_tag = get_needs_review_tag()
+    ready_tag = get_ready_tag()
+    return (
+        TidesTarget.objects
+        .filter(
+            models.Q(target_tags__tag=needs_review_tag) |
+            models.Q(target_tags__tag=ready_tag)
+        )
+        .filter(released=False)
+        .distinct()
+    )
+
+
+def update_staging_area():
+    """
+    Update staging area with new observations since last release.
+    Marks new targets as needs-review.
+    Returns count of newly staged targets.
+    """
+    from .models import TidesSpec
+    from django.utils import timezone
+    from datetime import timedelta
+
+    # Find targets with spectra observed in the last 24h
+    cutoff = timezone.now() - timedelta(days=1)
+    recent_spectra = TidesSpec.objects.filter(obs_date__gt=cutoff)
+    tides_ids = recent_spectra.values_list('tides_id', flat=True).distinct()
+
+    # Get targets that aren't already released or in review
+    needs_review_tag = get_needs_review_tag()
+    ready_tag = get_ready_tag()
+    targets_to_stage = (
+        TidesTarget.objects
+        .filter(pk__in=tides_ids, released=False)
+        .exclude(target_tags__tag=needs_review_tag)
+        .exclude(target_tags__tag=ready_tag)
+    )
+
+    # Add needs-review tag to new targets
+    count = 0
+    for target in targets_to_stage:
+        TargetTag.objects.get_or_create(
+            tides=target,
+            tag=needs_review_tag,
+            defaults={'user': None}
+        )
+        count += 1
+
+    return count
+

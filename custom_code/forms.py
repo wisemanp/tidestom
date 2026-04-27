@@ -26,9 +26,11 @@ class TidesTargetForm(forms.Form):
         # Populate main class choices from DB; fallback to static choices on the model if DB is empty
         try:
             db_choices = list(TidesClass.objects.order_by('name').values_list('name', 'name'))
+            db_choices.insert(0, (None, '----'))
         except DatabaseError:
             db_choices = []
         fallback = getattr(TidesTarget, 'TIDES_CLASS_CHOICES', [])
+        fallback.insert(0, (None, '----'))
         self.fields['tidesclass'].choices = db_choices if db_choices else fallback
 
         # Dynamically filter subclasses based on selected main class
