@@ -291,7 +291,10 @@ def target_photometry(context, target, dataproduct=None):
             warnings.warn(f"Warning: Lasair API key for {survey.upper()} not set!", UserWarning)
             continue
         try:
-            #phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
+            #if survey == "ztf":
+            #    phot = fetch_target_lasair(49.1384664, 44.9725084, survey)  # ZTF25aacedrs for testing
+            #if survey == "lsst":
+            #    phot = fetch_target_lasair(57.421526, -48.269298, survey)  # 313761042284412983 for testing
             phot = fetch_target_lasair(target.ra, target.dec, survey)
             photometry_list.append(phot)
         except Exception as exc:
