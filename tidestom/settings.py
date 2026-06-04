@@ -350,7 +350,9 @@ BROKERS = {
     },
     'LASAIR': {
         'ztf_api_key': os.environ.get('LASAIR_ZTF_KEY'),
+        'ztf_url': "https://lasair-ztf.lsst.ac.uk",
         'lsst_api_key': os.environ.get('LASAIR_LSST_KEY'),
+        'lsst_url': "https://lasair.lsst.ac.uk",
     }
 }
 
