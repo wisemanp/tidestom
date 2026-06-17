@@ -189,6 +189,14 @@ $(function () {
 
         $('#fixedz').toggle(fixed);
         $('#floatz').toggle(!fixed);
+
+        $('input[name="zfixed"]')
+            .prop('required', fixed)
+            .prop('disabled', !fixed);
+
+        $('input[name="zmin"], input[name="zmax"]')
+            .prop('required', !fixed)
+            .prop('disabled', fixed);
     }
 
     updateRedshiftMode();
