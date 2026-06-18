@@ -1,9 +1,11 @@
+from django.contrib.auth.views import login_required
 from django.views.generic.edit import FormView
 from django.views import View
 from django.views.generic import TemplateView, ListView   # <-- add this
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.decorators.http import require_POST
 from custom_code.models import (
     TidesTarget,
     Tag,
@@ -30,6 +32,8 @@ from django.db import DatabaseError
 import csv
 from tom_targets.views import TargetUpdateView, TargetDeleteView
 from .permissions import strict_targets_for_user
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 # 1. Add this at the very top level of the file to confirm the module loads
 print("DEBUG: custom_code/views.py module loaded", flush=True)
@@ -559,21 +563,21 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
                 'tags': target_tags,
                 'is_ready': is_ready,
             })
-        
+
         # Sort by ready status first (needs review first), then by name
         target_data.sort(key=lambda x: (x['is_ready'], x['target'].name))
-        
+
         ctx['target_data'] = target_data
         ctx['total_count'] = len(target_data)
         ctx['total_unreleased'] = total_unreleased
         ctx['has_more'] = total_unreleased > QUEUE_LIMIT
         ctx['queue_limit'] = QUEUE_LIMIT
-        
+
         # Context for filter form
         ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
         ctx['include_tags'] = include
         ctx['exclude_tags'] = exclude
-        
+
         return ctx
 
 
@@ -637,4 +641,66 @@ class StrictTargetDeleteView(TargetDeleteView):
                 self.request.user,
                 qs,
                 'delete_target'
+        )
+
+@login_required
+@require_POST
+def send_to_slack(request):
+
+    data = json.loads(request.body)
+
+    message = data.get("message", "")
+    page_url = data.get("page_url", "")
+
+    user = request.user
+
+    sender = (
+        user.get_full_name()
+        or user.username
+    )
+
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
+    try:
+
+        client.chat_postMessage(
+            channel=settings.SLACK_CHANNEL_ID,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": (
+                            f"*Sent by:* {sender}\n"
+                            f"*Username:* `{user.username}`"
+                        )
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Message:*\n{message}"
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"<{page_url}|Open page>"
+                    }
+                }
+            ]
+        )
+
+        return JsonResponse({"success": True})
+
+    except SlackApiError as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e)
+            },
+            status=500
         )
