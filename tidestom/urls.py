@@ -32,10 +32,11 @@ from custom_code.views import (
     PublicClassificationsDownloadView,
     StrictTargetUpdateView,
     StrictTargetDeleteView,
+    send_to_slack,
 )
 from myplots.views import (
     target_spectroscopy_partial,
-    download_spectrum_ascii, 
+    download_spectrum_ascii,
     download_spectrum_by_specid
 )
 
@@ -121,4 +122,10 @@ urlpatterns = [
         PublicClassificationsDownloadView.as_view(),
         name='public_classifications_download',
     ),
+
+    path(
+        "send-to-slack/",
+        send_to_slack,
+        name="send_to_slack"
+),
 ]
