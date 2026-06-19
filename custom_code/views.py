@@ -160,7 +160,6 @@ class SnidFormAjaxView(FormView):
             with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
 
-
         except requests.exceptions.HTTPError as e:
             return JsonResponse({"success": False, "error": f"HTTP error: {e}"},
                                 status=500)
@@ -172,8 +171,16 @@ class SnidFormAjaxView(FormView):
                     os.remove(temp_file_path)
             except Exception as e:
                 logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
-
-        return JsonResponse({"success": True, "data": response.json()})
+        if response.json()["success"] is False:
+            if response.json()['data']['message'] == "SNID failed":
+                return JsonResponse({"success": False, "error": "SNID failed, please \
+                        try again with different settings. Note SNID will not succeed \
+                        for all spectra."}, status=400)
+            else:
+                return JsonResponse({"success": False, "error": "An error occured"},
+                                    status=400)
+        else:
+            return JsonResponse({"success": True, "data": response.json()})
 
 class PreviousSNIDRunsView(View):
     def get(self, request):

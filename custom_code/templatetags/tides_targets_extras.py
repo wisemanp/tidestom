@@ -57,7 +57,7 @@ def tides_target_data(target):
     else:
         ztflink = ''
     if lsstname is not None:
-        lsstlink = "https://lasair-lsst.lsst.ac.uk/objects/" + lsstname
+        lsstlink = "https://lasair.lsst.ac.uk/objects/" + lsstname
     else:
         lsstlink = ''
     return {'target': target, 'extras': extras,
