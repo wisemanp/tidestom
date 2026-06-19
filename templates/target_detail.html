@@ -639,6 +639,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('slackModal');
     const openBtn = document.getElementById('slackButton');
     const closeBtn = document.getElementById('closeSlackModal');
+	  const objectName = "{{ object.name|escapejs }}";
+	  const details = "{{ tides_target_data object|escapejs }}";
 
     openBtn.addEventListener('click', () => {
         modal.style.display = 'block';
@@ -662,13 +664,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pageUrl = window.location.href;
 
-        const response = await fetch('/send-to-slack/', {
+        const response = await fetch('/marshal/send-to-slack/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
+            	  details: details,
+				        object_name: objectName,
                 message: message,
                 page_url: pageUrl
             })

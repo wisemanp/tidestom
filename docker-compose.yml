@@ -69,6 +69,8 @@ services:
       PGPORT: ${DB_PORT}
       PGDATABSE: ${DB_NAME}
       LASAIR_ZTF_KEY: ${LASAIR_ZTF_API_TOKEN}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_CHANNEL_ID: ${SLACK_CHANNEL_ID}
 
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
