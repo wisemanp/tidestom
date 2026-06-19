@@ -1,7 +1,7 @@
 from django.contrib.auth.views import login_required
 from django.views.generic.edit import FormView
 from django.views import View
-from django.views.generic import TemplateView, ListView   # <-- add this
+from django.views.generic import TemplateView, ListView  # <-- add this
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -659,6 +659,10 @@ def send_to_slack(request):
         or user.username
     )
 
+    object_name = data.get("object_name", "Unknown object")
+    details = data.get("details")
+
+
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
 
     try:
@@ -667,12 +671,25 @@ def send_to_slack(request):
             channel=settings.SLACK_CHANNEL_ID,
             blocks=[
                 {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": object_name
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": details
+                    }
+                },
+                {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
                         "text": (
-                            f"*Sent by:* {sender}\n"
-                            f"*Username:* `{user.username}`"
+                            f"*Sent by:* {sender}"
                         )
                     }
                 },
