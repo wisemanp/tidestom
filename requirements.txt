@@ -16,3 +16,4 @@ extinction>=0.4.8
 pysnid>=0.6.0
 ngsf>=0.0.2
 slack-sdk
+specutils
