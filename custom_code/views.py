@@ -721,9 +721,14 @@ def send_to_slack(request):
         fluxcon = FluxConservingResampler()
         fl_smooth = fluxcon(spec, wl_smooth)
 
-        fig, ax = plt.subplots(figsize=(8,8))
+        fig, ax = plt.subplots(figsize=(8,4))
         ax.plot(fl_smooth.spectral_axis.value, fl_smooth.flux.value, c='k')
-
+        ax.set_xlabel('Observed Wavelength (A)')
+        ax.set_ylabel("Flux (erg/s/cm2/A)")
+        ax.set_ylim(
+                np.nanpercentile(fl_smooth.flux.value, 0.1),
+                np.nanpercentile(fl_smooth.flux.value, 99.9)
+                    )
 
         buf = io.BytesIO()
 
@@ -787,11 +792,11 @@ def send_to_slack(request):
             channel=settings.SLACK_CHANNEL_ID,
             file=buf,
             filename=f"{object_name}.png",
-            title=f"{object_name} Plot"
+            title=f"{object_name} Plot",
         )
 
         buf.close()
-        fig.close()
+        plt.close()
 
         return JsonResponse({"success": True})
 
