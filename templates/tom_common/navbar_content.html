@@ -47,10 +47,23 @@ For customization instructions, see tom_common/base.html
     <a class="nav-link" href="{% url 'user-list' %}">Users</a>
 </li>
 
-<li class="nav-item ml-auto">
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle {% if request.resolver_match.namespace == 'search' %}active{% endif %}" data-toggle="dropdown">Search</a>
+<div class="dropdown-menu">
+<div class="nav-item ml-auto">
 <form method="get" action='/marshal/targets' class="form-inline">
-       <input type="text" name='cone_search' class="form-control" placeholder='RA, Dec, Radius (Deg)' id="target_cone_search"></form>
+       <input type="text" name='cone_search' class="form-control" placeholder='RA, Dec, Radius (Deg)' id="target_cone_search">
+       </form>
+</div>
+
+<div class="nav-item ml-auto">
+<form method="get" action='/marshal/targets' class="form-inline">
+	<input type="text" name="name_fuzzy" class="form-control" placeholder="Name (Fuzzy)" title="" id="id_name_fuzzy">
+	</form>
+</div>
+</div>
 </li>
+
 {% else %}
 <li class="nav-item {% if request.resolver_match.url_name == 'public_classifications' %}active{% endif %}">
 	<a class="nav-link" href="{% url 'public_classifications' %}">Classifications</a>
