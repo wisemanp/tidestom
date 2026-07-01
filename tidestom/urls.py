@@ -16,8 +16,11 @@ Including another URLconf
 
 from django.urls import path, include
 from django.views.generic import TemplateView
+from custom_code.templatetags import custom_extras
 from .views import (
-    SubmitClassificationView, get_subclasses, MyTargetDetailView
+    SubmitClassificationView, 
+    get_subclasses, 
+    MyTargetDetailView
 )
 from custom_code.views import (
     LatestView,
@@ -76,6 +79,11 @@ urlpatterns = [
     ),
     path(
         '', include('tom_common.urls')
+    ),
+    path(
+        'api/classifications/',
+         custom_extras.classification_data,
+         name='classification_data'
     ),
     path(
         "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"

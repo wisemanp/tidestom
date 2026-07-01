@@ -1,5 +1,5 @@
 {% extends 'tom_common/base.html' %}
-{% load static targets_extras observation_extras dataproduct_extras tom_common_extras tides_targets_extras %}
+{% load static targets_extras observation_extras dataproduct_extras tom_common_extras tides_targets_extras custom_extras %}
 {% block title %}Home{% endblock %}
 {% block content %}
 <div class="row">
@@ -11,8 +11,6 @@
     <h3 class="text-center">The industralisation of transient spectroscopy.</h3>
 
     <!-- END MODIFIED CONTENT -->
-   
-    
    
     
   </div>
@@ -31,4 +29,44 @@
       {% recent_targets %}
   </div>
 </div>
+
+<body>
+  <h5> Supernova Classifications </h5>
+  <div id="supernovapiechart" style="width: 500px; height: 400px;"></div>
+
+
+  <script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script> <!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
+  <script>
+    const COLOURS = [
+        '#B912D1', '#0542D1', '#17A008', '#638604', '#735401', '#6A1F00', '#3C0000'
+        ];
+
+    async function renderChart() {
+      const response = await fetch('{% url "classification_data" %}');
+      const data = await response.json();
+
+      const chartData = [{
+        type: 'pie',
+        labels: data.labels,
+        values: data.counts,
+        marker: {
+          colors: COLOURS.slice(0, data.labels.length)
+        },
+        textinfo: 'label+percent'
+      }];
+
+      const layout = {
+        title: 'Supernova Classifications',
+        height: 400,
+        width: 400
+      };
+
+      Plotly.newPlot('supernovapiechart', chartData, layout);
+    }
+
+    renderChart();
+  </script>
+</body>
+
+
 {% endblock %}
