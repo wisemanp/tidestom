@@ -323,6 +323,23 @@ class PipelineClassificationGlobal(models.Model):
     )
     tides_specid = models.BigIntegerField(null=True, blank=True, db_column='tides_specid', db_index=True, unique=True)
     sn_type = models.CharField(max_length=50, null=True, blank=True)
+    # Canonical FK resolved automatically by the normalise_pipeline_global DB trigger.
+    # NULL when the raw sn_type string has no exact match in tides_class.
+    tidesclass = models.ForeignKey(
+        'TidesClass',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pipeline_classifications_global',
+        db_column='tidesclass_id',
+    )
+    # Fine-grained subclass FK, populated by tides_combiner (NULL for M25 results).
+    tidesclass_subclass = models.ForeignKey(
+        'TidesClassSubClass',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pipeline_classifications_global',
+        db_column='tidesclass_subclass_id',
+    )
     probability = models.FloatField(null=True, blank=True)
     version = models.CharField(max_length=20, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
