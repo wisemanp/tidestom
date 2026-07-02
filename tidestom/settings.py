@@ -25,6 +25,8 @@ DB_HOST = os.environ.get('DB_HOST')
 DB_PORT = os.environ.get('DB_PORT')
 DB_NAME = os.environ.get('DB_NAME')
 LOCAL_MODE = os.environ.get('LOCAL_MODE')
+SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
+SLACK_CHANNEL_ID = os.environ.get('SLACK_CHANNEL_ID')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -350,7 +352,9 @@ BROKERS = {
     },
     'LASAIR': {
         'ztf_api_key': os.environ.get('LASAIR_ZTF_KEY'),
+        'ztf_url': "https://lasair-ztf.lsst.ac.uk",
         'lsst_api_key': os.environ.get('LASAIR_LSST_KEY'),
+        'lsst_url': "https://lasair.lsst.ac.uk",
     }
 }
 

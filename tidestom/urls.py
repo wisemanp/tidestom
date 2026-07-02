@@ -16,8 +16,11 @@ Including another URLconf
 
 from django.urls import path, include
 from django.views.generic import TemplateView
+from custom_code.templatetags import custom_extras
 from .views import (
-    SubmitClassificationView, get_subclasses, MyTargetDetailView
+    SubmitClassificationView, 
+    get_subclasses, 
+    MyTargetDetailView
 )
 from custom_code.views import (
     LatestView,
@@ -32,10 +35,11 @@ from custom_code.views import (
     PublicClassificationsDownloadView,
     StrictTargetUpdateView,
     StrictTargetDeleteView,
+    send_to_slack,
 )
 from myplots.views import (
     target_spectroscopy_partial,
-    download_spectrum_ascii, 
+    download_spectrum_ascii,
     download_spectrum_by_specid
 )
 
@@ -76,6 +80,11 @@ urlpatterns = [
     ),
     path(
         '', include('tom_common.urls')
+    ),
+    path(
+        'api/classifications/',
+         custom_extras.classification_data,
+         name='classification_data'
     ),
     path(
         "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"
@@ -121,4 +130,10 @@ urlpatterns = [
         PublicClassificationsDownloadView.as_view(),
         name='public_classifications_download',
     ),
+
+    path(
+        "send-to-slack/",
+        send_to_slack,
+        name="send_to_slack"
+),
 ]

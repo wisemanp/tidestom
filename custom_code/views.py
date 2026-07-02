@@ -1,17 +1,16 @@
+from django.contrib.auth.views import login_required
 from django.views.generic.edit import FormView
 from django.views import View
-from django.views.generic import TemplateView, ListView   # <-- add this
+from django.views.generic import TemplateView, ListView  # <-- add this
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.decorators.http import require_POST
 from custom_code.models import (
     TidesTarget,
     Tag,
     TargetTag,
     TidesSpec,
-    PipelineClassificationGlobal,
-    TidesClass,
-    HumanClassification,
 )
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm  # Ensure this is imported
@@ -21,15 +20,24 @@ from django.utils.timezone import now
 import requests
 import shutil
 import os
+import numpy as np
 import json
 import logging
 from workspaces import utils
 from pathlib import Path
 from custom_code.services import filter_by_tags, unreleased_queryset
-from django.db import DatabaseError
 import csv
 from tom_targets.views import TargetUpdateView, TargetDeleteView
 from .permissions import strict_targets_for_user
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+from astropy.table import Table
+from astropy.io.registry import IORegistryError
+from specutils import Spectrum1D
+from specutils.manipulation import FluxConservingResampler
+import astropy.units as u
+import matplotlib.pyplot as plt
+import io
 
 # 1. Add this at the very top level of the file to confirm the module loads
 print("DEBUG: custom_code/views.py module loaded", flush=True)
@@ -47,16 +55,16 @@ def get_tides_class_choices():
         # Instantiate the form to trigger its __init__ logic (which queries the DB)
         form = TidesTargetForm()
         print(f"DEBUG: Form instantiated. Fields: {list(form.fields.keys())}", flush=True)
-        
+
         field = form.fields.get('tidesclass')
-        
+
         if field:
             print("DEBUG: Found 'tidesclass' field.", flush=True)
             if hasattr(field, 'choices'):
                 # Extract just the values (first element of tuple), filtering out empty ones
                 raw_choices = list(field.choices)
                 print(f"DEBUG: Raw choices sample (first 5): {raw_choices[:5]}", flush=True)
-                
+
                 choices = [c[0] for c in raw_choices if c[0]]
                 if choices:
                     print(f"DEBUG: Returning {len(choices)} choices from form.", flush=True)
@@ -156,7 +164,6 @@ class SnidFormAjaxView(FormView):
             with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
 
-
         except requests.exceptions.HTTPError as e:
             return JsonResponse({"success": False, "error": f"HTTP error: {e}"},
                                 status=500)
@@ -168,8 +175,16 @@ class SnidFormAjaxView(FormView):
                     os.remove(temp_file_path)
             except Exception as e:
                 logger.warning(f"Failed to remove temp file {temp_file_path}: {e}")
-
-        return JsonResponse({"success": True, "data": response.json()})
+        if response.json()["success"] is False:
+            if response.json()['data']['message'] == "SNID failed":
+                return JsonResponse({"success": False, "error": "SNID failed, please \
+                        try again with different settings. Note SNID will not succeed \
+                        for all spectra."}, status=400)
+            else:
+                return JsonResponse({"success": False, "error": "An error occured"},
+                                    status=400)
+        else:
+            return JsonResponse({"success": True, "data": response.json()})
 
 class PreviousSNIDRunsView(View):
     def get(self, request):
@@ -286,7 +301,7 @@ class ToggleTagView(LoginRequiredMixin, View):
     def post(self, request, target_id, tag_id):
         target = get_object_or_404(TidesTarget, pk=target_id)
         tag = get_object_or_404(Tag, pk=tag_id, is_active=True)
-        
+
         # Check if tag is clickable
         if not tag.is_clickable:
             return JsonResponse({
@@ -397,7 +412,7 @@ class PublicClassificationsDownloadView(View):
         for t in qs:
             # Grab the first classification (if any) to get z/type
             pc = t.pipeline_classifications_global.first()
-            
+
             rows.append({
                 'tides_id': t.tides_id,
                 'name': t.name,
@@ -435,14 +450,14 @@ class LatestView(ListView):
     def get_queryset(self):
         # 2. Add debug here to confirm the view is processing the request
         print("DEBUG: LatestView.get_queryset called", flush=True)
-        
+
         # 1. Base: Spectra in the last N days
         try:
             days_range = int(self.request.GET.get('days_range', 60))
         except (ValueError, TypeError):
             days_range = 60
         date_threshold = now() - timedelta(days=days_range)
-        
+
         qs = TidesSpec.objects.filter(obs_date__gte=date_threshold).select_related('tides')
 
         # 2. Tag Filter (on the related Target) - Handle multiple
@@ -474,9 +489,9 @@ class LatestView(ListView):
     def get_context_data(self, **kwargs):
         # 3. Add debug here to confirm context preparation
         print("DEBUG: LatestView.get_context_data called", flush=True)
-        
+
         context = super().get_context_data(**kwargs)
-        
+
         context['default_days_range'] = self.request.GET.get('days_range', 60)
         context['filter_tags'] = self.request.GET.getlist('tag')
         context['filter_classes'] = self.request.GET.getlist('class')
@@ -484,7 +499,7 @@ class LatestView(ListView):
         context['filter_z_max'] = self.request.GET.get('z_max', '')
 
         context['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
-        
+
         # 4. Call the helper and print the result
         choices = get_tides_class_choices()
         print(f"DEBUG: get_tides_class_choices returned {len(choices)} items: {choices}", flush=True)
@@ -503,12 +518,12 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         from custom_code.services import update_staging_area
-        
+
         ctx = super().get_context_data(**kwargs)
-        
+
         # Auto-update staging area
         update_staging_area()
-        
+
         # Start with unreleased targets (these are "staged")
         qs = unreleased_queryset().select_related()
 
@@ -546,7 +561,7 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
                 .select_related('tag')
                 .values_list('tag__name', flat=True)
             )
-            
+
             target_data.append({
                 'target': target,
                 'auto_class': auto_class.sn_type if auto_class else None,
@@ -559,21 +574,21 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
                 'tags': target_tags,
                 'is_ready': is_ready,
             })
-        
+
         # Sort by ready status first (needs review first), then by name
         target_data.sort(key=lambda x: (x['is_ready'], x['target'].name))
-        
+
         ctx['target_data'] = target_data
         ctx['total_count'] = len(target_data)
         ctx['total_unreleased'] = total_unreleased
         ctx['has_more'] = total_unreleased > QUEUE_LIMIT
         ctx['queue_limit'] = QUEUE_LIMIT
-        
+
         # Context for filter form
         ctx['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
         ctx['include_tags'] = include
         ctx['exclude_tags'] = exclude
-        
+
         return ctx
 
 
@@ -637,4 +652,160 @@ class StrictTargetDeleteView(TargetDeleteView):
                 self.request.user,
                 qs,
                 'delete_target'
+        )
+
+@login_required
+@require_POST
+def send_to_slack(request):
+
+    data = json.loads(request.body)
+
+    message = data.get("message", "")
+    page_url = data.get("page_url", "")
+
+    user = request.user
+
+    sender = (
+        user.get_full_name()
+        or user.username
+    )
+
+    object_name = data.get("object_name", "Unknown object")
+    ra = data.get("ra")
+    dec = data.get("dec")
+    spectrum_id = data.get("spectrum_id")
+
+    try:
+        spec = TidesSpec.objects.get(tides_specid=int(spectrum_id))
+    except Exception:
+        try:
+            spec = (
+                TidesSpec.objects
+                .filter(additional_info__TIDES_SPECID=int(spectrum_id))
+                .first()
+            )
+        except Exception:
+            spec = None
+
+    if spec:
+        p = Path(spec.filepath)
+        if not p.exists():
+            candidate = Path(settings.BASE_DIR) / 'data' / 'spectra' / 'test' / p.name
+            if candidate.exists():
+                p = candidate
+        try:
+            spectrum = Table.read(p)
+        except IORegistryError:
+            spectrum= Table.read(p, format='ascii')
+
+        remove = []
+        n =0
+        for row in spectrum.iterrows():
+            if np.isnan(row[1]):
+                remove.append(n)
+            n+=1
+        _ = spectrum.remove_rows(remove)
+
+        try:
+            wl = spectrum['WAVE'][0]
+        except KeyError:
+            wl = spectrum['Wavelength']
+        try:
+            fl = spectrum['FLUX'][0]
+        except KeyError:
+            fl = spectrum['Flux']
+
+        spec = Spectrum1D(spectral_axis=wl* u.AA , flux=fl* u.Unit('erg cm-2 s-1 AA-1') )
+        wl_smooth = np.arange(wl[0], wl[-1], 15) * u.AA
+
+        fluxcon = FluxConservingResampler()
+        fl_smooth = fluxcon(spec, wl_smooth)
+
+        fig, ax = plt.subplots(figsize=(8,4))
+        ax.plot(fl_smooth.spectral_axis.value, fl_smooth.flux.value, c='k')
+        ax.set_xlabel('Observed Wavelength (A)')
+        ax.set_ylabel("Flux (erg/s/cm2/A)")
+        ax.set_ylim(
+                np.nanpercentile(fl_smooth.flux.value, 0.1),
+                np.nanpercentile(fl_smooth.flux.value, 99.9)
+                    )
+
+        buf = io.BytesIO()
+
+        fig.savefig(
+            buf,
+            format="png",
+            bbox_inches="tight",
+            dpi=150
+        )
+
+        buf.seek(0)
+
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
+    try:
+
+        client.chat_postMessage(
+            channel=settings.SLACK_CHANNEL_ID,
+            blocks=[
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": object_name
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": f"{ra} {dec}"
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": (
+                            f"*Sent by:* {sender}"
+                        )
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Message:*\n{message}"
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"<{page_url}|Open page>"
+                    }
+                }
+            ]
+        )
+
+        client.files_upload_v2(
+            channel=settings.SLACK_CHANNEL_ID,
+            file=buf,
+            filename=f"{object_name}.png",
+            title=f"{object_name} Plot",
+        )
+
+        buf.close()
+        plt.close()
+
+        return JsonResponse({"success": True})
+
+    except SlackApiError as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e)
+            },
+            status=500
         )

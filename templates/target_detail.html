@@ -633,6 +633,89 @@ fetch("{% static 'json/line_data.json' %}")
     toggleSpectroscopyElements();  // Run once on page load
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const modal = document.getElementById('slackModal');
+    const openBtn = document.getElementById('slackButton');
+    const closeBtn = document.getElementById('closeSlackModal');
+	const objectName = "{{ object.name|escapejs }}";
+	const ra = "{{ target.ra }}";
+	const dec = "{{ target.dec }}";
+
+    openBtn.addEventListener('click', () => {
+        modal.style.display = 'block';
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    document.getElementById('sendSlackMessage')
+        .addEventListener('click', async () => {
+
+        const message =
+            document.getElementById('slackMessage').value;
+
+		const spectrum_id =
+				document.getElementById('slack-select-spectrum').value;
+
+        const pageUrl = window.location.href;
+
+        const response = await fetch('/marshal/send-to-slack/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+				object_name: objectName,
+				ra: ra,
+				dec: dec,
+				spectrum_id: spectrum_id,
+                message: message,
+                page_url: pageUrl
+            })
+        });
+
+        if (response.ok) {
+            alert('Sent to Slack');
+            modal.style.display = 'none';
+            document.getElementById('slackMessage').value = '';
+        } else {
+            alert('Failed to send');
+        }
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+</script>
+
 {% if request.user.is_authenticated %}
 <div class="row">
 
@@ -672,6 +755,45 @@ fetch("{% static 'json/line_data.json' %}")
 
         {% endif %}
         </div>
+<!-- Slack Modal -->
+<div id="slackModal" class="slack-modal">
+    <div class="slack-modal-content">
+        <div class="slack-modal-header">
+            <h5>Send to Slack</h5>
+            <button id="closeSlackModal" class="btn-close">&times;</button>
+        </div>
+		<div class='form-group'>
+			<label for="slack-select-spectrum"> Select Spectrum</label>
+			<select id="slack-select-spectrum" name="slack-select-spectrum" class="form-control">
+			{% if spectra %}
+				{% for spec in spectra %}
+					<option value="{{ spec.tides_specid }}">
+					{{ spec.obs_date|date:"Y-m-d H:i" }} - {{ spec.filepath|default:"(no path)"|slice:"-40:" }}
+					</option>
+				{% endfor %}
+			{% else %}
+				<option value"">No spectra available</option>
+			{% endif %}
+			</select>
+		</div>
+        <div class="slack-modal-body">
+            <label for="slackMessage">Message</label>
+            <textarea
+                id="slackMessage"
+                class="form-control"
+                rows="4"
+                placeholder="Add a message..."
+            ></textarea>
+        </div>
+
+        <div class="slack-modal-footer">
+            <button id="sendSlackMessage" class="btn btn-slack">
+                Send
+            </button>
+        </div>
+    </div>
+</div>
+
 
 <style>
 .btn-slack {
@@ -702,6 +824,42 @@ fetch("{% static 'json/line_data.json' %}")
 
 .btn-slack i {
     font-size: 1rem; /* Adjust icon size if using Font Awesome */
+}
+
+.slack-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+}
+
+.slack-modal-content {
+    background: white;
+    width: 500px;
+    max-width: 90%;
+    margin: 10vh auto;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+
+.slack-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-close {
+    border: none;
+    background: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.slack-modal-footer {
+    margin-top: 1rem;
+    text-align: right;
 }
 </style>
 
