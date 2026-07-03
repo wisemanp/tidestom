@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from django.db.models import Count
 from custom_code.models import PipelineClassificationGlobal
 from tom_dataproducts.models import ReducedDatum
+from custom_code.models import HumanClassification, TagProposal, TargetTag
+from django.db.models.functions import TruncMonth
 
 # initialization of the template library
 register = template.Library()
@@ -24,5 +26,18 @@ def classification_data(request):
         .order_by('sn_type')
     )
     labels = [entry['sn_type'] for entry in data]
+    counts = [entry['count'] for entry in data]
+    return JsonResponse({'labels': labels, 'counts': counts})
+
+@register.inclusion_tag('custom_code/partials/classification_timeline.html')
+def classification_timeline_data(request):
+    data = (
+        TargetTag.objects
+        .annotate(month=TruncMonth('created'))
+        .values('month')
+        .annotate(count=Count('id'))
+        .order_by('month')
+    )
+    labels = [entry['month'].strftime('%B %Y') for entry in data]
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
