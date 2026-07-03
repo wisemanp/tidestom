@@ -368,11 +368,12 @@ class PublicClassificationsView(TemplateView):
     template_name = 'custom_code/public_classifications.html'
 
     def get_context_data(self, **kwargs):
-        from .services import released_queryset
+        from .models import PublicClassification
         ctx = super().get_context_data(**kwargs)
-        qs = released_queryset()
+        qs = PublicClassification.objects.select_related(
+            'tides', 'tidesclass', 'tidesclass_subclass'
+        )
 
-        # Simple filters
         z_min = self.request.GET.get('z_min')
         z_max = self.request.GET.get('z_max')
         ctype = self.request.GET.get('class')
@@ -380,46 +381,47 @@ class PublicClassificationsView(TemplateView):
         if z_min:
             try:
                 ctx['z_min'] = float(z_min)
-                # Filter on the related pipeline classification 'z'
-                qs = qs.filter(pipeline_classifications_global__z__gte=ctx['z_min'])
+                qs = qs.filter(z__gte=ctx['z_min'])
             except ValueError:
                 pass
         if z_max:
             try:
                 ctx['z_max'] = float(z_max)
-                # Filter on the related pipeline classification 'z'
-                qs = qs.filter(pipeline_classifications_global__z__lte=ctx['z_max'])
+                qs = qs.filter(z__lte=ctx['z_max'])
             except ValueError:
                 pass
         if ctype:
-            # Filter on the related pipeline classification 'sn_type'
-            qs = qs.filter(pipeline_classifications_global__sn_type=ctype)
+            qs = qs.filter(tidesclass__name=ctype)
             ctx['class'] = ctype
 
-        ctx['targets'] = qs.select_related().distinct()[:1000]
+        ctx['classifications'] = qs[:1000]
         return ctx
 
 
 class PublicClassificationsDownloadView(View):
     """Download released classifications as CSV or JSON."""
     def get(self, request):
-        from .services import released_queryset
+        from .models import PublicClassification
         fmt = request.GET.get('format', 'csv').lower()
 
-        # Prefetch classifications to avoid N+1 queries
-        qs = released_queryset().prefetch_related('pipeline_classifications_global')
+        qs = PublicClassification.objects.select_related(
+            'tides', 'tidesclass', 'tidesclass_subclass'
+        )
 
         rows = []
-        for t in qs:
-            # Grab the first classification (if any) to get z/type
-            pc = t.pipeline_classifications_global.first()
-
+        for pc in qs:
             rows.append({
-                'tides_id': t.tides_id,
-                'name': t.name,
-                'auto_class': pc.sn_type if pc else '',
-                'auto_prob': pc.probability if pc else '',
-                'auto_z': pc.z if pc else '',
+                'tides_id': pc.tides_id,
+                'name': pc.tides.name if pc.tides_id else '',
+                'source': pc.source,
+                'tidesclass': pc.tidesclass.name if pc.tidesclass_id else '',
+                'tidesclass_subclass': pc.tidesclass_subclass.sub_class if pc.tidesclass_subclass_id else '',
+                'sn_type': pc.sn_type or '',
+                'probability': pc.probability if pc.probability is not None else '',
+                'z': pc.z if pc.z is not None else '',
+                'zerr': pc.zerr if pc.zerr is not None else '',
+                'phase': pc.phase if pc.phase is not None else '',
+                'released_at': pc.released_at.isoformat() if pc.released_at else '',
             })
 
         if fmt == 'json':
@@ -428,10 +430,11 @@ class PublicClassificationsDownloadView(View):
                 content_type='application/json'
             )
 
-        # default: CSV
         resp = HttpResponse(content_type='text/csv')
         resp['Content-Disposition'] = 'attachment; filename="classifications.csv"'
-        writer = csv.DictWriter(resp, fieldnames=['tides_id','name','auto_class','auto_prob','auto_z'])
+        fieldnames = ['tides_id', 'name', 'source', 'tidesclass', 'tidesclass_subclass',
+                      'sn_type', 'probability', 'z', 'zerr', 'phase', 'released_at']
+        writer = csv.DictWriter(resp, fieldnames=fieldnames)
         writer.writeheader()
         for r in rows:
             writer.writerow(r)
@@ -570,10 +573,21 @@ class ReleaseQueueView(LoginRequiredMixin, TemplateView):
                 .values_list('tag__name', flat=True)
             )
 
+            if auto_class and auto_class.tidesclass_id:
+                auto_class = (
+                    target.pipeline_classifications_global
+                    .select_related('tidesclass', 'tidesclass_subclass')
+                    .order_by('-id')
+                    .first()
+                )
             target_data.append({
                 'target': target,
+                'auto_tidesclass': auto_class.tidesclass.name if auto_class and auto_class.tidesclass_id else None,
                 'auto_class': auto_class.sn_type if auto_class else None,
-                'auto_subclass': auto_class.notes if auto_class else None,
+                'auto_subclass': (
+                    auto_class.tidesclass_subclass.sub_class
+                    if auto_class and auto_class.tidesclass_subclass_id else None
+                ),
                 'auto_z': auto_class.z if auto_class else None,
                 'auto_prob': auto_class.probability if auto_class else None,
                 'human_class': human_class.sn_type if human_class else None,

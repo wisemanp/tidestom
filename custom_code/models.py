@@ -469,3 +469,47 @@ class TidesSpec(models.Model):
         managed = False
         db_table = 'tides_spec'
         ordering = ['-obs_date']
+
+
+# ----------------------------
+# Public classifications snapshot (local, managed)
+# Populated by promote_staged_to_released() at release time.
+# ----------------------------
+class PublicClassification(models.Model):
+    SOURCE_AUTO = 'auto'
+    SOURCE_HUMAN = 'human'
+    SOURCE_CHOICES = [(SOURCE_AUTO, 'Auto (pipeline)'), (SOURCE_HUMAN, 'Human')]
+
+    tides = models.OneToOneField(
+        TidesTarget,
+        on_delete=models.CASCADE,
+        related_name='public_classification',
+        db_column='tides_id',
+        db_constraint=False,  # cross-DB: TidesTarget lives in tides_db
+    )
+    released_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default=SOURCE_AUTO)
+    sn_type = models.CharField(max_length=50, null=True, blank=True)
+    tidesclass = models.ForeignKey(
+        'TidesClass',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='public_classifications',
+        db_constraint=False,  # TidesClass is unmanaged / potentially cross-DB
+    )
+    tidesclass_subclass = models.ForeignKey(
+        'TidesClassSubClass',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='public_classifications',
+        db_constraint=False,
+    )
+    z = models.FloatField(null=True, blank=True)
+    zerr = models.FloatField(null=True, blank=True)
+    probability = models.FloatField(null=True, blank=True)
+    phase = models.FloatField(null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'public_classification'
+        ordering = ['-released_at']
