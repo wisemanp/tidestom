@@ -2,9 +2,11 @@ import json
 from django import template
 from django.http import JsonResponse
 from django.db.models import Count
-from custom_code.models import PipelineClassificationGlobal
+from custom_code.models import (
+    PipelineClassificationGlobal, 
+    TidesSpec
+)
 from tom_dataproducts.models import ReducedDatum
-from custom_code.models import HumanClassification, TagProposal, TargetTag
 from django.db.models.functions import TruncMonth
 
 # initialization of the template library
@@ -32,10 +34,11 @@ def classification_data(request):
 @register.inclusion_tag('custom_code/partials/classification_timeline.html')
 def classification_timeline_data(request):
     data = (
-        TargetTag.objects
-        .annotate(month=TruncMonth('created'))
+        TidesSpec.objects
+        .filter(obs_date__isnull=False)  # needed because obs_date can have null values, which dont work with strftime
+        .annotate(month=TruncMonth('obs_date'))
         .values('month')
-        .annotate(count=Count('id'))
+        .annotate(count=Count('tides_specid'))
         .order_by('month')
     )
     labels = [entry['month'].strftime('%B %Y') for entry in data]
