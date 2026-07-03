@@ -11,6 +11,7 @@ from custom_code.models import (
     Tag,
     TargetTag,
     TidesSpec,
+    TidesClassSubClass,
 )
 from workspaces.models import UserWorkspace
 from .forms import SnidParamsForm, NGSFParamsForm, TidesTargetForm  # Ensure this is imported
@@ -468,7 +469,12 @@ class LatestView(ListView):
         # 3. Class Filter (on the related PipelineClassificationGlobal) - Handle multiple
         classes = self.request.GET.getlist('class')
         if classes:
-            qs = qs.filter(tides__pipeline_classifications_global__sn_type__in=classes)
+            qs = qs.filter(tides__pipeline_classifications_global__tidesclass__name__in=classes)
+
+        # 3b. Subclass Filter
+        subclasses = self.request.GET.getlist('subclass')
+        if subclasses:
+            qs = qs.filter(tides__pipeline_classifications_global__tidesclass_subclass__sub_class__in=subclasses)
 
         # 4. Redshift Filter (on the related PipelineClassificationGlobal)
         z_min = self.request.GET.get('z_min')
@@ -495,10 +501,12 @@ class LatestView(ListView):
         context['default_days_range'] = self.request.GET.get('days_range', 60)
         context['filter_tags'] = self.request.GET.getlist('tag')
         context['filter_classes'] = self.request.GET.getlist('class')
+        context['filter_subclasses'] = self.request.GET.getlist('subclass')
         context['filter_z_min'] = self.request.GET.get('z_min', '')
         context['filter_z_max'] = self.request.GET.get('z_max', '')
 
         context['all_tags'] = Tag.objects.filter(is_active=True).order_by('name')
+        context['all_subclasses'] = TidesClassSubClass.objects.select_related('main_class').order_by('main_class__name', 'sub_class')
 
         # 4. Call the helper and print the result
         choices = get_tides_class_choices()
