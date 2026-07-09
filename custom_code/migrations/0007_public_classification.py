@@ -7,13 +7,14 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('custom_code', '0005_guardian_before_tom_targets'),
+        ('custom_code', '0006_humanclassification_pipelineclassificationdash_and_more'), 
     ]
 
     operations = [
         migrations.CreateModel(
             name='PublicClassification',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('released_at', models.DateTimeField(auto_now_add=True)),
                 ('source', models.CharField(
                     choices=[('auto', 'Auto (pipeline)'), ('human', 'Human')],
