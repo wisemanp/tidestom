@@ -132,3 +132,102 @@ def update_staging_area():
 
     return count
 
+
+def promote_staged_to_released():
+    """
+    Promote all 'ready'-tagged unreleased targets to public.
+
+    For each target:
+      - Tags 'auto classification bad' OR 'human classification ok'
+        → use the most recent HumanClassification
+      - Otherwise → use PipelineClassificationGlobal (auto)
+
+    Writes/updates a PublicClassification snapshot, then sets released=True.
+    Returns the number of targets released.
+    """
+    from .models import PublicClassification, TidesClass, TidesClassSubClass
+
+    ready_tag = get_ready_tag()
+    targets = (
+        TidesTarget.objects
+        .filter(target_tags__tag=ready_tag, released=False)
+        .distinct()
+    )
+
+    count = 0
+    for target in targets:
+        tags = set(target.target_tags.values_list('tag__name', flat=True))
+        use_human = (
+            'auto classification bad' in tags or
+            'human classification ok' in tags
+        )
+
+        pc_kwargs = {}
+
+        if use_human:
+            human = target.latest_human_classification
+            if human:
+                tidesclass = None
+                try:
+                    tidesclass = TidesClass.objects.get(name=human.sn_type)
+                except Exception:
+                    pass
+                tidesclass_subclass = None
+                if tidesclass and human.sn_subtype:
+                    try:
+                        tidesclass_subclass = TidesClassSubClass.objects.get(
+                            main_class=tidesclass, sub_class=human.sn_subtype
+                        )
+                    except Exception:
+                        pass
+                pc_kwargs = {
+                    'source': PublicClassification.SOURCE_HUMAN,
+                    'sn_type': human.sn_type,
+                    'tidesclass': tidesclass,
+                    'tidesclass_subclass': tidesclass_subclass,
+                    'z': human.sn_z,
+                    'zerr': None,
+                    'probability': None,
+                    'phase': human.phase,
+                    'notes': human.comments,
+                }
+            else:
+                use_human = False  # no human class exists; fall back to auto
+
+        if not use_human:
+            auto = (
+                target.pipeline_classifications_global
+                .select_related('tidesclass', 'tidesclass_subclass')
+                .order_by('-id')
+                .first()
+            )
+            pc_kwargs = {
+                'source': PublicClassification.SOURCE_AUTO,
+                'sn_type': (
+                    auto.tidesclass.name if auto and auto.tidesclass_id
+                    else (auto.sn_type if auto else None)
+                ),
+                'tidesclass': auto.tidesclass if auto and auto.tidesclass_id else None,
+                'tidesclass_subclass': (
+                    auto.tidesclass_subclass if auto and auto.tidesclass_subclass_id else None
+                ),
+                'z': auto.z if auto else None,
+                'zerr': auto.zerr if auto else None,
+                'probability': auto.probability if auto else None,
+                'phase': auto.phase if auto else None,
+                'notes': auto.notes if auto else None,
+            }
+
+        PublicClassification.objects.update_or_create(
+            tides=target,
+            defaults=pc_kwargs,
+        )
+        count += 1
+
+    # Bulk-flip released flag
+    TidesTarget.objects.filter(
+        target_tags__tag=ready_tag, released=False
+    ).distinct().update(released=True)
+
+    return count
+

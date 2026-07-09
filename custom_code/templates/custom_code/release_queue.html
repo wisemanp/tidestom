@@ -105,6 +105,7 @@
         <tr>
           <th><input type="checkbox" id="select-all"></th>
           <th class="col-name">Name</th>
+          <th>Auto TidesClass</th>
           <th>Auto Class</th>
           <th>Auto Sub</th>
           <th>Auto z</th>
@@ -123,6 +124,13 @@
             </td>
             <td class="col-name">
               <a href="{% url 'target_detail' item.target.id %}">{{ item.target.name }}</a>
+            </td>
+            <td>
+              {% if item.auto_tidesclass %}
+                <span class="badge badge-success">{{ item.auto_tidesclass }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
             </td>
             <td>
               {% if item.auto_class %}
@@ -182,7 +190,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="10" class="text-center text-muted"><i>No unreleased targets match your filters.</i></td></tr>
+          <tr><td colspan="11" class="text-center text-muted"><i>No unreleased targets match your filters.</i></td></tr>
         {% endfor %}
       </tbody>
     </table>

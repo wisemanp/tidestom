@@ -31,24 +31,38 @@
     <tr>
       <th>Tides ID</th>
       <th>Name</th>
-      <th>Auto class</th>
-      <th>Subclass</th>
+      <th>Source</th>
+      <th>TiDES Class</th>
+      <th>TiDES Subclass</th>
+      <th>Raw type</th>
       <th>Prob</th>
       <th>z</th>
+      <th>Released</th>
     </tr>
   </thead>
   <tbody>
-    {% for t in targets %}
+    {% for pc in classifications %}
       <tr>
-        <td>{{ t.tides_id }}</td>
-        <td>{{ t.name }}</td>
-        <td>{{ t.auto_tidesclass }}</td>
-        <td>{% if t.auto_tidesclass_subclass %}{{ t.auto_tidesclass_subclass.sub_class }}{% endif %}</td>
-        <td>{{ t.auto_tidesclass_prob|floatformat:3 }}</td>
-        <td>{{ t.auto_tidesclass_z|floatformat:4 }}</td>
+        <td>{{ pc.tides_id }}</td>
+        <td>
+          {% if pc.tides %}
+            <a href="{% url 'target_detail' pc.tides.id %}">{{ pc.tides.name }}</a>
+          {% else %}{{ pc.tides_id }}{% endif %}
+        </td>
+        <td>
+          <span class="badge {% if pc.source == 'human' %}badge-primary{% else %}badge-info{% endif %}">
+            {{ pc.source }}
+          </span>
+        </td>
+        <td>{% if pc.tidesclass %}{{ pc.tidesclass.name }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+        <td>{% if pc.tidesclass_subclass %}{{ pc.tidesclass_subclass.sub_class }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+        <td>{{ pc.sn_type|default:"—" }}</td>
+        <td>{{ pc.probability|floatformat:3|default:"—" }}</td>
+        <td>{{ pc.z|floatformat:4|default:"—" }}</td>
+        <td>{{ pc.released_at|date:"Y-m-d" }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="6"><i>No released classifications yet.</i></td></tr>
+      <tr><td colspan="9"><i>No released classifications yet.</i></td></tr>
     {% endfor %}
   </tbody>
 </table>
