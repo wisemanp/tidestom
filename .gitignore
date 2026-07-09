@@ -13,6 +13,7 @@ db*
 *ipynb_checkpoints*
 custom_code/__pycache__/
 tidestom/__pycache__/
+**/*pycache*
 .env
 *pyc
 *.fits*
