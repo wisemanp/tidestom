@@ -66,6 +66,36 @@
 
     renderChart();
   </script>
+
+  <div id="redshiftplot" style="width: 400px; height: 400px;"></div>
+
+  <script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script><!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
+  <script>
+      async function renderRedshiftPlot() {
+        const response = await fetch('{% url "redshift_plot_data" %}');
+        const data = await response.json();
+
+        const zplotData = [{
+            type: 'scatter',
+            mode: 'markers',
+            x: data.sn_types,
+            y: data.redshifts,
+            marker: { color: '#0542D1' }
+        }];
+
+        Plotly.newPlot('redshiftplot', zplotData, {
+            title: 'Redshift by Classification',
+            xaxis: { title: { text: 'Classification' } },
+            yaxis: { title: { text: 'Redshift' } },
+            height: 400,
+            width: 400
+        });
+    }
+
+    renderRedshiftPlot();
+
+  </script>
+
 </body>
 
 

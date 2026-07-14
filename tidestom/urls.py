@@ -86,6 +86,10 @@ urlpatterns = [
          custom_extras.classification_data,
          name='classification_data'
     ),
+    path('api/redshift-plot/',
+         custom_extras.redshift_plot_data,
+         name='redshift_plot_data'
+    ),
     path(
         "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"
     ),
