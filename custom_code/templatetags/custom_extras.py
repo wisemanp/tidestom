@@ -2,8 +2,12 @@ import json
 from django import template
 from django.http import JsonResponse
 from django.db.models import Count
-from custom_code.models import PipelineClassificationGlobal
+from custom_code.models import (
+    PipelineClassificationGlobal, 
+    TidesSpec
+)
 from tom_dataproducts.models import ReducedDatum
+from django.db.models.functions import TruncMonth
 
 # initialization of the template library
 register = template.Library()
@@ -24,5 +28,38 @@ def classification_data(request):
         .order_by('sn_type')
     )
     labels = [entry['sn_type'] for entry in data]
+    counts = [entry['count'] for entry in data]
+    return JsonResponse({'labels': labels, 'counts': counts})
+
+@register.inclusion_tag('custom_code/partials/redshift_plot.html')
+def redshift_plot_data(request):
+    print("REDSHIFT FUNCTION CALLED")
+    data = (
+        PipelineClassificationGlobal.objects
+        #.exclude(z__isnull=True)
+        #.exclude(sn_type__isnull=True)
+        .values('sn_type', 'z')
+    )
+   
+    print(f"Total records: {data.count()}")
+    print(f"Records with z: {PipelineClassificationGlobal.objects.exclude(z__isnull=True).count()}")
+    print(f"Records with sn_type: {PipelineClassificationGlobal.objects.exclude(sn_type__isnull=True).count()}")
+    print(f"First few records: {list(data[:5])}")
+
+
+    sn_types = [entry['sn_type'] for entry in data]
+    redshifts = [entry['z'] for entry in data]
+    return JsonResponse({'sn_types': sn_types, 'redshifts': redshifts})
+@register.inclusion_tag('custom_code/partials/classification_timeline.html')
+def classification_timeline_data(request):
+    data = (
+        TidesSpec.objects
+        .filter(obs_date__isnull=False)  # needed because obs_date can have null values, which dont work with strftime
+        .annotate(month=TruncMonth('obs_date'))
+        .values('month')
+        .annotate(count=Count('tides_specid'))
+        .order_by('month')
+    )
+    labels = [entry['month'].strftime('%B %Y') for entry in data]
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
