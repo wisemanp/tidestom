@@ -41,6 +41,18 @@
             </select>
           </div>
 
+          <!-- Subclass Filter (Multi-select) -->
+          <div class="col-md-3">
+            <label class="form-label" for="subclass">Pipeline Subtype (hold Ctrl/Cmd)</label>
+            <select name="subclass" id="subclass" class="form-select form-control" multiple size="4">
+              {% for s in all_subclasses %}
+                <option value="{{ s.sub_class }}" {% if s.sub_class in filter_subclasses %}selected{% endif %}>
+                  {{ s.main_class.name }} &ndash; {{ s.sub_class }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
           <!-- Redshift Filter -->
           <div class="col-md-3">
             <label class="form-label">Redshift (Pipeline)</label>

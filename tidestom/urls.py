@@ -45,28 +45,29 @@ from myplots.views import (
 
 urlpatterns = [
     path(
-        'about/', TemplateView.as_view(template_name='about.html'),
+        'about/', 
+        TemplateView.as_view(template_name='about.html'),
         name='about'
     ),
-
     path(
-        'latest/', LatestView.as_view(),
+        'latest/', 
+        LatestView.as_view(),
         name='latest'
     ),
-
     path(
         'targets/<int:pk>/',
         MyTargetDetailView.as_view(template_name='target_detail.html'),
         name='target_detail'
     ),
-
     path(
         'targets/<int:target_id>/submit_classification/',
-        SubmitClassificationView.as_view(), name='submit_classification'
+        SubmitClassificationView.as_view(), 
+        name='submit_classification'
     ),
-
     path(
-        'api/get_subclasses/', get_subclasses, name='get_subclasses'
+        'api/get_subclasses/', 
+        get_subclasses, 
+        name='get_subclasses'
     ),
     path(
         'targets/<int:pk>/update/',
@@ -90,30 +91,50 @@ urlpatterns = [
          custom_extras.redshift_plot_data,
          name='redshift_plot_data'
     ),
-    path(
-        "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"
+    path('api/classification-timeline/', 
+         custom_extras.classification_timeline_data, 
+         name='classification_timeline_data'
     ),
     path(
-        "ngsf/run/", NGSFFormAJAXView.as_view(), name="ngsf-run"
+        "snid/run/", 
+        SnidFormAjaxView.as_view(), 
+        name="snid-run"
     ),
     path(
-        "target_spectroscopy/<int:target_id>/", target_spectroscopy_partial,
+        "ngsf/run/", 
+        NGSFFormAJAXView.as_view(), 
+        name="ngsf-run"
+    ),
+    path(
+        "target_spectroscopy/<int:target_id>/", 
+        target_spectroscopy_partial,
         name="target_spectroscopy"
         ),
     path(
-        "download_spectrum/<int:target_id>/", download_spectrum_ascii,
+        "download_spectrum/<int:target_id>/", 
+        download_spectrum_ascii,
         name="download_spectrum",
     ),
     path(
-        "download_spectrum_by_specid/<int:tides_specid>/", download_spectrum_by_specid,
+        "download_spectrum_by_specid/<int:tides_specid>/", 
+        download_spectrum_by_specid,
         name="download_spectrum_by_specid",
     ),
     path(
-        "api/previous_snid_runs/", PreviousSNIDRunsView.as_view(),
+        "api/previous_snid_runs/", #
+        PreviousSNIDRunsView.as_view(),
         name="previous_snid_runs"
     ),
-    path('targets/<int:target_id>/tags/toggle/<int:tag_id>/', ToggleTagView.as_view(), name='toggle_tag'),
-    path('tags/search/', TagSearchView.as_view(), name='tags_search'),
+    path(
+        'targets/<int:target_id>/tags/toggle/<int:tag_id>/', 
+        ToggleTagView.as_view(), 
+        name='toggle_tag'
+    ),
+    path(
+        'tags/search/', 
+        TagSearchView.as_view(), 
+        name='tags_search'
+    ),
     path(
         'release-queue/',
         ReleaseQueueView.as_view(),

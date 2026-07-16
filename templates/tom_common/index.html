@@ -30,38 +30,58 @@
   </div>
 </div>
 
-<body>
-  <h5> Supernova Classifications </h5>
-  <div id="supernovapiechart" style="width: 500px; height: 400px;"></div>
+<div style="display:flex; flex-direction: row; gap: 60px;">
+<!-- pie chart -->
+  <div>
+    <h5>Supernova Classifications</h5>
+    <div id="piechart" style="width: 400px; height: 400px;"></div>
+  </div>
 
+<!-- classification timeline -->
+  <div>
+    <h5> Classification Timeline </h5>
+    <div id="timeline" style="width: 400px; height: 400px;"></div>
+  </div>
+</div>
 
-  <script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script> <!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
-  <script>
-    const COLOURS = [
-        '#B912D1', '#0542D1', '#17A008', '#638604', '#735401', '#6A1F00', '#3C0000'
-        ];
+<script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script> <!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
+<script>
+  const COLOURS = [
+      '#B912D1', '#0542D1', '#17A008', '#638604', '#735401', '#6A1F00', '#3C0000'
+      ];
 
-    async function renderChart() {
-      const response = await fetch('{% url "classification_data" %}');
-      const data = await response.json();
+  async function renderPieChart() {
+    const response = await fetch('{% url "classification_data" %}');
+    const data = await response.json();
 
-      const chartData = [{
-        type: 'pie',
-        labels: data.labels,
-        values: data.counts,
-        marker: {
-          colors: COLOURS.slice(0, data.labels.length)
-        },
-        textinfo: 'label+percent'
-      }];
+    const chartData = [{
+      type: 'pie',
+      labels: data.labels,
+      values: data.counts,
+      marker: {
+        colors: COLOURS.slice(0, data.labels.length)
+      },
+      textinfo: 'label+percent'
+    }];
 
-      const layout = {
-        title: 'Supernova Classifications',
-        height: 400,
-        width: 400
-      };
+    Plotly.newPlot(
+      'piechart', 
+      chartData, 
+      {title: 'Supernova Classifications',
+      height: 400,
+      width: 400}
+      );
+  }
 
-      Plotly.newPlot('supernovapiechart', chartData, layout);
+  async function renderTimeline() {
+    const response = await fetch('{% url "classification_timeline_data" %}');
+    const data = await response.json();
+
+    const cumulative_counts = [];
+    let cumulative_sum = 0;
+    for (const count of data.counts) {
+      cumulative_sum += count;
+      cumulative_counts.push(cumulative_sum);
     }
 
     renderChart();
@@ -98,5 +118,33 @@
 
 </body>
 
+    const timelineData = [{
+      type: 'scatter',
+      mode: 'lines+markers',
+      x: data.labels,
+      y: cumulative_counts,
+      line: { 
+        shape: 'linear',
+        colour: '#0542D1'
+      },
+      marker: { 
+        color: '#0542D1' 
+      }
+    }];
+
+    Plotly.newPlot(
+      'timeline', 
+      timelineData, 
+      {title: 'Classifications Over Time',
+      xaxis: { title: 'Date' },
+      yaxis: { title: 'Cumulative Number of Classifications' },
+      height: 400, 
+      width: 400}
+      );
+  }
+
+  renderPieChart();
+  renderTimeline();
+</script>
 
 {% endblock %}
