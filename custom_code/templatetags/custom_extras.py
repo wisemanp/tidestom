@@ -17,7 +17,7 @@ def recent_photometry(target, num_points=1, limit=None):
     return {'recent_photometry': [(datum.timestamp, json.loads(datum.value)['magnitude']) for datum in photometry]}
 
 # Template tag for fetching classification data
-@register.inclusion_tag('custom_code/partials/classification_chart.html')
+@register.inclusion_tag('custom_code/partials/classification_chart.html') #partial doesn't exist, fine because returns JsonResponse
 def classification_data(request):
     '''fetches the classification data (type and counts) for the pie chart'''
     data = (
@@ -30,8 +30,9 @@ def classification_data(request):
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
 
-@register.inclusion_tag('custom_code/partials/average_spectrum.html')
-def average_spectrum_data(request):
+@register.inclusion_tag('custom_code/partials/average_spectrum.html') #partial doesn't exist, fine because returns JsonResponse
+def average_spectrum_data():
+    print("Fetching average spectrum data...")  # debugging: indicate that the function has been called
     filepaths = TidesSpec.objects.filter(filepath__isnull=False).values_list('filepath', flat=True)
    
     print(f"Number of filepaths found: {filepaths.count()}") # debugging: print the number of filepaths found
@@ -51,26 +52,35 @@ def average_spectrum_data(request):
             #print(f"Failed to read {filepath}: {e}")
             #continue
 
+    for filepath in filepaths:
+        try:
+            from astropy.io import fits
+            with fits.open(filepath) as hdul:
+                # read wavelength and flux from fits file
+                wavelengths = hdul[1].data['WAVELENGTH']
+                fluxes = hdul[1].data['FLUX']
+                all_wavelengths.append(wavelengths)
+                all_fluxes.append(fluxes)
+        except Exception as e:
+            print(f"Failed to read {filepath}: {e}")
+            continue
     # assessing structure of .fits files 
-    #with fits.open('path/to/your/file.fits') as hdul:
+    #with fits.open('filepath') as hdul:
         #hdul.info()  # shows the structure of the file
         #print(f"Columns in extension 1: {hdul[1].columns}")
 
-
     if not all_wavelengths:
-        return JsonResponse({'wavelengths': [], 'flux': []})
+        return {'wavelengths': [], 'flux': []}
 
-    common_wavelengths = all_wavelengths[0]
+    common_wavelengths = all_wavelengths[0] # allows for comparison between the different spectra, maps all onto first spectrum
 
     interpolated_fluxes = []
+    # incase the flux values aren't the same across all spectra
     for wavelengths, fluxes in zip(all_wavelengths, all_fluxes):
         interpolator = interp1d(wavelengths, fluxes, bounds_error=False, fill_value=0)
         interpolated_fluxes.append(interpolator(common_wavelengths))
 
     average_flux = list(np.mean(interpolated_fluxes, axis=0))
 
-    return JsonResponse({
-        'wavelengths': list(common_wavelengths),
-        'flux': average_flux
-    })
+    return {'wavelengths': common_wavelengths, 'flux': average_flux}
 

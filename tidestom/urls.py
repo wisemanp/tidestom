@@ -87,11 +87,6 @@ urlpatterns = [
          name='classification_data'
     ),
     path(
-        'api/average_spectrum/',
-         custom_extras.average_spectrum_data,
-         name='average_spectrum_data'
-    ),
-    path(
         "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"
     ),
     path(

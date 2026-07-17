@@ -69,31 +69,7 @@
   </script>
 
   <h5> Average Spectra </h5>
-  <div id="averagespectrum" style="width: 700px; height: 400px;"></div>
-<script>
-    async function renderAverageSpectrum() {
-        const response = await fetch('{% url "average_spectrum_data" %}');
-        const data = await response.json();
-
-        const spectrumData = [{
-            type: 'scatter',
-            mode: 'lines',
-            x: data.wavelengths,
-            y: data.flux,
-            line: { color: '#0542D1' }
-        }];
-
-        Plotly.newPlot('averagespectrum', spectrumData, {
-            title: 'Average Spectrum',
-            xaxis: { title: 'Wavelength (Å)' },
-            yaxis: { title: 'Flux' },
-            height: 400,
-            width: 400
-        });
-    }
-
-    renderAverageSpectrum();
-</script>
+  {% average_spectrum_data %}
 
 </body>
 
