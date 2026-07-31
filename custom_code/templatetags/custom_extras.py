@@ -30,13 +30,16 @@ def classification_data(request):
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
 
+
 @register.inclusion_tag('custom_code/partials/average_spectrum.html') #partial doesn't exist, fine because returns JsonResponse
 def average_spectrum_data():
     print("Fetching average spectrum data...")  # debugging: indicate that the function has been called
     filepaths = TidesSpec.objects.filter(filepath__isnull=False).values_list('filepath', flat=True)
-   
-    print(f"Number of filepaths found: {filepaths.count()}") # debugging: print the number of filepaths found
-    print(f"First few filepaths: {list(filepaths)[:5]}")  # Print the first few filepaths for debugging
+    
+    # assessing structure of .fits files 
+    #with fits.open('/data/spectra/test_data/sims/l1_obs_joined_58357417.fits') as hdul:
+        #hdul.info()
+        #print(f"Columns: {hdul[1].columns.names}", flush=True)
 
     all_wavelengths = []
     all_fluxes = []
@@ -53,22 +56,19 @@ def average_spectrum_data():
             #continue
 
     for filepath in filepaths:
+        print("Reading file:", filepath)  # debugging: indicate which file is being read
         try:
             from astropy.io import fits
             with fits.open(filepath) as hdul:
                 # read wavelength and flux from fits file
-                wavelengths = hdul[1].data['WAVELENGTH']
-                fluxes = hdul[1].data['FLUX']
+                wavelengths = hdul[1].data['WAVE'].flatten() #need 1d array for interpolation
+                fluxes = hdul[1].data['FLUX'].flatten()
                 all_wavelengths.append(wavelengths)
                 all_fluxes.append(fluxes)
         except Exception as e:
             print(f"Failed to read {filepath}: {e}")
             continue
-    # assessing structure of .fits files 
-    #with fits.open('filepath') as hdul:
-        #hdul.info()  # shows the structure of the file
-        #print(f"Columns in extension 1: {hdul[1].columns}")
-
+    
     if not all_wavelengths:
         return {'wavelengths': [], 'flux': []}
 
