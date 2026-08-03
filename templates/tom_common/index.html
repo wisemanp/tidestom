@@ -11,23 +11,16 @@
     <h3 class="text-center">The industralisation of transient spectroscopy.</h3>
 
     <!-- END MODIFIED CONTENT -->
-   
-    
   </div>
+
   <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        Latest Comments
-      </div>
-      {% recent_comments %}
-    </div>
-    <br/>
     <div class="card">
       <div class="card-header">
         Latest Targets
       </div>
       {% recent_targets %}
   </div>
+
 </div>
 
 <div style="display:flex; flex-direction: row; gap: 60px;">
@@ -41,6 +34,13 @@
   <div>
     <h5> Classification Timeline </h5>
     <div id="timeline" style="width: 400px; height: 400px;"></div>
+  </div>
+
+
+<!-- redshift plot -->
+  <div>
+    <h5> Redshift by Classification </h5>
+    <div id="redshiftplot" style="width: 400px; height: 400px;"></div>
   </div>
 </div>
 
@@ -84,40 +84,6 @@
       cumulative_counts.push(cumulative_sum);
     }
 
-    renderChart();
-  </script>
-
-  <div id="redshiftplot" style="width: 400px; height: 400px;"></div>
-
-  <script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script><!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
-  <script>
-      async function renderRedshiftPlot() {
-        const response = await fetch('{% url "redshift_plot_data" %}');
-        const data = await response.json();
-
-        const zplotData = [{
-            type: 'scatter',
-            mode: 'markers',
-            x: data.sn_types,
-            y: data.redshifts,
-            marker: { color: '#0542D1' }
-        }];
-
-        Plotly.newPlot('redshiftplot', zplotData, {
-            title: 'Redshift by Classification',
-            xaxis: { title: { text: 'Classification' } },
-            yaxis: { title: { text: 'Redshift' } },
-            height: 400,
-            width: 400
-        });
-    }
-
-    renderRedshiftPlot();
-
-  </script>
-
-</body>
-
     const timelineData = [{
       type: 'scatter',
       mode: 'lines+markers',
@@ -125,7 +91,7 @@
       y: cumulative_counts,
       line: { 
         shape: 'linear',
-        colour: '#0542D1'
+        color: '#0542D1'
       },
       marker: { 
         color: '#0542D1' 
@@ -143,8 +109,33 @@
       );
   }
 
+  async function renderRedshiftPlot() {
+    const response = await fetch('{% url "redshift_plot_data" %}');
+    const data = await response.json();
+
+    const redshiftplotData = [{
+      type: 'scatter',
+      mode: 'markers',
+      x: data.sn_types,
+      y: data.redshifts,
+      marker: { 
+        color: '#0542D1' 
+      }
+    }];
+
+    Plotly.newPlot('redshiftplot', redshiftplotData, {
+      title: 'Redshift by Classification',
+      xaxis: { title: { text: 'Classification' } },
+      yaxis: { title: { text: 'Redshift' } },
+      height: 400,
+      width: 400}
+      );
+  }
+
   renderPieChart();
   renderTimeline();
+  renderRedshiftPlot();
 </script>
+
 
 {% endblock %}
