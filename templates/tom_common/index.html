@@ -112,6 +112,14 @@
   async function renderRedshiftPlot() {
     const response = await fetch('{% url "redshift_plot_data" %}');
     const data = await response.json();
+    const types = [...new Set(data.sn_types)]; // Get unique types
+    const colourmap = {};
+    types.forEach((type, index) => {
+      colourmap[type] = COLOURS[index % COLOURS.length];
+    });
+
+    const markerColors = data.sn_types.map(type => colourmap[type]);
+
 
     const redshiftplotData = [{
       type: 'scatter',
@@ -119,7 +127,7 @@
       x: data.sn_types,
       y: data.redshifts,
       marker: { 
-        color: '#0542D1' 
+        color: markerColors 
       }
     }];
 
