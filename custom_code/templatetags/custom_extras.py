@@ -31,25 +31,6 @@ def classification_data(request):
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
 
-@register.inclusion_tag('custom_code/partials/redshift_plot.html')
-def redshift_plot_data(request):
-    print("REDSHIFT FUNCTION CALLED")
-    data = (
-        PipelineClassificationGlobal.objects
-        #.exclude(z__isnull=True)
-        #.exclude(sn_type__isnull=True)
-        .values('sn_type', 'z')
-    )
-   
-    print(f"Total records: {data.count()}")
-    print(f"Records with z: {PipelineClassificationGlobal.objects.exclude(z__isnull=True).count()}")
-    print(f"Records with sn_type: {PipelineClassificationGlobal.objects.exclude(sn_type__isnull=True).count()}")
-    print(f"First few records: {list(data[:5])}")
-
-
-    sn_types = [entry['sn_type'] for entry in data]
-    redshifts = [entry['z'] for entry in data]
-    return JsonResponse({'sn_types': sn_types, 'redshifts': redshifts})
 @register.inclusion_tag('custom_code/partials/classification_timeline.html')
 def classification_timeline_data(request):
     data = (
@@ -63,3 +44,17 @@ def classification_timeline_data(request):
     labels = [entry['month'].strftime('%B %Y') for entry in data]
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
+
+@register.inclusion_tag('custom_code/partials/redshift_plot.html')
+def redshift_plot_data(request):
+    data = (
+        PipelineClassificationGlobal.objects
+        #.exclude(z__isnull=True)
+        #.exclude(sn_type__isnull=True)
+        .values('sn_type', 'z')
+    )
+    sn_types = [entry['sn_type'] for entry in data]
+    redshifts = [entry['z'] for entry in data]
+    return JsonResponse({'sn_types': sn_types, 'redshifts': redshifts})
+
+

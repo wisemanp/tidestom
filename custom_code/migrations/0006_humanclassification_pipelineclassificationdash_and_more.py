@@ -162,8 +162,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TidesTarget',
             fields=[
-                ('target_ptr', models.OneToOneField(db_column='tides_id', on_delete=django.db.models.deletion.CASCADE, parent_link=True, pr
-imary_key=True, serialize=False, to='tom_targets.basetarget')),
+                ('target_ptr', models.OneToOneField(db_column='tides_id', on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='tom_targets.basetarget')),
                 ('lsst_sn_id', models.BigIntegerField(blank=True, null=True, unique=True)),
                 ('lsst_host_id', models.BigIntegerField(blank=True, null=True)),
                 ('last_date', models.DateTimeField(blank=True, null=True)),
