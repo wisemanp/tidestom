@@ -1,4 +1,5 @@
 import json
+import math
 import numpy as np
 from astropy.io import fits
 from scipy.interpolate import interp1d
@@ -7,6 +8,8 @@ from django.http import JsonResponse
 from django.db.models import Count
 from custom_code.models import PipelineClassificationGlobal, TidesSpec
 from tom_dataproducts.models import ReducedDatum
+import numpy as np
+from scipy.interpolate import interp1d
 
 # initialization of the template library
 register = template.Library()
@@ -30,16 +33,10 @@ def classification_data(request):
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
 
-
 @register.inclusion_tag('custom_code/partials/average_spectrum.html') #partial doesn't exist, fine because returns JsonResponse
 def average_spectrum_data():
     print("Fetching average spectrum data...")  # debugging: indicate that the function has been called
     filepaths = TidesSpec.objects.filter(filepath__isnull=False).values_list('filepath', flat=True)
-    
-    # assessing structure of .fits files 
-    #with fits.open('/data/spectra/test_data/sims/l1_obs_joined_58357417.fits') as hdul:
-        #hdul.info()
-        #print(f"Columns: {hdul[1].columns.names}", flush=True)
 
     all_wavelengths = []
     all_fluxes = []
@@ -50,9 +47,7 @@ def average_spectrum_data():
             #data = np.loadtxt(filepath, comments='#')
             #all_wavelengths.append(data[:, 0])
             #all_fluxes.append(data[:, 1])
-            #print(f"Successfully read: {filepath}")
         #except Exception as e:
-            #print(f"Failed to read {filepath}: {e}")
             #continue
 
     for filepath in filepaths:
@@ -80,7 +75,17 @@ def average_spectrum_data():
         interpolator = interp1d(wavelengths, fluxes, bounds_error=False, fill_value=0)
         interpolated_fluxes.append(interpolator(common_wavelengths))
 
-    average_flux = list(np.mean(interpolated_fluxes, axis=0))
+    #replace NaN and infinity values with 0, important for plotting and calculations
+    average_flux = np.nan_to_num(np.mean(interpolated_fluxes, axis=0), nan=0, posinf=0, neginf=0)
+    average_flux = list(average_flux)
+    common_wavelengths = [0 if (math.isnan(w) or math.isinf(w)) else w for w in common_wavelengths]
+    common_wavelengths = list(common_wavelengths)
 
-    return {'wavelengths': common_wavelengths, 'flux': average_flux}
+    print(f"wavelengths type: {type(common_wavelengths)}")
+    print(f"wavelengths first value: {common_wavelengths[0]}")
+    print(f"flux type: {type(average_flux)}")
+
+    return {'wavelengths': [float(w) for w in common_wavelengths], 'flux': [float(f) for f in average_flux]}
+
+
 

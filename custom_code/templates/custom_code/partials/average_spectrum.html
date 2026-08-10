@@ -4,7 +4,6 @@
     const wavelengths = {{ wavelengths|safe }};
     const flux = {{ flux|safe }};
 
-
     const spectrumData = [{
         type: 'scatter',
         mode: 'lines',
@@ -13,12 +12,20 @@
         line: { color: '#0542D1' }
     }];
 
-
-    Plotly.newPlot('averagespectrum', spectrumData, {
-        title: 'Average Spectrum',
-        xaxis: { title: 'Wavelength (Å)' },
-        yaxis: { title: 'Flux' },
-        height: 400,
-        width: 400
+    Plotly.newPlot(
+        'averagespectrum', 
+        spectrumData, 
+        {
+            title: 'Average Spectrum',
+            xaxis: { 
+                title: { text: 'Wavelength (Å)' },
+                automargin: true
+            },
+            yaxis: { 
+                title: { text: 'Flux' },
+                automargin: true
+            },
+            height: 400,
+            width: 400
     });
 </script>
