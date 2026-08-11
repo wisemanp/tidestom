@@ -1,18 +1,28 @@
-<div id = "averagespectrum" style="width: 400px; height: 400px;"></div>
-<script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script>
+<h5> Average Spectra </h5>
+
+<div id="spectrum-buttons">
+    {% for sn_type in sn_types %}
+    <button onclick="renderSpectrum('{{ sn_type }}')">{{ sn_type }}</button>
+    {% endfor %}
+</div>
+
+<div id="averagespectrum" style="width: 400px; height: 400px;"></div>
+
 <script>
-    const wavelengths = {{ wavelengths|safe }};
-    const flux = {{ flux|safe }};
+    async function renderSpectrum(snType) {
+        const response = await fetch('/api/average-spectrum/' + snType + '/');
+        const data = await response.json();
 
-    const spectrumData = [{
-        type: 'scatter',
-        mode: 'lines',
-        x: wavelengths,
-        y: flux,
-        line: { color: '#0542D1' }
-    }];
+        const spectrumData = [{
+            type: 'scatter',
+            mode: 'lines',
+            x: data.wavelengths,
+            y: data.flux,
+            name: snType,
+            line: { color: '#0542D1' }
+        }];
 
-    Plotly.newPlot(
+        Plotly.newPlot(
         'averagespectrum', 
         spectrumData, 
         {
@@ -28,4 +38,10 @@
             height: 400,
             width: 400
     });
+    }
+
+    // render the first classification type by default on page load
+    {% if sn_types %}
+    renderSpectrum('{{ sn_types.0 }}');
+    {% endif %}
 </script>
