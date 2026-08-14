@@ -64,16 +64,28 @@ def average_spectrum_by_type(request, sn_type):
     all_fluxes = []
 
     for filepath in filepaths:
-        try:
-            from astropy.io import fits
-            with fits.open(filepath) as hdul:
-                #need 1d array for interpolation
-                wavelengths = hdul[1].data['WAVE'].flatten()
-                fluxes = hdul[1].data['FLUX'].flatten()
+        if filepath.endswith('.fits'):
+            try:
+                from astropy.io import fits
+                with fits.open(filepath) as hdul:
+                    #need 1d array for interpolation
+                    wavelengths = hdul[1].data['WAVE'].flatten()
+                    fluxes = hdul[1].data['FLUX'].flatten()
+                    all_wavelengths.append(wavelengths)
+                    all_fluxes.append(fluxes)
+            except Exception as e:
+                print(f"Failed to read {filepath}: {e}")
+        elif filepath.endswith('.txt'):
+            try:
+                data = np.loadtxt(filepath)
+                wavelengths = data[:, 0]
+                fluxes = data[:, 1]
                 all_wavelengths.append(wavelengths)
                 all_fluxes.append(fluxes)
-        except Exception as e:
-            print(f"Failed to read {filepath}: {e}")
+            except Exception as e:
+                print(f"Failed to read {filepath}: {e}")
+        else:
+            print(f"Unsupported file format for {filepath}")
             continue
 
     if not all_wavelengths:
