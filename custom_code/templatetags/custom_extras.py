@@ -39,6 +39,32 @@ def classification_data(request):
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
 
+@register.inclusion_tag('custom_code/partials/classification_timeline.html')
+def classification_timeline_data(request):
+    data = (
+        TidesSpec.objects
+        .filter(obs_date__isnull=False)  # needed because obs_date can have null values, which dont work with strftime
+        .annotate(month=TruncMonth('obs_date'))
+        .values('month')
+        .annotate(count=Count('tides_specid'))
+        .order_by('month')
+    )
+    labels = [entry['month'].strftime('%B %Y') for entry in data]
+    counts = [entry['count'] for entry in data]
+    return JsonResponse({'labels': labels, 'counts': counts})
+
+@register.inclusion_tag('custom_code/partials/redshift_plot.html')
+def redshift_plot_data(request):
+    data = (
+        PipelineClassificationGlobal.objects
+        #.exclude(z__isnull=True)
+        #.exclude(sn_type__isnull=True)
+        .values('sn_type', 'z')
+    )
+    sn_types = [entry['sn_type'] for entry in data]
+    redshifts = [entry['z'] for entry in data]
+    return JsonResponse({'sn_types': sn_types, 'redshifts': redshifts})
+
 @register.inclusion_tag('custom_code/partials/average_spectrum.html')
 def average_spectrum_data():
     sn_types = list(PipelineClassificationGlobal.objects
@@ -93,30 +119,5 @@ def average_spectrum_by_type(request, sn_type):
         'wavelengths': [float(w) for w in common_wavelengths],
         'flux': [float(f) for f in average_flux]
     })
-@register.inclusion_tag('custom_code/partials/classification_timeline.html')
-def classification_timeline_data(request):
-    data = (
-        TidesSpec.objects
-        .filter(obs_date__isnull=False)  # needed because obs_date can have null values, which dont work with strftime
-        .annotate(month=TruncMonth('obs_date'))
-        .values('month')
-        .annotate(count=Count('tides_specid'))
-        .order_by('month')
-    )
-    labels = [entry['month'].strftime('%B %Y') for entry in data]
-    counts = [entry['count'] for entry in data]
-    return JsonResponse({'labels': labels, 'counts': counts})
-
-@register.inclusion_tag('custom_code/partials/redshift_plot.html')
-def redshift_plot_data(request):
-    data = (
-        PipelineClassificationGlobal.objects
-        #.exclude(z__isnull=True)
-        #.exclude(sn_type__isnull=True)
-        .values('sn_type', 'z')
-    )
-    sn_types = [entry['sn_type'] for entry in data]
-    redshifts = [entry['z'] for entry in data]
-    return JsonResponse({'sn_types': sn_types, 'redshifts': redshifts})
 
 
