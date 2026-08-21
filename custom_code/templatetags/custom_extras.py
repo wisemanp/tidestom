@@ -39,6 +39,72 @@ def classification_data(request):
     counts = [entry['count'] for entry in data]
     return JsonResponse({'labels': labels, 'counts': counts})
 
+@register.inclusion_tag('custom_code/partials/average_spectrum.html')
+def average_spectrum_data():
+    sn_types = list(PipelineClassificationGlobal.objects
+                    .exclude(sn_type__isnull=True)
+                    .values_list(
+                        'sn_type', flat=True))
+    # remove duplicates and sort the list of supernova types
+    unique_types = sorted(set(i.strip() for i in sn_types))
+
+    return {'sn_types': unique_types}
+
+def average_spectrum_by_type(request, sn_type):
+    specids = PipelineClassificationGlobal.objects.filter(
+        sn_type=sn_type
+    ).values_list('tides_specid', flat=True)
+
+    filepaths = (TidesSpec.objects
+        .filter(tides_specid__in=specids)
+        .filter(filepath__isnull=False)
+        .values_list('filepath', flat=True))
+    
+    all_wavelengths = []
+    all_fluxes = []
+
+    for filepath in filepaths:
+        if filepath.endswith('.fits'):
+            try:
+                from astropy.io import fits
+                with fits.open(filepath) as hdul:
+                    #need 1d array for interpolation
+                    wavelengths = hdul[1].data['WAVE'].flatten()
+                    fluxes = hdul[1].data['FLUX'].flatten()
+                    all_wavelengths.append(wavelengths)
+                    all_fluxes.append(fluxes)
+            except Exception as e:
+                print(f"Failed to read {filepath}: {e}")
+        elif filepath.endswith('.txt'):
+            try:
+                data = np.loadtxt(filepath)
+                wavelengths = data[:, 0]
+                fluxes = data[:, 1]
+                all_wavelengths.append(wavelengths)
+                all_fluxes.append(fluxes)
+            except Exception as e:
+                print(f"Failed to read {filepath}: {e}")
+        else:
+            print(f"Unsupported file format for {filepath}")
+            continue
+
+    if not all_wavelengths:
+        return JsonResponse({'wavelengths': [], 'flux': []})
+
+    common_wavelengths = list(all_wavelengths[0])
+    # allows for comparison between the different spectra, maps all onto first spectrum
+    interpolated_fluxes = []
+    # incase the flux values aren't the same across all spectra
+    for wavelengths, fluxes in zip(all_wavelengths, all_fluxes):
+        interpolator = interp1d(wavelengths, fluxes, bounds_error=False, fill_value=0)
+        interpolated_fluxes.append(interpolator(common_wavelengths))
+
+    average_flux = np.nan_to_num(np.mean(interpolated_fluxes, axis=0), nan=0, posinf=0, neginf=0)
+
+    return JsonResponse({
+        'wavelengths': [float(w) for w in common_wavelengths],
+        'flux': [float(f) for f in average_flux]
+    })
 @register.inclusion_tag('custom_code/partials/classification_timeline.html')
 def classification_timeline_data(request):
     data = (
