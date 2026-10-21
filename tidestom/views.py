@@ -237,6 +237,33 @@ class MyTargetDetailView(DetailView):
             context['pipeline_classifications'] = []
             context['aggregated_pipeline_class'] = None
             context['default_specid'] = None
+
+        # Previous/next targets, ordered by latest spectrum obs_date (ties broken by id).
+        # Targets without spectra are skipped.
+        context['prev_target'] = None
+        context['next_target'] = None
+        try:
+            ordered = (
+                TidesTarget.objects
+                .annotate(latest_obs=models.Max('spectra__obs_date'))
+                .filter(latest_obs__isnull=False)
+            )
+            current_obs = ordered.filter(pk=target.pk).order_by('pk').values_list('latest_obs', flat=True).first()
+            if current_obs is not None:
+                context['prev_target'] = (
+                    ordered
+                    .filter(Q(latest_obs__lt=current_obs) | Q(latest_obs=current_obs, pk__lt=target.pk))
+                    .order_by('-latest_obs', '-pk')
+                    .first()
+                )
+                context['next_target'] = (
+                    ordered
+                    .filter(Q(latest_obs__gt=current_obs) | Q(latest_obs=current_obs, pk__gt=target.pk))
+                    .order_by('latest_obs', 'pk')
+                    .first()
+                )
+        except Exception as e:
+            logger.warning(f"Failed to compute prev/next targets for target {target.pk}: {e}")
         return context
 
 
