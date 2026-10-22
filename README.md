@@ -9,9 +9,9 @@ This repository contains the Tides TOM (Target and Observation Manager) project,
 
 These instructions relate to building and deploying a local version of the Dockerised version of the TiDES TOM, this is the most feature full version and is closest to the version which will be deployed.
 
-**Note currently this version does not have API support**
+**Note currently this version does not have full API support**
 
-SNID and NGSF will not run on this version. Attempting to run them may lead to unexpected results.
+NGSF will not run on this version. Attempting to run it may lead to unexpected results.
 
 ### Prerequsists
 
@@ -34,6 +34,18 @@ To build and deploy the TiDES TOM follow these steps:
    |tidestom
    |test_data
    ```
+4. **Clone TiDES microservices**
+    Go to the [tides-shared-services](https://github.com/TiDES-4MOST/tides-shared-services.git) and switch to the ```dev``` branch, and then click the "Code" button and follow the instructions to Clone the repository. This will enable you to use the SNID classifer on your local version, in future NGSF will be added. 
+
+    **Note even if you don't want to use SNID or NGSF you should still complate this step to avoid startup failures**
+
+    This should be saved in the same directory as the main tidestom repository, eg.
+    ```bash
+    Documents
+    |
+    |tidestom
+    |test_data
+    |tides-shared-services
 
 5. **Build the Docker images and start the server**:
    This will take a few minutes the first time you run it, it should be faster on subsquent runs

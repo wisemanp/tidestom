@@ -69,6 +69,8 @@ services:
         condition: service_completed_successfully
       database:
         condition: service_started
+      snid_api:
+        condition: service_started
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
@@ -85,7 +87,7 @@ services:
       LOCAL_MODE: 'True'
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
-      #SNID_API_URL: http://localhost:8000
+      SNID_API_URL: http://snid_api:8000
       #NGSF_API_URL: http://localhost:8001
 
     #healthcheck:
@@ -132,8 +134,12 @@ services:
     depends_on:
       database:
         condition: service_started
+      snid_api:
+        condition: service_healthy
+        restart: true
     volumes:
       - static_volume:/app/staticfiles
+      - snid_api_runs:/snid_api_runs
     command: >
       sh -c "
         until pg_isready -h database -U tides -d tidestom; do
@@ -141,7 +147,9 @@ services:
           sleep 2
         done && \
         python manage.py makemigrations && \
-        python manage.py migrate && \ 
+        python manage.py migrate && \
+        mkdir -p /app/static/config &&\
+        cp /snid_api_runs/snid_template_options/subtypes.txt /app/static/config/ &&\
         python manage.py collectstatic --no-input \
       "
     environment:
@@ -155,6 +163,24 @@ services:
       LOCAL_MODE: 'True'
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
+
+  snid_api:
+    build: ../tides-shared-services/snid_docker/
+    cpus: 2
+    ports:
+      - "8001:8000"
+    environment:
+      DJANGO_URL: http://web:8000
+      LOCAL_MODE: 'True'
+    volumes:
+      - snid_api_runs:/snid_api_runs
+      - spectra:/data/spectra:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      retries: 10
+      start_period: 10s
+      timeout: 2s
 
 volumes:
   static_volume:
