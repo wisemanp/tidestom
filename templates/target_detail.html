@@ -826,6 +826,18 @@ function getCookie(name) {
 
         {% endif %}
         </div>
+      <div class='btn-group ml-1' role='group' aria-label='Previous/next target'>
+        {% if prev_target %}
+          <a href="{% url 'target_detail' prev_target.pk %}" class="btn btn-outline-secondary" title="Previous: {{ prev_target.name }}">&larr; Previous</a>
+        {% else %}
+          <span class="btn btn-outline-secondary disabled" aria-disabled="true">&larr; Previous</span>
+        {% endif %}
+        {% if next_target %}
+          <a href="{% url 'target_detail' next_target.pk %}" class="btn btn-outline-secondary" title="Next: {{ next_target.name }}">Next &rarr;</a>
+        {% else %}
+          <span class="btn btn-outline-secondary disabled" aria-disabled="true">Next &rarr;</span>
+        {% endif %}
+      </div>
 <!-- Slack Modal -->
 <div id="slackModal" class="slack-modal">
     <div class="slack-modal-content">
@@ -1305,6 +1317,11 @@ function getCookie(name) {
           <div class="checkbox-group">
               <h5>Transient Lines</h5>
               <div class="checkbox-grid" id="transient-lines"></div>
+          </div>
+
+          <div class="checkbox-group">
+              <h5>UV Lines</h5>
+              <div class="checkbox-grid" id="uv-lines"></div>
           </div>
 
           <div class="checkbox-group">

@@ -1,6 +1,11 @@
 {% extends 'tom_common/base.html' %}
 {% load bootstrap4 targets_extras dataproduct_extras %}
 {% block title %}Targets{% endblock %}
+{% block additional_css %}
+<style>
+  .target-table-wrapper a:visited { color: #6f42c1; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="row">
   <div class="col-md-10">
@@ -38,7 +43,9 @@
         <button type="submit" class="btn btn-outline-danger ml-1" name="remove">Remove</button>
       </div>
     </form>
-    {% target_table object_list %}
+    <div class="target-table-wrapper">
+      {% target_table object_list %}
+    </div>
     {% bootstrap_pagination page_obj extra=request.GET.urlencode %}
   </div>
   {{ filter.fields }}

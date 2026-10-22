@@ -32,10 +32,12 @@
   document.addEventListener('DOMContentLoaded', function() {
     const tidesclassField = document.getElementById('id_tidesclass');
     const tidesclassOtherField = document.getElementById('tidesclass_other_field');
+	const tidesclassOtherFieldInput = document.getElementById('id_tidesclass_other');
     const tidesclassSubclassField = document.getElementById('id_tidesclass_subclass');
 
     function toggleTidesclassOtherField() {
       tidesclassOtherField.style.display = (tidesclassField.value === 'Other') ? 'block' : 'none';
+	  tidesclassOtherFieldInput.required = (tidesclassField.value === 'Other') ? 'required': '';
     }
 
     function loadSubClassOptions() {
