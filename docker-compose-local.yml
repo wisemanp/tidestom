@@ -87,7 +87,7 @@ services:
       LOCAL_MODE: 'True'
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
       DJANGO_SETTINGS_MODULE: tidestom.settings
-      SNID_API_URL: http://localhost:8001
+      SNID_API_URL: http://snid_api:8000
       #NGSF_API_URL: http://localhost:8001
 
     #healthcheck:

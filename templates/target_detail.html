@@ -40,27 +40,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let lines = {};  // placeholder
 
-fetch("{% static 'json/line_data.json' %}")
+fetch("{% static 'json/line_data_new.json' %}")
     .then(response => response.json())
     .then(data => {
         lines = data;
 
-        const commonContainer = document.getElementById("common-lines");
-        const absorptionContainer = document.getElementById("absorption-lines");
-        const uvContainer = document.getElementById("uv-lines");
+        const transientContainer = document.getElementById("transient-lines");
+        const hostContainer = document.getElementById("host-lines");
         const transientSpecificContainer = document.getElementById("transient-specific-lines");
 
         // Build checkboxes
-        Object.entries(lines).forEach(([id, { color, label, type }]) => {
+        Object.entries(lines).forEach(([id, { color, label, type, break_before }]) => {
+            if (type === "host" && break_before) {
+                const spacer = document.createElement("div");
+                spacer.style.gridColumn = "1 / -1";
+                spacer.style.height = "0.75rem";
+                hostContainer.appendChild(spacer);
+            }
             const wrapper = document.createElement("label");
             wrapper.innerHTML = `
                 <input type="checkbox" id="${id}">
                 <span style="color:${color};">${label}</span>
             `;
 
-            if (type === "common") commonContainer.appendChild(wrapper);
-            else if (type === "absorption") absorptionContainer.appendChild(wrapper);
-            else if (type === "uv-lines") uvContainer.appendChild(wrapper);
+            if (type === "transient") transientContainer.appendChild(wrapper);
+            else if (type === "host") hostContainer.appendChild(wrapper);
             else if (type === "transient-specific") transientSpecificContainer.appendChild(wrapper);
         });
 
@@ -81,6 +85,8 @@ fetch("{% static 'json/line_data.json' %}")
             redshiftInput.value = resetValue;
             updateRedshiftVelocity();
         });
+
+        document.getElementById("toggle-galaxy-lines").addEventListener("change", updateRedshiftVelocity);
 
         // Initial draw to ensure sync between the checkboxes and line drawing
         updateRedshiftVelocity();
@@ -169,16 +175,36 @@ fetch("{% static 'json/line_data.json' %}")
         const figDiv = getFigDiv();
         if (!figDiv) return;
 
+        const galaxyEnabled = document.getElementById("toggle-galaxy-lines").checked;
+        function isGalaxyLine(entry) {
+            return entry.type === "host" && entry.galaxy_common === true;
+        }
+
+        function isLineSelected(id, entry) {
+            return (galaxyEnabled && isGalaxyLine(entry)) ||
+                document.getElementById(id)?.checked;
+        }
+        function getLineColor(entry) {
+            return galaxyEnabled && isGalaxyLine(entry)
+                ? "#555555"
+                : entry.color;
+        }
+
+        function getLineWavelength(restWavelength, entry) {
+            const lineVelocity = entry.type === "host" ? 0 : v;
+            return restWavelength * ((1 + z) + (lineVelocity / 299792.458));
+        }
+
         // --- Build line shapes (per-checkbox -> many lines) ---
         function buildShapes() {
             return Object.entries(lines)
-                .filter(([id]) => document.getElementById(id)?.checked)
+                .filter(([id, entry]) => isLineSelected(id, entry))
                 .flatMap(([_, entry]) => {
                     // older JSON variants used entry.x array; newer use entry.lines array of {x,label}
                     if (Array.isArray(entry.x)) {
                         // simple numeric list
                         return entry.x.map(value => {
-                            const xpos = value * ((1 + z) + (v / 299792.458));
+                            const xpos = getLineWavelength(value, entry);
                             return {
                                 type: "line",
                                 x0: xpos,
@@ -187,13 +213,13 @@ fetch("{% static 'json/line_data.json' %}")
                                 y1: 1,
                                 xref: "x",
                                 yref: "paper",
-                                line: { color: entry.color, width: 2 },
-                                layer: "below"
+                                line: { color: getLineColor(entry), width: 2, dash: "solid" },
+                                layer: "above"
                             };
                         });
                     } else if (Array.isArray(entry.lines)) {
                         return entry.lines.map(({ x }) => {
-                            const xpos = x * ((1 + z) + (v / 299792.458));
+                            const xpos = getLineWavelength(x, entry);
                             return {
                                 type: "line",
                                 x0: xpos,
@@ -202,8 +228,8 @@ fetch("{% static 'json/line_data.json' %}")
                                 y1: 1,
                                 xref: "x",
                                 yref: "paper",
-                                line: { color: entry.color, width: 2 },
-                                layer: "below"
+                                line: { color: getLineColor(entry), width: 2, dash: "solid" },
+                                layer: "above"
                             };
                         });
                     }
@@ -214,11 +240,11 @@ fetch("{% static 'json/line_data.json' %}")
         // --- Build plotly annotations for line labels (matches older working version) ---
         function buildAnnotations() {
             return Object.entries(lines)
-                .filter(([id]) => document.getElementById(id)?.checked)
+                .filter(([id, entry]) => isLineSelected(id, entry))
                 .flatMap(([_, entry]) => {
                     if (Array.isArray(entry.x)) {
                         return entry.x.map(value => {
-                            const xpos = value * ((1 + z) + (v / 299792.458));
+                            const xpos = getLineWavelength(value, entry);
                             return {
                                 x: xpos,
                                 y: 0.90,
@@ -227,20 +253,19 @@ fetch("{% static 'json/line_data.json' %}")
                                 text: `${entry.label} ${value}`,
                                 showarrow: false,
                                 textangle: -90,
-                                font: { color: entry.color, size: 8 },
+                                font: { color: getLineColor(entry), size: 8 },
                                 xanchor: "center",
                                 yanchor: "middle",
                                 bgcolor: "white",
                                 layer: "above",
                                 opacity: 0.95,
                                 cliponaxis: true,
-                                // marker to identify these annotations later:
                                 customdata: ["line_label"]
                             };
                         });
                     } else if (Array.isArray(entry.lines)) {
                         return entry.lines.map(({ x, label }) => {
-                            const xpos = x * ((1 + z) + (v / 299792.458));
+                            const xpos = getLineWavelength(x, entry);
                             return {
                                 x: xpos,
                                 y: 0.90,
@@ -249,7 +274,7 @@ fetch("{% static 'json/line_data.json' %}")
                                 text: `${label}`,
                                 showarrow: false,
                                 textangle: -90,
-                                font: { color: entry.color, size: 8 },
+                                font: { color: getLineColor(entry), size: 8 },
                                 xanchor: "center",
                                 yanchor: "middle",
                                 bgcolor: "white",
@@ -341,6 +366,45 @@ fetch("{% static 'json/line_data.json' %}")
             const { shapes: overlayShapes, annots: overlayAnnots } = buildOverlays();
             const lineShapes = buildShapes();
             const lineAnnots = buildAnnotations();
+
+
+            const customInput = document.getElementById("custom-rest-wavelength");
+            const restWavelength = customInput.valueAsNumber;
+
+            const customEnabled = document.getElementById("toggle-custom-line").checked;
+
+            if (customEnabled && Number.isFinite(restWavelength) && restWavelength > 0) {
+
+                const xpos = restWavelength * ((1 + z) + (v / 299792.458));
+
+                lineShapes.push({
+                    type: "line",
+                    x0: xpos,
+                    x1: xpos,
+                    y0: 0,
+                    y1: 1,
+                    xref: "x",
+                    yref: "paper",
+                    line: { color: "magenta", width: 2, dash: "dash" },
+                    layer: "below"
+                });
+
+                lineAnnots.push({
+                    x: xpos,
+                    y: 0.90,
+                    xref: "x",
+                    yref: "paper",
+                    text: `${restWavelength} Å`,
+                    showarrow: false,
+                    textangle: -90,
+                    font: { color: "magenta", size: 10 },
+                    xanchor: "center",
+                    yanchor: "middle",
+                    bgcolor: "white",
+                    opacity: 0.95
+                });
+            }
+
 
             // --- Ensure shaded regions draw behind traces ---
             overlayShapes.forEach(s => {
@@ -456,6 +520,7 @@ fetch("{% static 'json/line_data.json' %}")
     // Attach event listeners.
     redshiftSlider.addEventListener("input", updateRedshiftVelocity);
     velocitySlider.addEventListener("input", updateRedshiftVelocity);
+    document.getElementById("toggle-custom-line").addEventListener("change", updateRedshiftVelocity);
 
     if (figDiv) {
         figDiv.on("plotly_relayout", function(eventData) {
@@ -587,7 +652,11 @@ fetch("{% static 'json/line_data.json' %}")
       if (existingIndex >= 0) {
         Plotly.restyle(fig, {x:[trace.x], y:[trace.y], name:[trace.name], line:[trace.line], showlegend:[false]}, [existingIndex]);
       } else {
-        Plotly.addTraces(fig, [trace]);
+
+        const firstMatchIndex = fig.data.findIndex(t => typeof t.name === "string" && t.name.startsWith("SNID "));
+        const insertIndex = firstMatchIndex >= 0 ? firstMatchIndex : fig.data.length;
+        Plotly.addTraces(fig, [trace], [insertIndex]);
+      
       }
       //ensureLegendOff(fig);
     }
@@ -1225,7 +1294,7 @@ function getCookie(name) {
       <div class="d-flex flex-column gap-3 spectroscopy-only">
 
         <!-- Bin/Overplot + Control buttons aligned as a single row -->
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3 ml-5">
           <!-- Bin checkbox + input -->
           <div class="d-flex align-items-center gap-1" style="min-width: 200px;">
             <input class="form-check-input" type="checkbox" id="toggle-binned" checked>
@@ -1243,16 +1312,11 @@ function getCookie(name) {
         </div>
 
         <!-- Checkboxes -->
-        <div class="checkbox-container spectroscopy-only">
+        <div class="checkbox-container spectroscopy-only mt-3">
 
           <div class="checkbox-group">
-              <h5>Common Lines</h5>
-              <div class="checkbox-grid" id="common-lines"></div>
-          </div>
-
-          <div class="checkbox-group">
-              <h5>Absorption Lines</h5>
-              <div class="checkbox-grid" id="absorption-lines"></div>
+              <h5>Transient Lines</h5>
+              <div class="checkbox-grid" id="transient-lines"></div>
           </div>
 
           <div class="checkbox-group">
@@ -1264,6 +1328,37 @@ function getCookie(name) {
               <h5>Transient Specific Lines</h5>
               <div class="checkbox-grid" id="transient-specific-lines"></div>
           </div>
+
+          <div class="checkbox-group mt-3">
+              <h5>Host Lines</h5>
+
+              <div class="checkbox-grid" id="host-lines"></div>
+
+              <label class="d-flex align-items-center mt-4">
+                    <input type="checkbox" id="toggle-galaxy-lines" class="mr-2">
+                    <span>Galaxy lines</span>
+              </label>
+
+          </div>
+
+          <div class="d-flex align-items-center mt-3">
+                <input
+                    id="toggle-custom-line"
+                    type="checkbox"
+                    class="mr-2"
+                >
+                <label for="custom-rest-wavelength" class="mb-0 mr-2">
+                    Custom wavelength (Å):
+                </label>
+                <input
+                    id="custom-rest-wavelength"
+                    class="form-control form-control-sm"
+                    type="number"
+                    min="0"
+                    step="any"
+                    style="width: 70px;"
+                >
+            </div>
 
         </div>
       </div>
